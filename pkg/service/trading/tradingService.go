@@ -87,11 +87,11 @@ func (s *tradingService) shouldBuy(lastTransaction *domains.Transaction, current
 		return true
 	}
 
-	priceChange := s.getChangePrice(lastTransaction.Id, currentPrice)
-	if priceChange.ChangePercents > tradingPercent && util.AlmostEquals(currentPrice, priceChange.LowPrice) {
-		zap.S().Debugf("High[%v] Low[%v] Percents[%v]. currentPrice[%v]", priceChange.HighPrice, priceChange.LowPrice, priceChange.ChangePercents, currentPrice)
-		return true
-	}
+	//priceChange := s.getChangePrice(lastTransaction.Id, currentPrice)
+	//if priceChange.ChangePercents > tradingPercent && util.AlmostEquals(currentPrice, priceChange.LowPrice) {
+	//	zap.S().Debugf("High[%v] Low[%v] Percents[%v]. currentPrice[%v]", priceChange.HighPrice, priceChange.LowPrice, priceChange.ChangePercents, currentPrice)
+	//	return true
+	//}
 
 	return false
 }
