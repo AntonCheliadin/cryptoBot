@@ -1,8 +1,8 @@
 package domains
 
 import (
+	"cryptoBot/pkg/util"
 	"fmt"
-	"tradingBot/pkg/util"
 )
 
 type PriceChange struct {

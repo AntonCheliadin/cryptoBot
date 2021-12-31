@@ -1,9 +1,9 @@
 package binance
 
 import (
+	"cryptoBot/pkg/util"
 	"github.com/spf13/viper"
 	"strconv"
-	"tradingBot/pkg/util"
 )
 
 type OrderResponseDto struct {

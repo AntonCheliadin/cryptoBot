@@ -1,11 +1,11 @@
 package cron
 
 import (
+	"cryptoBot/pkg/repository"
+	"cryptoBot/pkg/service/trading"
 	"github.com/jasonlvhit/gocron"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"tradingBot/pkg/repository"
-	"tradingBot/pkg/service/trading"
 )
 
 type tradingJob struct {

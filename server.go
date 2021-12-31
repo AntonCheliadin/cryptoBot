@@ -1,4 +1,4 @@
-package tradingBot
+package cryptoBot
 
 import (
 	"context"

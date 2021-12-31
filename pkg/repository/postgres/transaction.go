@@ -1,13 +1,13 @@
 package postgres
 
 import (
+	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/data/domains"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	"strings"
 	"time"
-	"tradingBot/pkg/constants"
-	"tradingBot/pkg/data/domains"
 )
 
 func NewTransaction(db *sqlx.DB) *Transaction {

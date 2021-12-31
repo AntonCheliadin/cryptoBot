@@ -1,16 +1,16 @@
 package trading
 
 import (
+	"cryptoBot/pkg/api"
+	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/data/domains"
+	"cryptoBot/pkg/data/dto/binance"
+	"cryptoBot/pkg/repository"
+	"cryptoBot/pkg/util"
 	"database/sql"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"math"
-	"tradingBot/pkg/api"
-	"tradingBot/pkg/constants"
-	"tradingBot/pkg/data/domains"
-	"tradingBot/pkg/data/dto/binance"
-	"tradingBot/pkg/repository"
-	"tradingBot/pkg/util"
 )
 
 type TradingService interface {
@@ -119,11 +119,11 @@ func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
 	s.createBuyTransaction(coin, constants.BUY, orderDto, err)
 }
 
-func (s *tradingService) calculateAmountByPriceAndCost(currentPrice int64, cost int64) float64 {
-	amount := float64(cost) / float64(currentPrice)
+func (s *tradingService) calculateAmountByPriceAndCost(currentPriceWithCents int64, costWithoutCents int64) float64 {
+	amount := float64(costWithoutCents*100) / float64(currentPriceWithCents)
 	if amount > 10 {
 		return math.Round(amount)
-	} else if amount > 1 {
+	} else if amount > 0.1 {
 		return math.Round(amount*100) / 100
 	} else {
 		return math.Round(amount*1000000) / 1000000

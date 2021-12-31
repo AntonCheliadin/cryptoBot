@@ -1,8 +1,8 @@
 package api
 
 import (
-	"tradingBot/pkg/data/domains"
-	"tradingBot/pkg/data/dto/binance"
+	"cryptoBot/pkg/data/domains"
+	"cryptoBot/pkg/data/dto/binance"
 )
 
 type ExchangeApi interface {

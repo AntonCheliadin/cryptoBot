@@ -4,8 +4,8 @@ server:
 
 trading:
   percentChange: 1 # do action buy/sell when price change on 5%
-  defaultCoin: 'BTCUSDT'
-  defaultAmount: 0.00042 # ~20 USD
+  defaultCoin: 'LUNAUSDT'
+  defaultCost: 50
 
 api:
   binance:

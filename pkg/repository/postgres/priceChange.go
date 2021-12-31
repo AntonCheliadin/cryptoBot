@@ -1,11 +1,11 @@
 package postgres
 
 import (
+	"cryptoBot/pkg/data/domains"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	"strings"
-	"tradingBot/pkg/data/domains"
 )
 
 func NewPriceChange(db *sqlx.DB) *PriceChange {

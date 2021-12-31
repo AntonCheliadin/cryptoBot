@@ -1,10 +1,10 @@
 package domains
 
 import (
+	"cryptoBot/pkg/constants"
 	"database/sql"
 	"fmt"
 	"time"
-	"tradingBot/pkg/constants"
 )
 
 type Transaction struct {

@@ -3,6 +3,10 @@ package binance
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"cryptoBot/pkg/api"
+	"cryptoBot/pkg/data/domains"
+	"cryptoBot/pkg/data/dto/binance"
+	"cryptoBot/pkg/util"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,10 +15,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"tradingBot/pkg/api"
-	"tradingBot/pkg/data/domains"
-	"tradingBot/pkg/data/dto/binance"
-	"tradingBot/pkg/util"
 )
 
 func NewBinanceApi() api.ExchangeApi {

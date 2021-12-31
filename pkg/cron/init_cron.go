@@ -1,9 +1,9 @@
 package cron
 
 import (
+	"cryptoBot/pkg/repository"
+	"cryptoBot/pkg/service/trading"
 	"github.com/jasonlvhit/gocron"
-	"tradingBot/pkg/repository"
-	"tradingBot/pkg/service/trading"
 )
 
 func InitCronJobs(tradingService trading.TradingService, coinRepository repository.Coin) {

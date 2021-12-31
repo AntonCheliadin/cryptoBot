@@ -1,9 +1,9 @@
 package postgres
 
 import (
+	"cryptoBot/pkg/data/domains"
 	"github.com/jmoiron/sqlx"
 	"strings"
-	"tradingBot/pkg/data/domains"
 )
 
 func NewCoin(db *sqlx.DB) *Coin {

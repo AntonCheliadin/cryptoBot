@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/data/domains"
+	"cryptoBot/pkg/repository/postgres"
 	"github.com/jmoiron/sqlx"
-	"tradingBot/pkg/constants"
-	"tradingBot/pkg/data/domains"
-	"tradingBot/pkg/repository/postgres"
 )
 
 type Coin interface {

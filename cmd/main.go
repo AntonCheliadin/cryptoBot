@@ -2,6 +2,14 @@ package main
 
 import (
 	"context"
+	"cryptoBot"
+	"cryptoBot/pkg/api/binance"
+	"cryptoBot/pkg/controller"
+	"cryptoBot/pkg/cron"
+	"cryptoBot/pkg/log"
+	"cryptoBot/pkg/repository"
+	"cryptoBot/pkg/repository/postgres"
+	"cryptoBot/pkg/service/trading"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
@@ -12,14 +20,6 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
-	"tradingBot"
-	"tradingBot/pkg/api/binance"
-	"tradingBot/pkg/controller"
-	"tradingBot/pkg/cron"
-	"tradingBot/pkg/log"
-	"tradingBot/pkg/repository"
-	"tradingBot/pkg/repository/postgres"
-	"tradingBot/pkg/service/trading"
 )
 
 func main() {
@@ -75,7 +75,7 @@ func main() {
 
 	router := controller.InitControllers()
 
-	srv := new(tradingBot.Server)
+	srv := new(cryptoBot.Server)
 	go func() {
 		zap.S().Info("Server is doing to be up right now!\n")
 		if err := srv.Run(viper.GetString("server.port"), router); err != nil {
