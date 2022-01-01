@@ -13,7 +13,9 @@ import (
 	"strconv"
 	"syscall"
 	"tradingBot"
+	"tradingBot/pkg/api"
 	"tradingBot/pkg/api/binance"
+	"tradingBot/pkg/api/bybit"
 	"tradingBot/pkg/controller"
 	"tradingBot/pkg/cron"
 	"tradingBot/pkg/log"
@@ -67,9 +69,7 @@ func main() {
 
 	repos := repository.NewRepositories(postgresDb)
 
-	exchangeApi := binance.NewBinanceApi()
-
-	tradingService := trading.NewTradingService(repos.Transaction, repos.PriceChange, exchangeApi)
+	tradingService := trading.NewTradingService(repos.Transaction, repos.PriceChange, initExchangeApi())
 
 	cron.InitCronJobs(tradingService, repos.Coin)
 
@@ -113,4 +113,14 @@ func initMigrations(db *sqlx.DB) {
 		zap.S().Errorf("Error during applying migrations! %s", err.Error())
 	}
 	zap.S().Infof("Applied %d migrations!\n", n)
+}
+
+func initExchangeApi() api.ExchangeApi {
+	enabledExchange := viper.GetString("api.enabled")
+
+	if enabledExchange == "bybit" {
+		return bybit.NewBybitApi()
+	} else {
+		return binance.NewBinanceApi()
+	}
 }

@@ -39,17 +39,17 @@ func (api *BinanceApi) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
 	return priceDto.PriceInCents()
 }
 
-func (api *BinanceApi) BuyCoinByMarket(coin *domains.Coin, amount float64) (*binance.OrderResponseDto, error) {
+func (api *BinanceApi) BuyCoinByMarket(coin *domains.Coin, amount float64) (api.OrderDto, error) {
 	queryParams := api.buildParams(coin, amount, "BUY")
 	return api.orderCoinByMarket(queryParams)
 }
 
-func (api *BinanceApi) SellCoinByMarket(coin *domains.Coin, amount float64) (*binance.OrderResponseDto, error) {
+func (api *BinanceApi) SellCoinByMarket(coin *domains.Coin, amount float64) (api.OrderDto, error) {
 	queryParams := api.buildParams(coin, amount, "SELL")
 	return api.orderCoinByMarket(queryParams)
 }
 
-func (api *BinanceApi) orderCoinByMarket(queryParams string) (*binance.OrderResponseDto, error) {
+func (api *BinanceApi) orderCoinByMarket(queryParams string) (api.OrderDto, error) {
 	zap.S().Infof("OrderCoinByMarket = %s", queryParams)
 
 	uri := "https://api.binance.com/api/v3/order?" // /test

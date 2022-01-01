@@ -8,7 +8,6 @@ import (
 	"tradingBot/pkg/api"
 	"tradingBot/pkg/constants"
 	"tradingBot/pkg/data/domains"
-	"tradingBot/pkg/data/dto/binance"
 	"tradingBot/pkg/repository"
 	"tradingBot/pkg/util"
 )
@@ -112,15 +111,15 @@ func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
 
 	orderDto, err := s.exchangeApi.BuyCoinByMarket(coin, amountTransaction)
 	if err != nil || orderDto.GetAmount() == 0 {
-		zap.S().Errorf("Error during buy coin by market ", err.Error())
+		zap.S().Errorf("Error during buy coin by market ", err)
 		return
 	}
 
 	s.createBuyTransaction(coin, constants.BUY, orderDto, err)
 }
 
-func (s *tradingService) calculateAmountByPriceAndCost(currentPrice int64, cost int64) float64 {
-	amount := float64(cost) / float64(currentPrice)
+func (s *tradingService) calculateAmountByPriceAndCost(currentPriceWithCents int64, costWithoutCents int64) float64 {
+	amount := float64(costWithoutCents*100) / float64(currentPriceWithCents)
 	if amount > 10 {
 		return math.Round(amount)
 	} else if amount > 1 {
@@ -145,7 +144,7 @@ func (s *tradingService) sell(coin *domains.Coin, buyTransaction *domains.Transa
 	}
 }
 
-func (s *tradingService) createBuyTransaction(coin *domains.Coin, tType constants.TransactionType, orderDto *binance.OrderResponseDto, apiError error) *domains.Transaction {
+func (s *tradingService) createBuyTransaction(coin *domains.Coin, tType constants.TransactionType, orderDto api.OrderDto, apiError error) *domains.Transaction {
 	transaction := domains.Transaction{
 		CoinId:          coin.Id,
 		TransactionType: tType,
@@ -169,7 +168,7 @@ func (s *tradingService) createBuyTransaction(coin *domains.Coin, tType constant
 	return &transaction
 }
 
-func (s *tradingService) createSellTransaction(coin *domains.Coin, tType constants.TransactionType, orderDto *binance.OrderResponseDto, apiError error, buyTransaction *domains.Transaction) *domains.Transaction {
+func (s *tradingService) createSellTransaction(coin *domains.Coin, tType constants.TransactionType, orderDto api.OrderDto, apiError error, buyTransaction *domains.Transaction) *domains.Transaction {
 	sellTotalCost := orderDto.CalculateTotalCost()
 	commissionInUsd := orderDto.CalculateCommissionInUsd()
 

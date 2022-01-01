@@ -30,17 +30,17 @@ type fill struct {
 	CommissionAsset string `json:"commissionAsset"`
 }
 
-func (f fill) getPrice() float64 {
+func (f *fill) getPrice() float64 {
 	money, _ := strconv.ParseFloat(f.Price, 64)
 	return money
 }
 
-func (f fill) getCommission() float64 {
+func (f *fill) getCommission() float64 {
 	money, _ := strconv.ParseFloat(f.Commission, 64)
 	return money
 }
 
-func (d OrderResponseDto) CalculateAvgPrice() int64 {
+func (d *OrderResponseDto) CalculateAvgPrice() int64 {
 	price := float64(0)
 
 	for _, fill := range d.Fills {
@@ -50,11 +50,11 @@ func (d OrderResponseDto) CalculateAvgPrice() int64 {
 	return util.GetCents(price / float64(len(d.Fills)))
 }
 
-func (d OrderResponseDto) CalculateTotalCost() int64 {
+func (d *OrderResponseDto) CalculateTotalCost() int64 {
 	return util.GetCentsFromString(d.CummulativeQuoteQty)
 }
 
-func (d OrderResponseDto) CalculateCommissionInUsd() int64 {
+func (d *OrderResponseDto) CalculateCommissionInUsd() int64 {
 	totalCommission := float64(0)
 
 	for _, fill := range d.Fills {
@@ -64,7 +64,7 @@ func (d OrderResponseDto) CalculateCommissionInUsd() int64 {
 	return util.GetCents(totalCommission)
 }
 
-func (d OrderResponseDto) GetAmount() float64 {
+func (d *OrderResponseDto) GetAmount() float64 {
 	amount, _ := strconv.ParseFloat(d.ExecutedQty, 64)
 	return amount
 }
