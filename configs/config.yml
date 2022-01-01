@@ -5,7 +5,7 @@ server:
 trading:
   percentChange: 1 # do action buy/sell when price change on 5%
   defaultCoin: 'LUNAUSDT'
-  defaultCost: 50
+  defaultCost: 100
 
 api:
   binance:
