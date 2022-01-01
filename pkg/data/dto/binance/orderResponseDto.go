@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-type OrderResponseDto struct {
+type OrderResponseBinanceDto struct {
 	Symbol              string `json:"symbol"`
 	OrderId             int    `json:"orderId"`
 	OrderListId         int    `json:"orderListId"`
@@ -40,7 +40,7 @@ func (f fill) getCommission() float64 {
 	return money
 }
 
-func (d OrderResponseDto) CalculateAvgPrice() int64 {
+func (d OrderResponseBinanceDto) CalculateAvgPrice() int64 {
 	price := float64(0)
 
 	for _, fill := range d.Fills {
@@ -50,11 +50,11 @@ func (d OrderResponseDto) CalculateAvgPrice() int64 {
 	return util.GetCents(price / float64(len(d.Fills)))
 }
 
-func (d OrderResponseDto) CalculateTotalCost() int64 {
+func (d OrderResponseBinanceDto) CalculateTotalCost() int64 {
 	return util.GetCentsFromString(d.CummulativeQuoteQty)
 }
 
-func (d OrderResponseDto) CalculateCommissionInUsd() int64 {
+func (d OrderResponseBinanceDto) CalculateCommissionInUsd() int64 {
 	totalCommission := float64(0)
 
 	for _, fill := range d.Fills {
@@ -64,7 +64,7 @@ func (d OrderResponseDto) CalculateCommissionInUsd() int64 {
 	return util.GetCents(totalCommission)
 }
 
-func (d OrderResponseDto) GetAmount() float64 {
+func (d OrderResponseBinanceDto) GetAmount() float64 {
 	amount, _ := strconv.ParseFloat(d.ExecutedQty, 64)
 	return amount
 }

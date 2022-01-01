@@ -39,17 +39,17 @@ func (api *BinanceApi) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
 	return priceDto.PriceInCents()
 }
 
-func (api *BinanceApi) BuyCoinByMarket(coin *domains.Coin, amount float64) (*binance.OrderResponseDto, error) {
+func (api *BinanceApi) BuyCoinByMarket(coin *domains.Coin, amount float64, price int64) (api.OrderResponseDto, error) {
 	queryParams := api.buildParams(coin, amount, "BUY")
 	return api.orderCoinByMarket(queryParams)
 }
 
-func (api *BinanceApi) SellCoinByMarket(coin *domains.Coin, amount float64) (*binance.OrderResponseDto, error) {
+func (api *BinanceApi) SellCoinByMarket(coin *domains.Coin, amount float64, price int64) (api.OrderResponseDto, error) {
 	queryParams := api.buildParams(coin, amount, "SELL")
 	return api.orderCoinByMarket(queryParams)
 }
 
-func (api *BinanceApi) orderCoinByMarket(queryParams string) (*binance.OrderResponseDto, error) {
+func (api *BinanceApi) orderCoinByMarket(queryParams string) (api.OrderResponseDto, error) {
 	zap.S().Infof("OrderCoinByMarket = %s", queryParams)
 
 	uri := "https://api.binance.com/api/v3/order?" // /test
@@ -83,14 +83,14 @@ func (api *BinanceApi) orderCoinByMarket(queryParams string) (*binance.OrderResp
 	}
 	zap.S().Infof("API response: %s", string(body))
 
-	dto := binance.OrderResponseDto{}
+	dto := binance.OrderResponseBinanceDto{}
 	errUnmarshal := json.Unmarshal(body, &dto)
 	if errUnmarshal != nil {
 		zap.S().Error("Unmarshal error", errUnmarshal.Error())
 		return nil, errUnmarshal
 	}
 
-	return &dto, nil
+	return dto, nil
 }
 
 func (api *BinanceApi) buildParams(coin *domains.Coin, amount float64, side string) string {
