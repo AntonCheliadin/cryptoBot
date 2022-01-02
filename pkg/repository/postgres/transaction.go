@@ -70,7 +70,7 @@ func (r *Transaction) SaveTransaction(trnsctn *domains.Transaction) error {
 			return err
 		}
 		trnsctn.Id = transactionId
-		zap.S().Infof("Domain was saved on proxy side: %s", trnsctn.String())
+		zap.S().Debugf("Domain was saved on proxy side: %s", trnsctn.String())
 		return tx.Commit()
 	}
 

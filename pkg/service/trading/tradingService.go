@@ -4,7 +4,6 @@ import (
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/data/domains"
-	"cryptoBot/pkg/data/dto/binance"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/util"
 	"database/sql"
@@ -15,6 +14,7 @@ import (
 
 type TradingService interface {
 	BotAction(coin *domains.Coin)
+	BotActionForPrice(coin *domains.Coin, price int64)
 }
 
 var tradingServiceImpl *tradingService
@@ -44,6 +44,10 @@ func (s *tradingService) BotAction(coin *domains.Coin) {
 		return
 	}
 
+	s.BotActionForPrice(coin, currentPrice)
+}
+
+func (s *tradingService) BotActionForPrice(coin *domains.Coin, currentPrice int64) {
 	boughtNotSoldTransaction, err := s.transactionRepo.FindLastBoughtNotSold(coin.Id)
 	if err != nil {
 		zap.S().Error(err)
@@ -52,7 +56,7 @@ func (s *tradingService) BotAction(coin *domains.Coin) {
 
 	if boughtNotSoldTransaction != nil {
 		if s.shouldSell(boughtNotSoldTransaction, currentPrice) {
-			s.sell(coin, boughtNotSoldTransaction)
+			s.sell(coin, boughtNotSoldTransaction, currentPrice)
 		} else if s.shouldBuy(boughtNotSoldTransaction, currentPrice) {
 			s.buy(coin, currentPrice)
 		} else {
@@ -110,7 +114,7 @@ func (s *tradingService) getPriceChangeInPercent(lastTransaction *domains.Transa
 func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
 	amountTransaction := s.calculateAmountByPriceAndCost(currentPrice, viper.GetInt64("trading.defaultCost"))
 
-	orderDto, err := s.exchangeApi.BuyCoinByMarket(coin, amountTransaction)
+	orderDto, err := s.exchangeApi.BuyCoinByMarket(coin, amountTransaction, currentPrice)
 	if err != nil || orderDto.GetAmount() == 0 {
 		zap.S().Errorf("Error during buy coin by market ", err.Error())
 		return
@@ -130,8 +134,8 @@ func (s *tradingService) calculateAmountByPriceAndCost(currentPriceWithCents int
 	}
 }
 
-func (s *tradingService) sell(coin *domains.Coin, buyTransaction *domains.Transaction) {
-	orderDto, err := s.exchangeApi.SellCoinByMarket(coin, buyTransaction.Amount)
+func (s *tradingService) sell(coin *domains.Coin, buyTransaction *domains.Transaction, currentPrice int64) {
+	orderDto, err := s.exchangeApi.SellCoinByMarket(coin, buyTransaction.Amount, currentPrice)
 	if err != nil || orderDto.GetAmount() == 0 {
 		zap.S().Errorf("Error during sell coin by market ", err.Error())
 		return
@@ -145,7 +149,7 @@ func (s *tradingService) sell(coin *domains.Coin, buyTransaction *domains.Transa
 	}
 }
 
-func (s *tradingService) createBuyTransaction(coin *domains.Coin, tType constants.TransactionType, orderDto *binance.OrderResponseDto, apiError error) *domains.Transaction {
+func (s *tradingService) createBuyTransaction(coin *domains.Coin, tType constants.TransactionType, orderDto api.OrderResponseDto, apiError error) *domains.Transaction {
 	transaction := domains.Transaction{
 		CoinId:          coin.Id,
 		TransactionType: tType,
@@ -169,7 +173,7 @@ func (s *tradingService) createBuyTransaction(coin *domains.Coin, tType constant
 	return &transaction
 }
 
-func (s *tradingService) createSellTransaction(coin *domains.Coin, tType constants.TransactionType, orderDto *binance.OrderResponseDto, apiError error, buyTransaction *domains.Transaction) *domains.Transaction {
+func (s *tradingService) createSellTransaction(coin *domains.Coin, tType constants.TransactionType, orderDto api.OrderResponseDto, apiError error, buyTransaction *domains.Transaction) *domains.Transaction {
 	sellTotalCost := orderDto.CalculateTotalCost()
 	commissionInUsd := orderDto.CalculateCommissionInUsd()
 
