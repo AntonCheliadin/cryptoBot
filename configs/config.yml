@@ -3,9 +3,11 @@ server:
   port: 4455
 
 trading:
-  percentChange: 1 # do action buy/sell when price change on 5%
+  percentChange: 0.5 # do action buy/sell when price change on 1%
   defaultCoin: 'LUNAUSDT'
   defaultCost: 100
+  middleCost: 100
+  minCost: 100
 
 api:
   binance:

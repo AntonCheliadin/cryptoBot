@@ -66,6 +66,6 @@ func (r *PriceChange) SavePriceChange(domain *domains.PriceChange) error {
 		return fmt.Errorf("Unexpected updated rows count: %d", count)
 	}
 
-	zap.S().Infof("Domain was updated on proxy side: %s", domain.String())
+	zap.S().Debugf("Domain was updated on proxy side: %s", domain.String())
 	return tx.Commit()
 }

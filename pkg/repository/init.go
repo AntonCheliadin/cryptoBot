@@ -16,6 +16,8 @@ type Transaction interface {
 	FindLastByCoinIdAndType(coinId int64, transactionType constants.TransactionType) (*domains.Transaction, error)
 	FindLastBoughtNotSold(coinId int64) (*domains.Transaction, error)
 	SaveTransaction(transaction *domains.Transaction) error
+	FindAllLastTransactions(coinId int64, limit int8) ([]domains.Transaction, error)
+	FindSumInUsdNotSoldTransactions() (int64, error)
 }
 
 type PriceChange interface {

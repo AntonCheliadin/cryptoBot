@@ -70,7 +70,7 @@ func main() {
 	analyserService := analyser.NewAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, tradingService)
 
 	coin, _ := repos.Coin.FindBySymbol("LUNAUSDT")
-	analyserService.AnalyseCoin(coin, "2021-12-08", "2021-12-10", "1m")
+	analyserService.AnalyseCoin(coin, "2021-11-01", "2021-12-01", "1m")
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())

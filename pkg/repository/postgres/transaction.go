@@ -51,6 +51,28 @@ func (r *Transaction) FindLastBoughtNotSold(coinId int64) (*domains.Transaction,
 	return &transaction, nil
 }
 
+func (r *Transaction) FindSumInUsdNotSoldTransactions() (int64, error) {
+	var sumUsd int64
+	if err := r.db.Get(&sumUsd, "SELECT sum(total_cost) FROM transaction_table WHERE transaction_type=$1 and related_transaction_id is null", constants.BUY); err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return 0, nil
+		}
+		return 0, err
+	}
+	return sumUsd, nil
+}
+
+func (r *Transaction) FindAllLastTransactions(coinId int64, limit int8) ([]domains.Transaction, error) {
+	var transactions []domains.Transaction
+	if err := r.db.Select(&transactions, "SELECT * FROM transaction_table WHERE coin_id=$1 order by created_at desc limit $2", coinId, limit); err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return transactions, nil
+}
+
 func (r *Transaction) SaveTransaction(trnsctn *domains.Transaction) error {
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -91,6 +113,6 @@ func (r *Transaction) SaveTransaction(trnsctn *domains.Transaction) error {
 		return fmt.Errorf("Unexpected updated rows count: %d", count)
 	}
 
-	zap.S().Infof("Domain was updated on proxy side: %s", trnsctn.String())
+	zap.S().Debugf("Domain was updated on proxy side: %s", trnsctn.String())
 	return tx.Commit()
 }

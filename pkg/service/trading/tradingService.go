@@ -111,8 +111,10 @@ func (s *tradingService) getPriceChangeInPercent(lastTransaction *domains.Transa
 	return util.CalculatePercents(lastTransaction.Price, currentPrice)
 }
 
+var maxSumOfNotSoldTransactions = int64(0)
+
 func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
-	amountTransaction := s.calculateAmountByPriceAndCost(currentPrice, viper.GetInt64("trading.defaultCost"))
+	amountTransaction := s.calculateAmountByPriceAndCost(currentPrice, s.calculateCostForBuy(coin))
 
 	orderDto, err := s.exchangeApi.BuyCoinByMarket(coin, amountTransaction, currentPrice)
 	if err != nil || orderDto.GetAmount() == 0 {
@@ -121,6 +123,44 @@ func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
 	}
 
 	s.createBuyTransaction(coin, constants.BUY, orderDto, err)
+
+	sumInUsdNotSoldTransactions, err := s.transactionRepo.FindSumInUsdNotSoldTransactions()
+	if err == nil {
+		if sumInUsdNotSoldTransactions > maxSumOfNotSoldTransactions {
+			maxSumOfNotSoldTransactions = sumInUsdNotSoldTransactions
+		}
+		zap.S().Infof("Sum of not sold transactions current=[%v], max=[%v]", sumInUsdNotSoldTransactions, maxSumOfNotSoldTransactions)
+	}
+}
+
+func (s *tradingService) calculateCostForBuy(coin *domains.Coin) int64 {
+	transactions, err := s.transactionRepo.FindAllLastTransactions(coin.Id, 5)
+	if err != nil || len(transactions) == 0 {
+		return viper.GetInt64("trading.defaultCost")
+	}
+
+	boughtNotSoldTransactionsInARow := s.countBoughtNotSoldTransactionsInARow(transactions)
+
+	if boughtNotSoldTransactionsInARow <= 1 {
+		return viper.GetInt64("trading.defaultCost")
+	}
+
+	if boughtNotSoldTransactionsInARow >= 3 {
+		return viper.GetInt64("trading.minCost")
+	}
+
+	return viper.GetInt64("trading.middleCost")
+}
+
+func (s *tradingService) countBoughtNotSoldTransactionsInARow(transactions []domains.Transaction) int {
+	var count = 0
+
+	for i, transaction := range transactions {
+		if transaction.TransactionType == constants.BUY && !transaction.RelatedTransactionId.Valid && count == i {
+			count += 1
+		}
+	}
+	return count
 }
 
 func (s *tradingService) calculateAmountByPriceAndCost(currentPriceWithCents int64, costWithoutCents int64) float64 {
