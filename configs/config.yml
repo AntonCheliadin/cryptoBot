@@ -1,6 +1,6 @@
 server:
   host: "localhost"
-  port: 4455
+  port: 443
 
 trading:
   percentChange: 1 # do action buy/sell when price change on 5%
