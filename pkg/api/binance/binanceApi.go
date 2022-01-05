@@ -97,6 +97,7 @@ func (api *BinanceApi) buildParams(coin *domains.Coin, amount float64, side stri
 	return "symbol=" + coin.Symbol +
 		"&side=" + side +
 		"&type=MARKET" +
+		"&recvWindow=60000" +
 		"&quantity=" + strings.TrimRight(fmt.Sprintf("%f", amount), "0") +
 		"&timestamp=" + util.MakeTimestamp()
 }

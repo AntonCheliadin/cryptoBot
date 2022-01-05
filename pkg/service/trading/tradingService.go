@@ -112,7 +112,7 @@ func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
 
 	orderDto, err := s.exchangeApi.BuyCoinByMarket(coin, amountTransaction)
 	if err != nil || orderDto.GetAmount() == 0 {
-		zap.S().Errorf("Error during buy coin by market ", err.Error())
+		zap.S().Errorf("Error during buy coin by market")
 		return
 	}
 
@@ -133,7 +133,7 @@ func (s *tradingService) calculateAmountByPriceAndCost(currentPriceWithCents int
 func (s *tradingService) sell(coin *domains.Coin, buyTransaction *domains.Transaction) {
 	orderDto, err := s.exchangeApi.SellCoinByMarket(coin, buyTransaction.Amount)
 	if err != nil || orderDto.GetAmount() == 0 {
-		zap.S().Errorf("Error during sell coin by market ", err.Error())
+		zap.S().Errorf("Error during sell coin by market")
 		return
 	}
 
@@ -162,7 +162,7 @@ func (s *tradingService) createBuyTransaction(coin *domains.Coin, tType constant
 	}
 
 	if err := s.transactionRepo.SaveTransaction(&transaction); err != nil {
-		zap.S().Errorf("Error during save transaction", err.Error())
+		zap.S().Errorf("Error during save transaction %s", err)
 		return nil
 	}
 
@@ -194,7 +194,7 @@ func (s *tradingService) createSellTransaction(coin *domains.Coin, tType constan
 	}
 
 	if err := s.transactionRepo.SaveTransaction(&transaction); err != nil {
-		zap.S().Errorf("Error during save transaction", err.Error())
+		zap.S().Errorf("Error during save transaction %s", err.Error())
 		return nil
 	}
 
