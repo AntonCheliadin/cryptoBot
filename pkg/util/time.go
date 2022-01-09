@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -14,4 +15,9 @@ func GetMillisByDate(date string) int64 {
 	layout := "2006-01-02"
 	t, _ := time.Parse(layout, date)
 	return t.UnixNano() / 1000000
+}
+
+func ParseDate(date string) (time.Time, error) {
+	layout := "2006-01-02"
+	return time.Parse(layout, strings.ReplaceAll(date, " ", ""))
 }

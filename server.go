@@ -19,7 +19,7 @@ func (s *Server) Run(port string, handler http.Handler) error {
 		WriteTimeout:   10 * time.Second,
 	}
 
-	return s.httpServer.ListenAndServe()
+	return s.httpServer.ListenAndServeTLS("YOURPUBLIC.pem", "YOURPRIVATE.key")
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {

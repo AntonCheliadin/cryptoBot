@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -11,6 +12,10 @@ func GetCentsFromString(money string) int64 {
 
 func GetCents(money float64) int64 {
 	return int64(money * 100)
+}
+
+func RoundCentsToUsd(moneyInCents int64) string {
+	return fmt.Sprintf("$%.2f", float64(moneyInCents)/100)
 }
 
 /* AlmostEquals(50_000, 50_010) == true */

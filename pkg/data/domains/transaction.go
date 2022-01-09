@@ -42,5 +42,5 @@ type Transaction struct {
 }
 
 func (t *Transaction) String() string {
-	return fmt.Sprintf("Transaction {id: %v, coin: %v, amount: %v, price: %v}", t.Id, t.CoinId, t.Amount, t.Price)
+	return fmt.Sprintf("Transaction {id: %v, type: %v, coin: %v, amount: %v, price: %v}", t.Id, t.TransactionType, t.CoinId, t.Amount, t.Price)
 }

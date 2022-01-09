@@ -51,6 +51,34 @@ func (r *Transaction) FindLastBoughtNotSold(coinId int64) (*domains.Transaction,
 	return &transaction, nil
 }
 
+func (r *Transaction) CalculateSumOfProfit() (int64, error) {
+	var sumOfProfit int64
+	if err := r.db.Get(&sumOfProfit, "select sum(profit) from transaction_table where profit is not null"); err != nil {
+		return 0, err
+	}
+	return sumOfProfit, nil
+}
+
+func (r *Transaction) CalculateSumOfSpentTransactions() (int64, error) {
+	var sumOfSpent int64
+	err := r.db.Get(&sumOfSpent, "select sum(total_cost) from transaction_table where related_transaction_id is null")
+	return sumOfSpent, err
+}
+
+func (r *Transaction) CalculateSumOfProfitByDate(date time.Time) (int64, error) {
+	var sumOfProfit int64
+	err := r.db.Get(&sumOfProfit, "select sum(profit) from transaction_table where profit is not null and date_trunc('day', created_at) = $1", date)
+	return sumOfProfit, err
+}
+
+func (r *Transaction) CalculateSumOfSpentTransactionsByDate(date time.Time) (int64, error) {
+	var sumOfSpent int64
+	if err := r.db.Get(&sumOfSpent, "select sum(total_cost) from transaction_table where related_transaction_id is null and date_trunc('day', created_at) = $1", date); err != nil {
+		return 0, err
+	}
+	return sumOfSpent, nil
+}
+
 func (r *Transaction) SaveTransaction(trnsctn *domains.Transaction) error {
 	tx, err := r.db.Begin()
 	if err != nil {

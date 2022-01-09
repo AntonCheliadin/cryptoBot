@@ -2,6 +2,7 @@ package trading
 
 import (
 	"cryptoBot/pkg/api"
+	telegramApi "cryptoBot/pkg/api/telegram"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/repository"
@@ -117,6 +118,7 @@ func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
 	orderDto, err := s.exchangeApi.BuyCoinByMarket(coin, amountTransaction, currentPrice)
 	if err != nil || orderDto.GetAmount() == 0 {
 		zap.S().Errorf("Error during buy coin by market")
+		telegramApi.SendTextToTelegramChat("Error during buy coin by market")
 		return
 	}
 
@@ -138,6 +140,7 @@ func (s *tradingService) sell(coin *domains.Coin, buyTransaction *domains.Transa
 	orderDto, err := s.exchangeApi.SellCoinByMarket(coin, buyTransaction.Amount, currentPrice)
 	if err != nil || orderDto.GetAmount() == 0 {
 		zap.S().Errorf("Error during sell coin by market")
+		telegramApi.SendTextToTelegramChat("Error during sell coin by market")
 		return
 	}
 
@@ -170,6 +173,8 @@ func (s *tradingService) createBuyTransaction(coin *domains.Coin, tType constant
 		return nil
 	}
 
+	telegramApi.SendTextToTelegramChat(transaction.String())
+
 	return &transaction
 }
 
@@ -201,6 +206,8 @@ func (s *tradingService) createSellTransaction(coin *domains.Coin, tType constan
 		zap.S().Errorf("Error during save transaction %s", err.Error())
 		return nil
 	}
+
+	telegramApi.SendTextToTelegramChat(transaction.String())
 
 	return &transaction
 }

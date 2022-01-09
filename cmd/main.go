@@ -9,6 +9,7 @@ import (
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
+	"cryptoBot/pkg/service/telegram"
 	"cryptoBot/pkg/service/trading"
 	"fmt"
 	"github.com/jmoiron/sqlx"
@@ -70,10 +71,11 @@ func main() {
 	exchangeApi := binance.NewBinanceApi()
 
 	tradingService := trading.NewTradingService(repos.Transaction, repos.PriceChange, exchangeApi)
+	telegramService := telegram.NewTelegramService(repos.Transaction)
 
 	cron.InitCronJobs(tradingService, repos.Coin)
 
-	router := controller.InitControllers()
+	router := controller.InitControllers(telegramService)
 
 	srv := new(cryptoBot.Server)
 	go func() {
