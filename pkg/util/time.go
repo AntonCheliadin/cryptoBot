@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -18,6 +19,18 @@ func GetMillisByDate(date string) int64 {
 }
 
 func ParseDate(date string) (time.Time, error) {
+	dateString := strings.Trim(date, " ")
+	if len(dateString) == 2 {
+		return GetDateByDayOfCurrentMonth(dateString)
+	}
+
 	layout := "2006-01-02"
-	return time.Parse(layout, strings.ReplaceAll(date, " ", ""))
+	parsedDate, err := time.Parse(layout, dateString)
+	return parsedDate, err
+}
+
+func GetDateByDayOfCurrentMonth(date string) (time.Time, error) {
+	now := time.Now()
+	dayInt, err := strconv.Atoi(date)
+	return time.Date(now.Year(), now.Month(), dayInt, 0, 0, 0, 0, time.UTC), err
 }

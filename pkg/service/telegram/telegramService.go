@@ -1,11 +1,13 @@
 package telegram
 
 import (
+	"cryptoBot/pkg/api"
 	telegramApi "cryptoBot/pkg/api/telegram"
 	"cryptoBot/pkg/data/dto/telegram"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/util"
 	"fmt"
+	"github.com/spf13/viper"
 	"strings"
 )
 
@@ -13,18 +15,22 @@ const STATS_COMMAND string = "/stats"
 
 var telegramServiceImpl *TelegramService
 
-func NewTelegramService(transactionRepo repository.Transaction) *TelegramService {
+func NewTelegramService(transactionRepo repository.Transaction, coinRepo repository.Coin, exchangeApi api.ExchangeApi) *TelegramService {
 	if telegramServiceImpl != nil {
 		panic("Unexpected try to create second service instance")
 	}
 	telegramServiceImpl = &TelegramService{
 		transactionRepo: transactionRepo,
+		coinRepo:        coinRepo,
+		exchangeApi:     exchangeApi,
 	}
 	return telegramServiceImpl
 }
 
 type TelegramService struct {
 	transactionRepo repository.Transaction
+	coinRepo        repository.Coin
+	exchangeApi     api.ExchangeApi
 }
 
 func (s *TelegramService) HandleMessage(update *telegram.Update) {
@@ -43,21 +49,34 @@ func (s *TelegramService) buildResponse(update *telegram.Update) string {
 func (s *TelegramService) buildStatistics(command string) string {
 	var response = "stats:\n"
 
-	if spentInCents, err := s.transactionRepo.CalculateSumOfSpentTransactions(); err == nil {
-		response += "total spent " + util.RoundCentsToUsd(spentInCents) + "\n"
+	coin, _ := s.coinRepo.FindBySymbol(viper.GetString("trading.defaultCoin"))
+	currentPrice, _ := s.exchangeApi.GetCurrentCoinPrice(coin)
+	boughtNotSoldTransaction, _ := s.transactionRepo.FindLastBoughtNotSold(coin.Id)
+
+	if boughtNotSoldTransaction != nil && currentPrice > 0 {
+		response += fmt.Sprintf("last bought for %v \ncurrent price %v (%.2f%%) \n",
+			util.RoundCentsToUsd(boughtNotSoldTransaction.Price), util.RoundCentsToUsd(currentPrice), util.CalculatePercents(boughtNotSoldTransaction.Price, currentPrice))
 	}
 
-	if profitInCents, err := s.transactionRepo.CalculateSumOfProfit(); err == nil {
-		response += "total profit " + util.RoundCentsToUsd(profitInCents) + "\n"
+	spentInCents, _ := s.transactionRepo.CalculateSumOfSpentTransactions()
+	response += "\ntotal spent " + util.RoundCentsToUsd(spentInCents) + "\n"
+
+	profitInCents, _ := s.transactionRepo.CalculateSumOfProfit()
+	response += "total profit " + util.RoundCentsToUsd(profitInCents)
+
+	if profitInCents > 0 && spentInCents > 0 {
+		response += fmt.Sprintf(" (%.2f%%) \n", (float64(profitInCents)/float64(spentInCents))*100)
 	}
 
 	if date, err := util.ParseDate(command); err == nil {
-		if spentInCentsByDate, err := s.transactionRepo.CalculateSumOfSpentTransactionsByDate(date); err == nil {
-			response += fmt.Sprintf("%v spent %v \n", date.Format("2006-01-02"), util.RoundCentsToUsd(spentInCentsByDate))
-		}
+		spentInCentsByDate, _ := s.transactionRepo.CalculateSumOfSpentTransactionsByDate(date)
+		response += fmt.Sprintf("\n%v spent %v \n", date.Format("2006-01-02"), util.RoundCentsToUsd(spentInCentsByDate))
 
-		if profitInCentsByDate, err := s.transactionRepo.CalculateSumOfProfitByDate(date); err == nil {
-			response += fmt.Sprintf("%v profit %v \n", date.Format("2006-01-02"), util.RoundCentsToUsd(profitInCentsByDate))
+		profitInCentsByDate, _ := s.transactionRepo.CalculateSumOfProfitByDate(date)
+		response += fmt.Sprintf("%v profit %v", date.Format("2006-01-02"), util.RoundCentsToUsd(profitInCentsByDate))
+
+		if spentInCentsByDate > 0 && profitInCentsByDate > 0 {
+			response += fmt.Sprintf(" (%.2f %%) \n", (float64(profitInCentsByDate)/float64(spentInCentsByDate))*100)
 		}
 	}
 

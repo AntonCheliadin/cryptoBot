@@ -71,9 +71,11 @@ func main() {
 	exchangeApi := binance.NewBinanceApi()
 
 	tradingService := trading.NewTradingService(repos.Transaction, repos.PriceChange, exchangeApi)
-	telegramService := telegram.NewTelegramService(repos.Transaction)
+	telegramService := telegram.NewTelegramService(repos.Transaction, repos.Coin, exchangeApi)
 
-	cron.InitCronJobs(tradingService, repos.Coin)
+	if enabled, err := strconv.ParseBool(os.Getenv("TRADING_ENABLED")); enabled && err == nil {
+		cron.InitCronJobs(tradingService, repos.Coin)
+	}
 
 	router := controller.InitControllers(telegramService)
 
