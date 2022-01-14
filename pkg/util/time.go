@@ -19,7 +19,14 @@ func GetMillisByDate(date string) int64 {
 }
 
 func ParseDate(date string) (time.Time, error) {
-	dateString := strings.Trim(date, " ")
+	dateString := strings.Trim(date, " _")
+	if dateString == "today" {
+		return time.Now(), nil
+	}
+	if dateString == "yesterday" {
+		return time.Now().AddDate(0, 0, -1), nil
+	}
+
 	if len(dateString) == 2 {
 		return GetDateByDayOfCurrentMonth(dateString)
 	}
