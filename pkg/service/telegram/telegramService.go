@@ -76,7 +76,10 @@ func (s *TelegramService) buildProfitResponse(command string) string {
 
 	for dayIterator.Before(maxDate) || dayIterator.Equal(maxDate) {
 		profitInCentsByDate, _ := s.transactionRepo.CalculateSumOfProfitByDate(dayIterator)
-		response += fmt.Sprintf("%v %v\n", dayIterator.Format("2006-01-02"), util.RoundCentsToUsd(profitInCentsByDate))
+		spentInCentsByDate, _ := s.transactionRepo.CalculateSumOfSpentTransactionsByDate(dayIterator)
+
+		response += fmt.Sprintf("%v %v %v\n", dayIterator.Format("2006-01-02"),
+			util.RoundCentsToUsd(profitInCentsByDate), util.RoundCentsToUsd(spentInCentsByDate))
 
 		dayIterator = dayIterator.AddDate(0, 0, 1)
 	}
