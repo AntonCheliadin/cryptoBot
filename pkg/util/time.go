@@ -22,11 +22,12 @@ func ParseDate(date string) (time.Time, error) {
 	now := time.Now()
 	dateString := strings.Trim(date, " _")
 
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	if dateString == "today" {
-		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC), nil
+		return today, nil
 	}
 	if dateString == "yesterday" {
-		return time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, time.UTC), nil
+		return today.AddDate(0, 0, -1), nil
 	}
 
 	if len(dateString) == 2 {
