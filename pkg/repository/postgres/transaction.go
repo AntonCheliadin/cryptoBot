@@ -65,7 +65,7 @@ func (r *Transaction) CalculateSumOfSpentTransactions() (int64, error) {
 
 func (r *Transaction) CalculateSumOfProfitByDate(date time.Time) (int64, error) {
 	var sumOfProfit int64
-	err := r.db.Get(&sumOfProfit, "select sum(profit) from transaction_table where profit is not null and date_trunc('day', created_at) = date_trunc('day', $1)", date)
+	err := r.db.Get(&sumOfProfit, "select sum(profit) from transaction_table where profit is not null and date_trunc('day', created_at) = $1", date)
 	return sumOfProfit, err
 }
 
