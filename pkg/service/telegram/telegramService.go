@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"cryptoBot/configs"
 	"cryptoBot/pkg/api"
 	telegramApi "cryptoBot/pkg/api/telegram"
 	"cryptoBot/pkg/data/dto/telegram"
@@ -8,10 +9,13 @@ import (
 	"cryptoBot/pkg/util"
 	"fmt"
 	"github.com/spf13/viper"
+	"strconv"
 	"strings"
 )
 
-const STATS_COMMAND string = "/stats"
+const COMMAND_STATS string = "/stats"
+const COMMAND_BUY_STOP string = "/stop_buying"
+const COMMAND_BUY_START string = "/start_buying"
 
 var telegramServiceImpl *TelegramService
 
@@ -40,8 +44,14 @@ func (s *TelegramService) HandleMessage(update *telegram.Update) {
 }
 
 func (s *TelegramService) buildResponse(update *telegram.Update) string {
-	if strings.HasPrefix(update.Message.Text, STATS_COMMAND) {
-		return s.buildStatistics(strings.ReplaceAll(update.Message.Text, STATS_COMMAND, ""))
+	if strings.HasPrefix(update.Message.Text, COMMAND_STATS) {
+		return s.buildStatistics(strings.ReplaceAll(update.Message.Text, COMMAND_STATS, ""))
+	} else if COMMAND_BUY_STOP == update.Message.Text {
+		configs.RuntimeConfig.DisableBuying()
+		return "BuyingEnabled = " + strconv.FormatBool(configs.RuntimeConfig.IsBuyingEnabled())
+	} else if COMMAND_BUY_START == update.Message.Text {
+		configs.RuntimeConfig.EnableBuying()
+		return "BuyingEnabled = " + strconv.FormatBool(configs.RuntimeConfig.IsBuyingEnabled())
 	}
 	return "Unexpected command"
 }

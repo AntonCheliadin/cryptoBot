@@ -1,6 +1,7 @@
 package trading
 
 import (
+	"cryptoBot/configs"
 	"cryptoBot/pkg/api"
 	telegramApi "cryptoBot/pkg/api/telegram"
 	"cryptoBot/pkg/constants"
@@ -113,6 +114,10 @@ func (s *tradingService) getPriceChangeInPercent(lastTransaction *domains.Transa
 }
 
 func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
+	if !configs.RuntimeConfig.IsBuyingEnabled() {
+		return
+	}
+
 	amountTransaction := s.calculateAmountByPriceAndCost(currentPrice, viper.GetInt64("trading.defaultCost"))
 
 	orderDto, err := s.exchangeApi.BuyCoinByMarket(coin, amountTransaction, currentPrice)

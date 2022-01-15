@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"cryptoBot"
+	"cryptoBot/configs"
 	"cryptoBot/pkg/api/binance"
 	"cryptoBot/pkg/controller"
 	"cryptoBot/pkg/cron"
@@ -30,6 +31,7 @@ func main() {
 	if err := initConfig(); err != nil {
 		panic(fmt.Sprintf("Error during reading configs: %s", err.Error()))
 	}
+	configs.NewRuntimeConfig()
 
 	log.InitLogger()
 
