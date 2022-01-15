@@ -16,8 +16,9 @@ func SendTextToTelegramChat(text string) {
 	response, err := http.PostForm(
 		TELEGRAM_API,
 		url.Values{
-			"chat_id": {CHAT_ID},
-			"text":    {text},
+			"chat_id":    {CHAT_ID},
+			"text":       {text},
+			"parse_mode": {"HTML"},
 		})
 
 	if err != nil {
