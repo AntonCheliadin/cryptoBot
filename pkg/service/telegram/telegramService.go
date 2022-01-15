@@ -11,9 +11,11 @@ import (
 	"github.com/spf13/viper"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const COMMAND_STATS string = "/stats"
+const COMMAND_PROFIT string = "/profit"
 const COMMAND_BUY_STOP string = "/stop_buying"
 const COMMAND_BUY_START string = "/start_buying"
 
@@ -46,6 +48,8 @@ func (s *TelegramService) HandleMessage(update *telegram.Update) {
 func (s *TelegramService) buildResponse(update *telegram.Update) string {
 	if strings.HasPrefix(update.Message.Text, COMMAND_STATS) {
 		return s.buildStatistics(strings.ReplaceAll(update.Message.Text, COMMAND_STATS, ""))
+	} else if strings.HasPrefix(update.Message.Text, COMMAND_PROFIT) {
+		return s.buildProfitResponse(strings.ReplaceAll(update.Message.Text, COMMAND_PROFIT, ""))
 	} else if COMMAND_BUY_STOP == update.Message.Text {
 		configs.RuntimeConfig.DisableBuying()
 		return "BuyingEnabled = " + strconv.FormatBool(configs.RuntimeConfig.IsBuyingEnabled())
@@ -56,8 +60,32 @@ func (s *TelegramService) buildResponse(update *telegram.Update) string {
 	return "Unexpected command"
 }
 
+func (s *TelegramService) buildProfitResponse(command string) string {
+	daysString := strings.Trim(command, " ")
+
+	dayInt, err := strconv.Atoi(daysString)
+	if dayInt == 0 || err != nil {
+		dayInt = 7
+	}
+
+	now := time.Now()
+	maxDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	dayIterator := maxDate.AddDate(0, 0, -dayInt)
+
+	response := ""
+
+	for dayIterator.Before(maxDate) || dayIterator.Equal(maxDate) {
+		profitInCentsByDate, _ := s.transactionRepo.CalculateSumOfProfitByDate(dayIterator)
+		response += fmt.Sprintf("%v %v\n", dayIterator.Format("2006-01-02"), util.RoundCentsToUsd(profitInCentsByDate))
+
+		dayIterator = dayIterator.AddDate(0, 0, 1)
+	}
+
+	return response
+}
+
 func (s *TelegramService) buildStatistics(command string) string {
-	var response = "stats:\n"
+	var response = ""
 
 	coin, _ := s.coinRepo.FindBySymbol(viper.GetString("trading.defaultCoin"))
 	currentPrice, _ := s.exchangeApi.GetCurrentCoinPrice(coin)
