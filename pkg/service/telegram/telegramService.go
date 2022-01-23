@@ -64,6 +64,13 @@ func (s *TelegramService) buildResponse(update *telegram.Update) string {
 func (s *TelegramService) buildProfitResponse(command string) string {
 	daysString := strings.Trim(command, " ")
 
+	shortResult := false
+
+	if strings.Contains(daysString, "short") {
+		shortResult = true
+		daysString = strings.ReplaceAll(daysString, "short", "")
+	}
+
 	dayInt, err := strconv.Atoi(daysString)
 	if dayInt == 0 || err != nil {
 		dayInt = 7
@@ -74,8 +81,14 @@ func (s *TelegramService) buildProfitResponse(command string) string {
 	dayIterator := maxDate.AddDate(0, 0, -dayInt)
 
 	response := "<pre>\n" +
-		"|    Date    |  Profit  |   Bought   |    Sold    |  Not sold  |  Min price |\n" +
-		"|------------|----------|------------|------------|------------|------------|"
+		"|    Date    |  Profit  |\n" +
+		"|------------|----------|"
+
+	if !shortResult {
+		response = "<pre>\n" +
+			"|    Date    |  Profit  |   Bought   |    Sold    |  Not sold  |  Min price |\n" +
+			"|------------|----------|------------|------------|------------|------------|"
+	}
 
 	sumProfit := int64(0)
 	sumNotSold := int64(0)
@@ -84,25 +97,35 @@ func (s *TelegramService) buildProfitResponse(command string) string {
 
 	for dayIterator.Before(maxDate) || dayIterator.Equal(maxDate) {
 		profitInCentsByDate, _ := s.transactionRepo.CalculateSumOfProfitByDate(dayIterator)
-		spentInCentsByDate, _ := s.transactionRepo.CalculateSumOfSpentTransactionsByDate(dayIterator)
-		boughtInCentsByDate, _ := s.transactionRepo.CalculateSumOfTransactionsByDateAndType(dayIterator, constants.BUY)
-		soldInCentsByDate, _ := s.transactionRepo.CalculateSumOfTransactionsByDateAndType(dayIterator, constants.SELL)
-		minPrice, _ := s.transactionRepo.FindMinPriceByDate(dayIterator)
-		sumProfit += profitInCentsByDate
-		sumNotSold += spentInCentsByDate
-		sumBought += boughtInCentsByDate
-		sumSold += soldInCentsByDate
 
-		response += fmt.Sprintf("\n| %v | %8v | %10v | %10v | %10v | %10v |", dayIterator.Format(constants.DATE_FORMAT),
-			util.RoundCentsToUsd(profitInCentsByDate), util.RoundCentsToUsd(boughtInCentsByDate),
-			util.RoundCentsToUsd(soldInCentsByDate), util.RoundCentsToUsd(spentInCentsByDate),
-			util.RoundCentsToUsd(minPrice))
+		response += fmt.Sprintf("\n| %v | %8v |", dayIterator.Format(constants.DATE_FORMAT),
+			util.RoundCentsToUsd(profitInCentsByDate))
+
+		if !shortResult {
+			spentInCentsByDate, _ := s.transactionRepo.CalculateSumOfSpentTransactionsByDate(dayIterator)
+			boughtInCentsByDate, _ := s.transactionRepo.CalculateSumOfTransactionsByDateAndType(dayIterator, constants.BUY)
+			soldInCentsByDate, _ := s.transactionRepo.CalculateSumOfTransactionsByDateAndType(dayIterator, constants.SELL)
+			minPrice, _ := s.transactionRepo.FindMinPriceByDate(dayIterator)
+			sumProfit += profitInCentsByDate
+			sumNotSold += spentInCentsByDate
+			sumBought += boughtInCentsByDate
+			sumSold += soldInCentsByDate
+
+			response += fmt.Sprintf(" %10v | %10v | %10v | %10v |",
+				util.RoundCentsToUsd(boughtInCentsByDate), util.RoundCentsToUsd(soldInCentsByDate),
+				util.RoundCentsToUsd(spentInCentsByDate), util.RoundCentsToUsd(minPrice))
+		}
 
 		dayIterator = dayIterator.AddDate(0, 0, 1)
 	}
-	response += fmt.Sprintf("\n|------------|----------|------------|------------|------------|------------|\n|   total    | %8v | %10v | %10v | %10v | %10v |\n</pre>",
-		util.RoundCentsToUsd(sumProfit), util.RoundCentsToUsd(sumBought), util.RoundCentsToUsd(sumSold), util.RoundCentsToUsd(sumNotSold), "")
 
+	if !shortResult {
+		response += fmt.Sprintf("\n|------------|----------|------------|------------|------------|------------|\n|   total    | %8v | %10v | %10v | %10v | %10v |\n</pre>",
+			util.RoundCentsToUsd(sumProfit), util.RoundCentsToUsd(sumBought), util.RoundCentsToUsd(sumSold), util.RoundCentsToUsd(sumNotSold), "")
+	} else {
+		response += fmt.Sprintf("\n|------------|----------|\n|   total    | %8v |\n</pre>",
+			util.RoundCentsToUsd(sumProfit))
+	}
 	return response
 }
 
