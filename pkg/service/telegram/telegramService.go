@@ -97,6 +97,7 @@ func (s *TelegramService) buildProfitResponse(command string) string {
 
 	for dayIterator.Before(maxDate) || dayIterator.Equal(maxDate) {
 		profitInCentsByDate, _ := s.transactionRepo.CalculateSumOfProfitByDate(dayIterator)
+		sumProfit += profitInCentsByDate
 
 		response += fmt.Sprintf("\n| %v | %8v |", dayIterator.Format(constants.DATE_FORMAT),
 			util.RoundCentsToUsd(profitInCentsByDate))
@@ -106,7 +107,6 @@ func (s *TelegramService) buildProfitResponse(command string) string {
 			boughtInCentsByDate, _ := s.transactionRepo.CalculateSumOfTransactionsByDateAndType(dayIterator, constants.BUY)
 			soldInCentsByDate, _ := s.transactionRepo.CalculateSumOfTransactionsByDateAndType(dayIterator, constants.SELL)
 			minPrice, _ := s.transactionRepo.FindMinPriceByDate(dayIterator)
-			sumProfit += profitInCentsByDate
 			sumNotSold += spentInCentsByDate
 			sumBought += boughtInCentsByDate
 			sumSold += soldInCentsByDate
