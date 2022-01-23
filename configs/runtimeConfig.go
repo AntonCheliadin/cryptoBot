@@ -7,21 +7,11 @@ func NewRuntimeConfig() *config {
 		panic("Unexpected try to create second instance")
 	}
 	RuntimeConfig = &config{
-		buyingEnabled: true,
+		TradingEnabled: true,
 	}
 	return RuntimeConfig
 }
 
 type config struct {
-	buyingEnabled bool
-}
-
-func (c *config) IsBuyingEnabled() bool {
-	return c.buyingEnabled
-}
-func (c *config) EnableBuying() {
-	c.buyingEnabled = true
-}
-func (c *config) DisableBuying() {
-	c.buyingEnabled = false
+	TradingEnabled bool
 }

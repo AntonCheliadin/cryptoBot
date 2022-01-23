@@ -51,11 +51,11 @@ func (s *TelegramService) buildResponse(update *telegram.Update) string {
 	} else if strings.HasPrefix(update.Message.Text, COMMAND_PROFIT) {
 		return s.buildProfitResponse(strings.ReplaceAll(update.Message.Text, COMMAND_PROFIT, ""))
 	} else if COMMAND_BUY_STOP == update.Message.Text {
-		configs.RuntimeConfig.DisableBuying()
-		return "BuyingEnabled = " + strconv.FormatBool(configs.RuntimeConfig.IsBuyingEnabled())
+		configs.RuntimeConfig.TradingEnabled = false
+		return "TradingEnabled = " + strconv.FormatBool(configs.RuntimeConfig.TradingEnabled)
 	} else if COMMAND_BUY_START == update.Message.Text {
-		configs.RuntimeConfig.EnableBuying()
-		return "BuyingEnabled = " + strconv.FormatBool(configs.RuntimeConfig.IsBuyingEnabled())
+		configs.RuntimeConfig.TradingEnabled = true
+		return "TradingEnabled = " + strconv.FormatBool(configs.RuntimeConfig.TradingEnabled)
 	}
 	return "Unexpected command"
 }

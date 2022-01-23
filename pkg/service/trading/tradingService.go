@@ -40,6 +40,10 @@ type tradingService struct {
 }
 
 func (s *tradingService) BotAction(coin *domains.Coin) {
+	if !configs.RuntimeConfig.TradingEnabled {
+		return
+	}
+
 	currentPrice, err := s.exchangeApi.GetCurrentCoinPrice(coin)
 	if err != nil {
 		zap.S().Error(err)
@@ -114,10 +118,6 @@ func (s *tradingService) getPriceChangeInPercent(lastTransaction *domains.Transa
 }
 
 func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
-	if !configs.RuntimeConfig.IsBuyingEnabled() {
-		return
-	}
-
 	amountTransaction := s.calculateAmountByPriceAndCost(currentPrice, viper.GetInt64("trading.defaultCost"))
 
 	orderDto, err := s.exchangeApi.BuyCoinByMarket(coin, amountTransaction, currentPrice)
