@@ -121,7 +121,11 @@ func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
 	if configs.RuntimeConfig.HasLimitSpendDay() {
 		var dayAgo = time.Now().AddDate(0, 0, -1)
 		spentForTheLast24Hours, err := s.transactionRepo.CalculateSumOfSpentTransactionsAndCreatedAfter(dayAgo)
-		if spentForTheLast24Hours > int64(configs.RuntimeConfig.LimitSpendDay)*100 || err != nil {
+		if err != nil {
+			zap.S().Errorf("Error on CalculateSumOfSpentTransactionsAndCreatedAfter: %s", err)
+			return
+		}
+		if spentForTheLast24Hours > int64(configs.RuntimeConfig.LimitSpendDay)*100 {
 			zap.S().Infof("Can't submit buy transactions because of spend limitation. spentForTheLast24Hours = [%s], LimitSpendDay=[%s]", spentForTheLast24Hours, configs.RuntimeConfig.LimitSpendDay)
 			return
 		}
