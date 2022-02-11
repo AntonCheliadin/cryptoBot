@@ -3,6 +3,7 @@ package postgres
 import (
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/data/domains"
+	"database/sql"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
@@ -75,9 +76,9 @@ func (r *Transaction) CalculateSumOfSpentTransactions() (int64, error) {
 }
 
 func (r *Transaction) CalculateSumOfSpentTransactionsAndCreatedAfter(date time.Time) (int64, error) {
-	var sumOfSpent int64
+	var sumOfSpent sql.NullInt64
 	err := r.db.Get(&sumOfSpent, "select sum(total_cost) from transaction_table where related_transaction_id is null and created_at > $1", date)
-	return sumOfSpent, err
+	return sumOfSpent.Int64, err
 }
 
 func (r *Transaction) CalculateSumOfProfitByDate(date time.Time) (int64, error) {
