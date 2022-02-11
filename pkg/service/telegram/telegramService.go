@@ -60,7 +60,7 @@ func (s *TelegramService) buildResponse(update *telegram.Update) string {
 		configs.RuntimeConfig.EnableBuying()
 		return "BuyingEnabled = " + strconv.FormatBool(configs.RuntimeConfig.IsBuyingEnabled())
 	} else if strings.HasPrefix(update.Message.Text, COMMAND_LIMIT_SPEND) {
-		isNewLimitSet := s.setLimit(update.Message.Text)
+		isNewLimitSet := s.setLimit(strings.ReplaceAll(update.Message.Text, COMMAND_LIMIT_SPEND, ""))
 		if isNewLimitSet {
 			return "New limit is set"
 		} else {
