@@ -19,6 +19,7 @@ const COMMAND_STATS string = "/stats"
 const COMMAND_PROFIT string = "/profit"
 const COMMAND_BUY_STOP string = "/stop_buying"
 const COMMAND_BUY_START string = "/start_buying"
+const COMMAND_LIMIT_SPEND string = "/limit_spend"
 
 var telegramServiceImpl *TelegramService
 
@@ -57,8 +58,27 @@ func (s *TelegramService) buildResponse(update *telegram.Update) string {
 	} else if COMMAND_BUY_START == update.Message.Text {
 		configs.RuntimeConfig.EnableBuying()
 		return "BuyingEnabled = " + strconv.FormatBool(configs.RuntimeConfig.IsBuyingEnabled())
+	} else if COMMAND_LIMIT_SPEND == update.Message.Text {
+		isNewLimitSet := s.setLimit(update.Message.Text)
+		if isNewLimitSet {
+			return "New limit is set"
+		} else {
+			return "New limit is not set"
+		}
 	}
 	return "Unexpected command"
+}
+
+func (s TelegramService) setLimit(limitInputValue string) bool {
+	limitString := strings.Trim(limitInputValue, " ")
+
+	limitInt, err := strconv.Atoi(limitString)
+	if limitInt < 0 || err != nil {
+		return false
+	}
+
+	configs.RuntimeConfig.LimitSpendDay = limitInt
+	return true
 }
 
 func (s *TelegramService) buildProfitResponse(command string) string {

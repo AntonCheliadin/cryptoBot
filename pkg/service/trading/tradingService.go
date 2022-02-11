@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"math"
+	"time"
 )
 
 type TradingService interface {
@@ -116,6 +117,14 @@ func (s *tradingService) getPriceChangeInPercent(lastTransaction *domains.Transa
 func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
 	if !configs.RuntimeConfig.IsBuyingEnabled() {
 		return
+	}
+	if configs.RuntimeConfig.HasLimitSpendDay() {
+		var dayAgo = time.Now().AddDate(0, 0, -1)
+		spentForTheLast24Hours, err := s.transactionRepo.CalculateSumOfSpentTransactionsAndCreatedAfter(dayAgo)
+		if spentForTheLast24Hours > int64(configs.RuntimeConfig.LimitSpendDay)*100 || err != nil {
+			zap.S().Infof("Can't submit buy transactions because of spend limitation.")
+			return
+		}
 	}
 
 	amountTransaction := s.calculateAmountByPriceAndCost(currentPrice, viper.GetInt64("trading.defaultCost"))

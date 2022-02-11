@@ -20,6 +20,7 @@ type Transaction interface {
 	SaveTransaction(transaction *domains.Transaction) error
 	CalculateSumOfProfit() (int64, error)
 	CalculateSumOfSpentTransactions() (int64, error)
+	CalculateSumOfSpentTransactionsAndCreatedAfter(date time.Time) (int64, error)
 	CalculateSumOfProfitByDate(date time.Time) (int64, error)
 	FindMinPriceByDate(date time.Time) (int64, error)
 	CalculateSumOfSpentTransactionsByDate(date time.Time) (int64, error)

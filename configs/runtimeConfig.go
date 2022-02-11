@@ -8,12 +8,22 @@ func NewRuntimeConfig() *config {
 	}
 	RuntimeConfig = &config{
 		buyingEnabled: true,
+		LimitSpendDay: 500,
 	}
 	return RuntimeConfig
 }
 
 type config struct {
+	/**
+	Transactions switcher, enable/disable buy and sell transactions.
+	*/
 	buyingEnabled bool
+
+	/**
+	Limit spend money for the last 24 hours.
+	 0 - without limit.
+	*/
+	LimitSpendDay int
 }
 
 func (c *config) IsBuyingEnabled() bool {
@@ -24,4 +34,8 @@ func (c *config) EnableBuying() {
 }
 func (c *config) DisableBuying() {
 	c.buyingEnabled = false
+}
+
+func (c *config) HasLimitSpendDay() bool {
+	return c.LimitSpendDay > 0
 }
