@@ -10,6 +10,7 @@ import (
 	"cryptoBot/pkg/util"
 	"fmt"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 	"strconv"
 	"strings"
 	"time"
@@ -73,7 +74,8 @@ func (s TelegramService) setLimit(limitInputValue string) bool {
 	limitString := strings.Trim(limitInputValue, " ")
 
 	limitInt, err := strconv.Atoi(limitString)
-	if limitInt < 0 || err != nil {
+	if err != nil {
+		zap.S().Errorf("Error occured on parsing limit spend: %s", err.Error())
 		return false
 	}
 
