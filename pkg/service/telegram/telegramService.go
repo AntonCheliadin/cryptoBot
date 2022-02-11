@@ -88,9 +88,9 @@ func (s *TelegramService) buildProfitResponse(command string) string {
 
 	shortResult := false
 
-	if strings.Contains(daysString, "short") {
+	if strings.Contains(daysString, "_short") {
 		shortResult = true
-		daysString = strings.ReplaceAll(daysString, "short", "")
+		daysString = strings.ReplaceAll(daysString, "_short", "")
 	}
 
 	dayInt, err := strconv.Atoi(daysString)
