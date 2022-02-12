@@ -1,5 +1,10 @@
 package configs
 
+import (
+	telegramApi "cryptoBot/pkg/api/telegram"
+	"time"
+)
+
 var RuntimeConfig *config
 
 func NewRuntimeConfig() *config {
@@ -34,6 +39,16 @@ func (c *config) EnableBuying() {
 }
 func (c *config) DisableBuying() {
 	c.buyingEnabled = false
+}
+func (c *config) DisableBuyingForHour() {
+	c.buyingEnabled = false
+	telegramApi.SendTextToTelegramChat("Trading has been disabled for an hour.")
+
+	select {
+	case <-time.After(time.Hour):
+		c.EnableBuying()
+		telegramApi.SendTextToTelegramChat("Trading has been enabled.")
+	}
 }
 
 func (c *config) HasLimitSpendDay() bool {

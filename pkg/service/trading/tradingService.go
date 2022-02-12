@@ -137,6 +137,7 @@ func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
 	if err != nil || orderDto.GetAmount() == 0 {
 		zap.S().Errorf("Error during buy coin by market")
 		telegramApi.SendTextToTelegramChat("Error during buy coin by market")
+		configs.RuntimeConfig.DisableBuyingForHour()
 		return
 	}
 
