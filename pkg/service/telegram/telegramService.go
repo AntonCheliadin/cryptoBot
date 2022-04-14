@@ -4,11 +4,13 @@ import (
 	"cryptoBot/configs"
 	"cryptoBot/pkg/api"
 	telegramApi "cryptoBot/pkg/api/telegram"
+	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/data/dto/telegram"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/util"
 	"fmt"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +20,7 @@ const COMMAND_STATS string = "/stats"
 const COMMAND_PROFIT string = "/profit"
 const COMMAND_BUY_STOP string = "/stop_buying"
 const COMMAND_BUY_START string = "/start_buying"
+const COMMAND_LIMIT_SPEND string = "/limit_spend"
 
 var telegramServiceImpl *TelegramService
 
@@ -56,12 +59,39 @@ func (s *TelegramService) buildResponse(update *telegram.Update) string {
 	} else if COMMAND_BUY_START == update.Message.Text {
 		configs.RuntimeConfig.TradingEnabled = true
 		return "TradingEnabled = " + strconv.FormatBool(configs.RuntimeConfig.TradingEnabled)
+	} else if strings.HasPrefix(update.Message.Text, COMMAND_LIMIT_SPEND) {
+		isNewLimitSet := s.setLimit(strings.ReplaceAll(update.Message.Text, COMMAND_LIMIT_SPEND, ""))
+		if isNewLimitSet {
+			return "New limit is set"
+		} else {
+			return "New limit is not set"
+		}
 	}
 	return "Unexpected command"
 }
 
+func (s TelegramService) setLimit(limitInputValue string) bool {
+	limitString := strings.Trim(limitInputValue, " ")
+
+	limitInt, err := strconv.Atoi(limitString)
+	if err != nil {
+		zap.S().Errorf("Error occured on parsing limit spend: %s", err.Error())
+		return false
+	}
+
+	configs.RuntimeConfig.LimitSpendDay = limitInt
+	return true
+}
+
 func (s *TelegramService) buildProfitResponse(command string) string {
 	daysString := strings.Trim(command, " ")
+
+	shortResult := false
+
+	if strings.Contains(daysString, "_short") {
+		shortResult = true
+		daysString = strings.ReplaceAll(daysString, "_short", "")
+	}
 
 	dayInt, err := strconv.Atoi(daysString)
 	if dayInt == 0 || err != nil {
@@ -73,26 +103,51 @@ func (s *TelegramService) buildProfitResponse(command string) string {
 	dayIterator := maxDate.AddDate(0, 0, -dayInt)
 
 	response := "<pre>\n" +
-		"|    Date    |  Profit  |  Not sold  |\n" +
-		"|------------|----------|------------|\n"
+		"|    Date    |  Profit  |\n" +
+		"|------------|----------|"
+
+	if !shortResult {
+		response = "<pre>\n" +
+			"|    Date    |  Profit  |   Bought   |    Sold    |  Not sold  |  Min price |\n" +
+			"|------------|----------|------------|------------|------------|------------|"
+	}
 
 	sumProfit := int64(0)
 	sumNotSold := int64(0)
+	sumBought := int64(0)
+	sumSold := int64(0)
 
 	for dayIterator.Before(maxDate) || dayIterator.Equal(maxDate) {
 		profitInCentsByDate, _ := s.transactionRepo.CalculateSumOfProfitByDate(dayIterator)
-		spentInCentsByDate, _ := s.transactionRepo.CalculateSumOfSpentTransactionsByDate(dayIterator)
 		sumProfit += profitInCentsByDate
-		sumNotSold += spentInCentsByDate
 
-		response += fmt.Sprintf("| %v | %8v | %10v |\n", dayIterator.Format("2006-01-02"),
-			util.RoundCentsToUsd(profitInCentsByDate), util.RoundCentsToUsd(spentInCentsByDate))
+		response += fmt.Sprintf("\n| %v | %8v |", dayIterator.Format(constants.DATE_FORMAT),
+			util.RoundCentsToUsd(profitInCentsByDate))
+
+		if !shortResult {
+			spentInCentsByDate, _ := s.transactionRepo.CalculateSumOfSpentTransactionsByDate(dayIterator)
+			boughtInCentsByDate, _ := s.transactionRepo.CalculateSumOfTransactionsByDateAndType(dayIterator, constants.BUY)
+			soldInCentsByDate, _ := s.transactionRepo.CalculateSumOfTransactionsByDateAndType(dayIterator, constants.SELL)
+			minPrice, _ := s.transactionRepo.FindMinPriceByDate(dayIterator)
+			sumNotSold += spentInCentsByDate
+			sumBought += boughtInCentsByDate
+			sumSold += soldInCentsByDate
+
+			response += fmt.Sprintf(" %10v | %10v | %10v | %10v |",
+				util.RoundCentsToUsd(boughtInCentsByDate), util.RoundCentsToUsd(soldInCentsByDate),
+				util.RoundCentsToUsd(spentInCentsByDate), util.RoundCentsToUsd(minPrice))
+		}
 
 		dayIterator = dayIterator.AddDate(0, 0, 1)
 	}
-	response += fmt.Sprintf("|------------|----------|------------|\n|   total    | %8v | %10v |\n</pre>",
-		util.RoundCentsToUsd(sumProfit), util.RoundCentsToUsd(sumNotSold))
 
+	if !shortResult {
+		response += fmt.Sprintf("\n|------------|----------|------------|------------|------------|------------|\n|   total    | %8v | %10v | %10v | %10v | %10v |\n</pre>",
+			util.RoundCentsToUsd(sumProfit), util.RoundCentsToUsd(sumBought), util.RoundCentsToUsd(sumSold), util.RoundCentsToUsd(sumNotSold), "")
+	} else {
+		response += fmt.Sprintf("\n|------------|----------|\n|   total    | %8v |\n</pre>",
+			util.RoundCentsToUsd(sumProfit))
+	}
 	return response
 }
 
@@ -120,10 +175,10 @@ func (s *TelegramService) buildStatistics(command string) string {
 
 	if date, err := util.ParseDate(command); err == nil {
 		spentInCentsByDate, _ := s.transactionRepo.CalculateSumOfSpentTransactionsByDate(date)
-		response += fmt.Sprintf("\n%v spent %v \n", date.Format("2006-01-02"), util.RoundCentsToUsd(spentInCentsByDate))
+		response += fmt.Sprintf("\n%v spent %v \n", date.Format(constants.DATE_FORMAT), util.RoundCentsToUsd(spentInCentsByDate))
 
 		profitInCentsByDate, _ := s.transactionRepo.CalculateSumOfProfitByDate(date)
-		response += fmt.Sprintf("%v profit %v", date.Format("2006-01-02"), util.RoundCentsToUsd(profitInCentsByDate))
+		response += fmt.Sprintf("%v profit %v", date.Format(constants.DATE_FORMAT), util.RoundCentsToUsd(profitInCentsByDate))
 
 		if spentInCentsByDate > 0 && profitInCentsByDate > 0 {
 			response += fmt.Sprintf(" (%.2f %%) \n", (float64(profitInCentsByDate)/float64(spentInCentsByDate))*100)

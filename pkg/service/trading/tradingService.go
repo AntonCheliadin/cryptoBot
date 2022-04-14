@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"math"
+	"time"
 )
 
 type TradingService interface {
@@ -118,12 +119,29 @@ func (s *tradingService) getPriceChangeInPercent(lastTransaction *domains.Transa
 }
 
 func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
+	if !configs.RuntimeConfig.TradingEnabled {
+		return
+	}
+	if configs.RuntimeConfig.HasLimitSpendDay() {
+		var dayAgo = time.Now().AddDate(0, 0, -1)
+		spentForTheLast24Hours, err := s.transactionRepo.CalculateSumOfSpentTransactionsAndCreatedAfter(dayAgo)
+		if err != nil {
+			zap.S().Errorf("Error on CalculateSumOfSpentTransactionsAndCreatedAfter: %s", err)
+			return
+		}
+		if spentForTheLast24Hours > int64(configs.RuntimeConfig.LimitSpendDay)*100 {
+			zap.S().Infof("Can't submit buy transactions because of spend limitation. spentForTheLast24Hours = [%s], LimitSpendDay=[%s]", spentForTheLast24Hours, configs.RuntimeConfig.LimitSpendDay)
+			return
+		}
+	}
+
 	amountTransaction := s.calculateAmountByPriceAndCost(currentPrice, viper.GetInt64("trading.defaultCost"))
 
 	orderDto, err := s.exchangeApi.BuyCoinByMarket(coin, amountTransaction, currentPrice)
 	if err != nil || orderDto.GetAmount() == 0 {
 		zap.S().Errorf("Error during buy coin by market")
 		telegramApi.SendTextToTelegramChat("Error during buy coin by market")
+		configs.RuntimeConfig.DisableBuyingForHour()
 		return
 	}
 

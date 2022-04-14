@@ -16,11 +16,15 @@ type Transaction interface {
 	FindLastByCoinId(coinId int64) (*domains.Transaction, error)
 	FindLastByCoinIdAndType(coinId int64, transactionType constants.TransactionType) (*domains.Transaction, error)
 	FindLastBoughtNotSold(coinId int64) (*domains.Transaction, error)
+	FindLastBoughtNotSoldAndDate(date time.Time) (*domains.Transaction, error)
 	SaveTransaction(transaction *domains.Transaction) error
 	CalculateSumOfProfit() (int64, error)
 	CalculateSumOfSpentTransactions() (int64, error)
+	CalculateSumOfSpentTransactionsAndCreatedAfter(date time.Time) (int64, error)
 	CalculateSumOfProfitByDate(date time.Time) (int64, error)
+	FindMinPriceByDate(date time.Time) (int64, error)
 	CalculateSumOfSpentTransactionsByDate(date time.Time) (int64, error)
+	CalculateSumOfTransactionsByDateAndType(date time.Time, transType constants.TransactionType) (int64, error)
 }
 
 type PriceChange interface {

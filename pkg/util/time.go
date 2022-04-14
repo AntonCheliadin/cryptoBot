@@ -1,6 +1,7 @@
 package util
 
 import (
+	"cryptoBot/pkg/constants"
 	"fmt"
 	"strconv"
 	"strings"
@@ -13,8 +14,7 @@ func MakeTimestamp() string {
 }
 
 func GetMillisByDate(date string) int64 {
-	layout := "2006-01-02"
-	t, _ := time.Parse(layout, date)
+	t, _ := time.Parse(constants.DATE_FORMAT, date)
 	return t.UnixNano() / 1000000
 }
 
@@ -34,8 +34,7 @@ func ParseDate(date string) (time.Time, error) {
 		return GetDateByDayOfCurrentMonth(dateString)
 	}
 
-	layout := "2006-01-02"
-	parsedDate, err := time.Parse(layout, dateString)
+	parsedDate, err := time.Parse(constants.DATE_FORMAT, dateString)
 	return parsedDate, err
 }
 
