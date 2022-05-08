@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 func NewBinanceApi() api.ExchangeApi {
@@ -25,6 +26,10 @@ func NewBinanceApi() api.ExchangeApi {
 
 //https://binance-docs.github.io/apidocs/spot/en/#test-connectivity
 type BinanceApi struct {
+}
+
+func (api *BinanceApi) GetKlines(coin *domains.Coin, interval string, limit int, fromTime time.Time) (*api.KlinesDto, error) {
+	return nil, errors.New("Not implemented for Binance API")
 }
 
 func (api *BinanceApi) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {

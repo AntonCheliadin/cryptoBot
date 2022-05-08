@@ -11,7 +11,7 @@ type Kline struct {
 
 	OpenTime  time.Time `db:"open_time"`
 	CloseTime time.Time `db:"close_time"`
-	Interval  string
+	Interval  string    //Data refresh interval. Enum : 1 3 5 15 30 60 120 240 360 720 "D" "M" "W"
 
 	Open  int64
 	High  int64

@@ -2,9 +2,11 @@ package mock
 
 import (
 	"cryptoBot/pkg/api"
+	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/data/domains"
 	"errors"
 	"fmt"
+	"time"
 )
 
 func NewBinanceApiMock() api.ExchangeApi {
@@ -12,6 +14,17 @@ func NewBinanceApiMock() api.ExchangeApi {
 }
 
 type BinanceApiMock struct {
+}
+
+func (api *BinanceApiMock) GetKlines(coin *domains.Coin, interval string, limit int, fromTime time.Time) (*api.KlinesDto, error) {
+	return nil, errors.New("Not implemented for Binance API")
+}
+
+func (api *BinanceApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, futuresType constants.FuturesType, leverage int) (api.OrderResponseDto, error) {
+	return nil, errors.New("Futures api is not implemented")
+}
+func (api *BinanceApiMock) CloseFuturesOrder(openedTransaction *domains.Transaction) (api.OrderResponseDto, error) {
+	return nil, errors.New("Futures api is not implemented")
 }
 
 func (api *BinanceApiMock) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {

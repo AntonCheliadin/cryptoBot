@@ -15,7 +15,15 @@ func MakeTimestamp() string {
 
 func GetMillisByDate(date string) int64 {
 	t, _ := time.Parse(constants.DATE_FORMAT, date)
-	return t.UnixNano() / 1000000
+	return t.UnixNano() / int64(time.Millisecond)
+}
+
+func GetSecondsByTime(date time.Time) int {
+	return int(date.UnixNano() / int64(time.Second))
+}
+
+func GetTimeByMillis(millis int) time.Time {
+	return time.Unix(0, int64(millis)*int64(time.Millisecond))
 }
 
 func ParseDate(date string) (time.Time, error) {
