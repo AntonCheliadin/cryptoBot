@@ -39,6 +39,10 @@ type Transaction struct {
 
 	/* (Profit)/BUY.TotalCost * 100% */
 	PercentProfit sql.NullFloat64 `db:"percent_profit"`
+
+	TradingStrategy constants.TradingStrategy `db:"trading_strategy"`
+
+	FuturesType constants.FuturesType `db:"futures_type"`
 }
 
 func (t *Transaction) String() string {

@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 )
 
@@ -23,4 +24,15 @@ func AlmostEquals(money1 int64, money2 int64) bool {
 	changedInPercents := CalculatePercentsAbs(money2, money1)
 
 	return changedInPercents < 0.02
+}
+
+func CalculateAmountByPriceAndCost(currentPriceWithCents int64, costWithoutCents int64) float64 {
+	amount := float64(costWithoutCents*100) / float64(currentPriceWithCents)
+	if amount > 10 {
+		return math.Round(amount)
+	} else if amount > 0.1 {
+		return math.Round(amount*100) / 100
+	} else {
+		return math.Round(amount*1000000) / 1000000
+	}
 }

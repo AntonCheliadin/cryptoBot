@@ -7,6 +7,8 @@ import (
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
 	"cryptoBot/pkg/service/analyser"
+	"cryptoBot/pkg/service/date"
+	"cryptoBot/pkg/service/exchange"
 	"cryptoBot/pkg/service/trading"
 	"fmt"
 	"github.com/jmoiron/sqlx"
@@ -66,11 +68,14 @@ func main() {
 	exchangeApi := binance.NewBinanceApi()
 	mockExchangeApi := mock.NewBinanceApiMock()
 
-	tradingService := trading.NewTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi)
-	analyserService := analyser.NewAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, tradingService)
+	//tradingService := trading.NewHolderStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi)
+	//analyserService := analyser.NewAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, tradingService)
+	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, exchangeApi, date.GetClock(), repos.Kline)
+	maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi, date.GetClock(), exchangeDataService)
+	analyserService := analyser.NewMovingAverageStrategyAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, maTradingService)
 
 	coin, _ := repos.Coin.FindBySymbol("LUNAUSDT")
-	analyserService.AnalyseCoin(coin, "2021-12-08", "2021-12-10", "1m")
+	analyserService.AnalyseCoin(coin, "2021-12-08", "2021-12-10")
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())

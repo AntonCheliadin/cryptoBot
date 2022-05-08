@@ -4,11 +4,13 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"cryptoBot/pkg/api"
+	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/data/dto/binance"
 	"cryptoBot/pkg/util"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go.uber.org/zap"
 	"io/ioutil"
@@ -21,6 +23,7 @@ func NewBinanceApi() api.ExchangeApi {
 	return &BinanceApi{}
 }
 
+//https://binance-docs.github.io/apidocs/spot/en/#test-connectivity
 type BinanceApi struct {
 }
 
@@ -115,4 +118,11 @@ func (api *BinanceApi) sign(data string) string {
 	sha := hex.EncodeToString(h.Sum(nil))
 
 	return sha
+}
+
+func (api *BinanceApi) OpenFuturesOrder(coin *domains.Coin, amount float64, futuresType constants.FuturesType, leverage int) (api.OrderResponseDto, error) {
+	return nil, errors.New("Futures api is not implemented")
+}
+func (api *BinanceApi) CloseFuturesOrder(openedTransaction *domains.Transaction) (api.OrderResponseDto, error) {
+	return nil, errors.New("Futures api is not implemented")
 }

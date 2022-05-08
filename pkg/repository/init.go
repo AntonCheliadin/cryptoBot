@@ -13,18 +13,20 @@ type Coin interface {
 }
 
 type Transaction interface {
-	FindLastByCoinId(coinId int64) (*domains.Transaction, error)
-	FindLastByCoinIdAndType(coinId int64, transactionType constants.TransactionType) (*domains.Transaction, error)
-	FindLastBoughtNotSold(coinId int64) (*domains.Transaction, error)
-	FindLastBoughtNotSoldAndDate(date time.Time) (*domains.Transaction, error)
+	FindLastByCoinId(coinId int64, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error)
+	FindLastByCoinIdAndType(coinId int64, transactionType constants.TransactionType, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error)
+	FindLastBoughtNotSold(coinId int64, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error)
+	FindLastBoughtNotSoldAndDate(date time.Time, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error)
 	SaveTransaction(transaction *domains.Transaction) error
-	CalculateSumOfProfit() (int64, error)
-	CalculateSumOfSpentTransactions() (int64, error)
-	CalculateSumOfSpentTransactionsAndCreatedAfter(date time.Time) (int64, error)
-	CalculateSumOfProfitByDate(date time.Time) (int64, error)
-	FindMinPriceByDate(date time.Time) (int64, error)
-	CalculateSumOfSpentTransactionsByDate(date time.Time) (int64, error)
-	CalculateSumOfTransactionsByDateAndType(date time.Time, transType constants.TransactionType) (int64, error)
+	CalculateSumOfProfit(tradingStrategy constants.TradingStrategy) (int64, error)
+	CalculateSumOfSpentTransactions(tradingStrategy constants.TradingStrategy) (int64, error)
+	CalculateSumOfSpentTransactionsAndCreatedAfter(date time.Time, tradingStrategy constants.TradingStrategy) (int64, error)
+	CalculateSumOfProfitByDate(date time.Time, tradingStrategy constants.TradingStrategy) (int64, error)
+	FindMinPriceByDate(date time.Time, tradingStrategy constants.TradingStrategy) (int64, error)
+	CalculateSumOfSpentTransactionsByDate(date time.Time, tradingStrategy constants.TradingStrategy) (int64, error)
+	CalculateSumOfTransactionsByDateAndType(date time.Time, transType constants.TransactionType, tradingStrategy constants.TradingStrategy) (int64, error)
+
+	FindOpenedTransaction(tradingStrategy constants.TradingStrategy) (*domains.Transaction, error)
 }
 
 type PriceChange interface {
@@ -32,10 +34,17 @@ type PriceChange interface {
 	SavePriceChange(priceChange *domains.PriceChange) error
 }
 
+type Kline interface {
+	FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coinId int64, interval string, closeTime time.Time, limit int64) ([]*domains.Kline, error)
+	SaveKline(domain *domains.Kline) error
+	FindAtMoment(coinId int64, momentTime time.Time, interval string) (*domains.Kline, error)
+}
+
 type Repository struct {
 	Coin        Coin
 	Transaction Transaction
 	PriceChange PriceChange
+	Kline       Kline
 }
 
 func NewRepositories(postgresDb *sqlx.DB) *Repository {
@@ -43,5 +52,6 @@ func NewRepositories(postgresDb *sqlx.DB) *Repository {
 		Coin:        postgres.NewCoin(postgresDb),
 		Transaction: postgres.NewTransaction(postgresDb),
 		PriceChange: postgres.NewPriceChange(postgresDb),
+		Kline:       postgres.NewKline(postgresDb),
 	}
 }

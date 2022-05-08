@@ -72,7 +72,7 @@ func main() {
 
 	exchangeApi := binance.NewBinanceApi()
 
-	tradingService := trading.NewTradingService(repos.Transaction, repos.PriceChange, exchangeApi)
+	tradingService := trading.NewHolderStrategyTradingService(repos.Transaction, repos.PriceChange, exchangeApi)
 	telegramService := telegram.NewTelegramService(repos.Transaction, repos.Coin, exchangeApi)
 
 	if enabled, err := strconv.ParseBool(os.Getenv("TRADING_ENABLED")); enabled && err == nil {

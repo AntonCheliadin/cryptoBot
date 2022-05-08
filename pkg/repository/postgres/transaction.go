@@ -19,9 +19,9 @@ type Transaction struct {
 	db *sqlx.DB
 }
 
-func (r *Transaction) FindLastByCoinId(coinId int64) (*domains.Transaction, error) {
+func (r *Transaction) find(query string, args ...interface{}) (*domains.Transaction, error) {
 	var transaction domains.Transaction
-	if err := r.db.Get(&transaction, "SELECT * FROM transaction_table WHERE coin_id=$1 order by created_at desc limit 1", int64(coinId)); err != nil {
+	if err := r.db.Get(&transaction, query, args); err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, nil
 		}
@@ -30,9 +30,14 @@ func (r *Transaction) FindLastByCoinId(coinId int64) (*domains.Transaction, erro
 	return &transaction, nil
 }
 
-func (r *Transaction) FindLastByCoinIdAndType(coinId int64, transactionType constants.TransactionType) (*domains.Transaction, error) {
+//language=SQL
+func (r *Transaction) FindOpenedTransaction(tradingStrategy constants.TradingStrategy) (*domains.Transaction, error) {
+	return r.find("SELECT * FROM transaction_table WHERE related_transaction_id is null AND trading_strategy=$1 order by created_at desc limit 1", tradingStrategy)
+}
+
+func (r *Transaction) FindLastByCoinId(coinId int64, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error) {
 	var transaction domains.Transaction
-	if err := r.db.Get(&transaction, "SELECT * FROM transaction_table WHERE coin_id=$1 and transaction_type=$2 order by created_at desc limit 1", int64(coinId), transactionType); err != nil {
+	if err := r.db.Get(&transaction, "SELECT * FROM transaction_table WHERE coin_id=$1 AND trading_strategy=$2 order by created_at desc limit 1", coinId, tradingStrategy); err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, nil
 		}
@@ -41,9 +46,9 @@ func (r *Transaction) FindLastByCoinIdAndType(coinId int64, transactionType cons
 	return &transaction, nil
 }
 
-func (r *Transaction) FindLastBoughtNotSold(coinId int64) (*domains.Transaction, error) {
+func (r *Transaction) FindLastByCoinIdAndType(coinId int64, transactionType constants.TransactionType, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error) {
 	var transaction domains.Transaction
-	if err := r.db.Get(&transaction, "SELECT * FROM transaction_table WHERE coin_id=$1 and transaction_type=$2 and related_transaction_id is null order by created_at desc limit 1", int64(coinId), constants.BUY); err != nil {
+	if err := r.db.Get(&transaction, "SELECT * FROM transaction_table WHERE coin_id=$1 and transaction_type=$2 AND trading_strategy=$3 order by created_at desc limit 1", coinId, transactionType, tradingStrategy); err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, nil
 		}
@@ -52,9 +57,9 @@ func (r *Transaction) FindLastBoughtNotSold(coinId int64) (*domains.Transaction,
 	return &transaction, nil
 }
 
-func (r *Transaction) FindLastBoughtNotSoldAndDate(date time.Time) (*domains.Transaction, error) {
+func (r *Transaction) FindLastBoughtNotSold(coinId int64, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error) {
 	var transaction domains.Transaction
-	if err := r.db.Get(&transaction, "SELECT * FROM transaction_table WHERE transaction_type=$1 and related_transaction_id is null and date_trunc('day', created_at) = $2 order by created_at desc limit 1", constants.BUY, date); err != nil {
+	if err := r.db.Get(&transaction, "SELECT * FROM transaction_table WHERE coin_id=$1 and transaction_type=$2 and related_transaction_id is null AND trading_strategy=$3 order by created_at desc limit 1", int64(coinId), constants.BUY, tradingStrategy); err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, nil
 		}
@@ -63,45 +68,56 @@ func (r *Transaction) FindLastBoughtNotSoldAndDate(date time.Time) (*domains.Tra
 	return &transaction, nil
 }
 
-func (r *Transaction) CalculateSumOfProfit() (int64, error) {
+func (r *Transaction) FindLastBoughtNotSoldAndDate(date time.Time, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error) {
+	var transaction domains.Transaction
+	if err := r.db.Get(&transaction, "SELECT * FROM transaction_table WHERE transaction_type=$1 and related_transaction_id is null and date_trunc('day', created_at) = $2 AND trading_strategy=$3 order by created_at desc limit 1", constants.BUY, date, tradingStrategy); err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &transaction, nil
+}
+
+func (r *Transaction) CalculateSumOfProfit(tradingStrategy constants.TradingStrategy) (int64, error) {
 	var sumOfProfit int64
-	err := r.db.Get(&sumOfProfit, "select sum(profit) from transaction_table where profit is not null")
+	err := r.db.Get(&sumOfProfit, "select sum(profit) from transaction_table where profit is not null AND trading_strategy=$1", tradingStrategy)
 	return sumOfProfit, err
 }
 
-func (r *Transaction) CalculateSumOfSpentTransactions() (int64, error) {
+func (r *Transaction) CalculateSumOfSpentTransactions(tradingStrategy constants.TradingStrategy) (int64, error) {
 	var sumOfSpent int64
-	err := r.db.Get(&sumOfSpent, "select sum(total_cost) from transaction_table where related_transaction_id is null")
+	err := r.db.Get(&sumOfSpent, "select sum(total_cost) from transaction_table where related_transaction_id is null AND trading_strategy=$1", tradingStrategy)
 	return sumOfSpent, err
 }
 
-func (r *Transaction) CalculateSumOfSpentTransactionsAndCreatedAfter(date time.Time) (int64, error) {
+func (r *Transaction) CalculateSumOfSpentTransactionsAndCreatedAfter(date time.Time, tradingStrategy constants.TradingStrategy) (int64, error) {
 	var sumOfSpent sql.NullInt64
-	err := r.db.Get(&sumOfSpent, "select sum(total_cost) from transaction_table where related_transaction_id is null and created_at > $1", date)
+	err := r.db.Get(&sumOfSpent, "select sum(total_cost) from transaction_table where related_transaction_id is null and created_at > $1 AND trading_strategy=$2", date, tradingStrategy)
 	return sumOfSpent.Int64, err
 }
 
-func (r *Transaction) CalculateSumOfProfitByDate(date time.Time) (int64, error) {
+func (r *Transaction) CalculateSumOfProfitByDate(date time.Time, tradingStrategy constants.TradingStrategy) (int64, error) {
 	var sumOfProfit int64
-	err := r.db.Get(&sumOfProfit, "select sum(profit) from transaction_table where profit is not null and date_trunc('day', created_at) = $1", date)
+	err := r.db.Get(&sumOfProfit, "select sum(profit) from transaction_table where profit is not null and date_trunc('day', created_at) = $1 AND trading_strategy=$2", date, tradingStrategy)
 	return sumOfProfit, err
 }
 
-func (r *Transaction) FindMinPriceByDate(date time.Time) (int64, error) {
+func (r *Transaction) FindMinPriceByDate(date time.Time, tradingStrategy constants.TradingStrategy) (int64, error) {
 	var sumOfSpent int64
-	err := r.db.Get(&sumOfSpent, "select min(price) from transaction_table where date_trunc('day', created_at) = $1", date)
+	err := r.db.Get(&sumOfSpent, "select min(price) from transaction_table where date_trunc('day', created_at) = $1 AND trading_strategy=$2", date, tradingStrategy)
 	return sumOfSpent, err
 }
 
-func (r *Transaction) CalculateSumOfSpentTransactionsByDate(date time.Time) (int64, error) {
+func (r *Transaction) CalculateSumOfSpentTransactionsByDate(date time.Time, tradingStrategy constants.TradingStrategy) (int64, error) {
 	var sumOfSpent int64
-	err := r.db.Get(&sumOfSpent, "select sum(total_cost) from transaction_table where related_transaction_id is null and date_trunc('day', created_at) = $1", date)
+	err := r.db.Get(&sumOfSpent, "select sum(total_cost) from transaction_table where related_transaction_id is null and date_trunc('day', created_at) = $1 AND trading_strategy=$2", date, tradingStrategy)
 	return sumOfSpent, err
 }
 
-func (r *Transaction) CalculateSumOfTransactionsByDateAndType(date time.Time, transType constants.TransactionType) (int64, error) {
+func (r *Transaction) CalculateSumOfTransactionsByDateAndType(date time.Time, transType constants.TransactionType, tradingStrategy constants.TradingStrategy) (int64, error) {
 	var sumOfSpent int64
-	err := r.db.Get(&sumOfSpent, "select sum(total_cost) from transaction_table where date_trunc('day', created_at) = $1 and transaction_type = $2", date, transType)
+	err := r.db.Get(&sumOfSpent, "select sum(total_cost) from transaction_table where date_trunc('day', created_at) = $1 and transaction_type = $2 AND trading_strategy=$3", date, transType, tradingStrategy)
 	return sumOfSpent, err
 }
 
@@ -114,8 +130,8 @@ func (r *Transaction) SaveTransaction(trnsctn *domains.Transaction) error {
 	utc, _ := time.LoadLocation("UTC")
 	if trnsctn.Id == 0 {
 		transactionId := int64(0)
-		err := tx.QueryRow("INSERT INTO transaction_table (coin_id, transaction_type, amount, price, total_cost, created_at, client_order_id, api_error, related_transaction_id, profit, percent_profit, commission) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id",
-			trnsctn.CoinId, trnsctn.TransactionType, trnsctn.Amount, trnsctn.Price, trnsctn.TotalCost, time.Now().In(utc), trnsctn.ClientOrderId, trnsctn.ApiError, trnsctn.RelatedTransactionId, trnsctn.Profit, trnsctn.PercentProfit, trnsctn.Commission,
+		err := tx.QueryRow("INSERT INTO transaction_table (coin_id, transaction_type, amount, price, total_cost, created_at, client_order_id, api_error, related_transaction_id, profit, percent_profit, commission, trading_strategy) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id",
+			trnsctn.CoinId, trnsctn.TransactionType, trnsctn.Amount, trnsctn.Price, trnsctn.TotalCost, time.Now().In(utc), trnsctn.ClientOrderId, trnsctn.ApiError, trnsctn.RelatedTransactionId, trnsctn.Profit, trnsctn.PercentProfit, trnsctn.Commission, trnsctn.TradingStrategy,
 		).Scan(&transactionId)
 		if err != nil {
 			_ = tx.Rollback()
