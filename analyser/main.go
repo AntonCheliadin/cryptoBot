@@ -1,8 +1,8 @@
 package main
 
 import (
-	"cryptoBot/pkg/api/binance"
 	"cryptoBot/pkg/api/binance/mock"
+	"cryptoBot/pkg/api/bybit"
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
@@ -65,17 +65,20 @@ func main() {
 
 	repos := repository.NewRepositories(postgresDb)
 
-	exchangeApi := binance.NewBinanceApi()
+	//exchangeApi := binance.NewBinanceApi()
+	//mockExchangeApi := mock.NewBinanceApiMock()
+
+	exchangeApi := bybit.NewBybitApi()
 	mockExchangeApi := mock.NewBinanceApiMock()
 
 	//tradingService := trading.NewHolderStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi)
 	//analyserService := analyser.NewAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, tradingService)
 	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, exchangeApi, date.GetClock(), repos.Kline)
-	maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi, date.GetClock(), exchangeDataService)
-	analyserService := analyser.NewMovingAverageStrategyAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, maTradingService)
+	maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi, date.GetClock(), exchangeDataService, repos.Kline)
+	analyserService := analyser.NewMovingAverageStrategyAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, maTradingService, repos.Kline)
 
-	coin, _ := repos.Coin.FindBySymbol("LUNAUSDT")
-	analyserService.AnalyseCoin(coin, "2021-12-08", "2021-12-10")
+	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
+	analyserService.AnalyseCoin(coin, "2022-05-12", "2022-05-13")
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())

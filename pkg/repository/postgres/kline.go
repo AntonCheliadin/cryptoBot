@@ -17,9 +17,9 @@ type Kline struct {
 	db *sqlx.DB
 }
 
-func (r *Kline) find(query string, args ...interface{}) (*domains.Kline, error) {
+func (r *Kline) find(query string, arguments ...interface{}) (*domains.Kline, error) {
 	var domain domains.Kline
-	if err := r.db.Get(&domain, query, args); err != nil {
+	if err := r.db.Get(&domain, query, arguments); err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, nil
 		}
@@ -29,15 +29,21 @@ func (r *Kline) find(query string, args ...interface{}) (*domains.Kline, error) 
 }
 
 //language=SQL
-func (r *Kline) FindAtMoment(coinId int64, momentTime time.Time, interval string) (*domains.Kline, error) {
-	return r.find("SELECT * FROM kline WHERE coin_id = $1 AND interval = $2 AND open_time >= $3 AND close_time <= $3 ",
-		coinId, interval, momentTime)
+func (r *Kline) FindOpenedAtMoment(coinId int64, momentTime time.Time, interval string) (*domains.Kline, error) {
+	var domain domains.Kline
+	if err := r.db.Get(&domain, "SELECT * FROM kline WHERE coin_id = $1 AND interval = $2 AND open_time = $3", coinId, interval, momentTime); err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &domain, nil
 }
 
 func (r *Kline) FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(
 	coinId int64, interval string, closeTime time.Time, limit int64) ([]*domains.Kline, error) {
 	var klines []domains.Kline
-	err := r.db.Select(&klines, "SELECT * FROM kline WHERE coin_id = $1 AND interval = $2 AND close_time <= $3 ORDER BY open_time ASC LIMIT &4 ",
+	err := r.db.Select(&klines, "SELECT * FROM kline WHERE coin_id = $1 AND interval = $2 AND close_time <= $3 ORDER BY open_time DESC LIMIT $4",
 		coinId, interval, closeTime, limit)
 
 	if err != nil {
@@ -47,9 +53,10 @@ func (r *Kline) FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLim
 	return listRelationsToListRelationsPointers(klines), nil
 }
 
+/* Sort ASC */
 func listRelationsToListRelationsPointers(domainList []domains.Kline) []*domains.Kline {
 	result := make([]*domains.Kline, 0, len(domainList))
-	for i := range domainList {
+	for i := len(domainList) - 1; i >= 0; i-- {
 		result = append(result, &domainList[i])
 	}
 	return result

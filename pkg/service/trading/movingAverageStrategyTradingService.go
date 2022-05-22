@@ -9,7 +9,7 @@ import (
 	"cryptoBot/pkg/service/date"
 	"cryptoBot/pkg/service/exchange"
 	"cryptoBot/pkg/util"
-	"fmt"
+	"errors"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -17,11 +17,12 @@ import (
 var movingAverageStrategyTradingServiceImpl *MovingAverageStrategyTradingService
 
 func NewMAStrategyTradingService(transactionRepo repository.Transaction, priceChangeRepo repository.PriceChange,
-	exchangeApi api.ExchangeApi, clock date.Clock, exchangeDataService *exchange.DataService) *MovingAverageStrategyTradingService {
+	exchangeApi api.ExchangeApi, clock date.Clock, exchangeDataService *exchange.DataService, klineRepo repository.Kline) *MovingAverageStrategyTradingService {
 	if movingAverageStrategyTradingServiceImpl != nil {
 		panic("Unexpected try to create second service instance")
 	}
 	movingAverageStrategyTradingServiceImpl = &MovingAverageStrategyTradingService{
+		klineRepo:           klineRepo,
 		transactionRepo:     transactionRepo,
 		priceChangeRepo:     priceChangeRepo,
 		exchangeApi:         exchangeApi,
@@ -86,7 +87,7 @@ func (s *MovingAverageStrategyTradingService) BotSingleAction(coin *domains.Coin
 }
 
 func (s *MovingAverageStrategyTradingService) openOrder(coin *domains.Coin, futuresType constants.FuturesType) {
-	currentPrice, err := s.exchangeApi.GetCurrentCoinPrice(coin)
+	currentPrice, err := s.GetCurrentCoinPriceByKline(coin)
 	if err != nil {
 		zap.S().Errorf("Error during GetCurrentCoinPrice: %s", err.Error())
 		return
@@ -161,11 +162,10 @@ func (s *MovingAverageStrategyTradingService) calculateAvg(coin *domains.Coin, l
 		avgPoints = append(avgPoints, (kline.Open+kline.Close+kline.High+kline.Low)/4)
 
 		if len(avgPoints) == length {
-			movingAvgPoints = append(movingAvgPoints, util.Sum(avgPoints))
+			averageByLength := util.Sum(avgPoints) / int64(length)
+			movingAvgPoints = append(movingAvgPoints, averageByLength)
 
-			fmt.Printf("CONFIRM DELETE FIRST ELEMENT. \n len:%d values %v \n", len(avgPoints), avgPoints)
-			avgPoints = avgPoints[:1] //remove first element
-			fmt.Printf(" len:%d values %v \n", len(avgPoints), avgPoints)
+			avgPoints = avgPoints[1:] //remove first element
 		}
 	}
 
@@ -188,4 +188,15 @@ func (s *MovingAverageStrategyTradingService) createTransactionByOrderResponseDt
 		transaction.TransactionType = constants.SELL
 	}
 	return transaction
+}
+
+func (s *MovingAverageStrategyTradingService) GetCurrentCoinPriceByKline(coin *domains.Coin) (int64, error) {
+	kline, err := s.klineRepo.FindOpenedAtMoment(coin.Id, s.Clock.NowTime(), viper.GetString("strategy.ma.interval"))
+	if err != nil {
+		return 0, err
+	}
+	if kline == nil {
+		return 0, errors.New("Cann't get current price!")
+	}
+	return kline.Open, nil
 }

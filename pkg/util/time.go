@@ -26,6 +26,10 @@ func GetTimeByMillis(millis int) time.Time {
 	return time.Unix(0, int64(millis)*int64(time.Millisecond))
 }
 
+func GetTimeBySeconds(seconds int) time.Time {
+	return time.Unix(int64(seconds), 0)
+}
+
 func ParseDate(date string) (time.Time, error) {
 	now := time.Now()
 	dateString := strings.Trim(date, " _")

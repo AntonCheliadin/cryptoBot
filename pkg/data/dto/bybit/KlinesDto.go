@@ -3,6 +3,8 @@ package bybit
 import (
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/util"
+	"go.uber.org/zap"
+	"strconv"
 	"time"
 )
 
@@ -18,7 +20,7 @@ type KlinesDto struct {
 func (dto *KlinesDto) GetKlines() []api.KlineDto {
 	castedKlines := make([]api.KlineDto, len(dto.Result), len(dto.Result))
 	for i := range dto.Result {
-		castedKlines[i] = dto.Result[i]
+		castedKlines[i] = &dto.Result[i]
 	}
 
 	return castedKlines
@@ -39,29 +41,37 @@ type KlineDto struct {
 	Turnover float64 `json:"turnover"`
 }
 
-func (dto KlineDto) GetSymbol() string {
+func (dto *KlineDto) GetSymbol() string {
 	return dto.Symbol
 }
 
-func (dto KlineDto) GetInterval() string {
+func (dto *KlineDto) GetInterval() string {
 	return dto.Interval
 }
 
-func (dto KlineDto) GetStartAt() time.Time {
-	return util.GetTimeByMillis(dto.StartAt)
+func (dto *KlineDto) GetStartAt() time.Time {
+	return util.GetTimeBySeconds(dto.StartAt)
 }
 
-func (dto KlineDto) GetOpen() int64 {
+func (dto *KlineDto) GetCloseAt() time.Time {
+	parseInt, err := strconv.ParseInt(dto.Interval, 10, 64)
+	if err != nil {
+		zap.S().Errorf("Error: %s", err.Error())
+	}
+	return dto.GetStartAt().Add(time.Minute * time.Duration(parseInt))
+}
+
+func (dto *KlineDto) GetOpen() int64 {
 	return util.GetCents(dto.Open)
 }
 
-func (dto KlineDto) GetHigh() int64 {
+func (dto *KlineDto) GetHigh() int64 {
 	return util.GetCents(dto.High)
 }
 
-func (dto KlineDto) GetLow() int64 {
+func (dto *KlineDto) GetLow() int64 {
 	return util.GetCents(dto.Low)
 }
-func (dto KlineDto) GetClose() int64 {
+func (dto *KlineDto) GetClose() int64 {
 	return util.GetCents(dto.Close)
 }

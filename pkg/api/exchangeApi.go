@@ -8,7 +8,7 @@ import (
 
 type ExchangeApi interface {
 	GetCurrentCoinPrice(coin *domains.Coin) (int64, error)
-	GetKlines(coin *domains.Coin, interval string, limit int, fromTime time.Time) (*KlinesDto, error)
+	GetKlines(coin *domains.Coin, interval string, limit int, fromTime time.Time) (KlinesDto, error)
 
 	BuyCoinByMarket(coin *domains.Coin, amount float64, price int64) (OrderResponseDto, error)
 	SellCoinByMarket(coin *domains.Coin, amount float64, price int64) (OrderResponseDto, error)
@@ -32,6 +32,7 @@ type KlineDto interface {
 	GetSymbol() string
 	GetInterval() string
 	GetStartAt() time.Time
+	GetCloseAt() time.Time
 	GetOpen() int64
 	GetHigh() int64
 	GetLow() int64

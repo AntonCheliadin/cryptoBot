@@ -8,4 +8,4 @@ services:
     environment:
       POSTGRES_USER: bot
       POSTGRES_PASSWORD: securepass
-      POSTGRES_DB: botdb
+      POSTGRES_DB: bot_analyser_db

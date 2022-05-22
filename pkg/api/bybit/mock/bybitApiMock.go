@@ -4,37 +4,57 @@ import (
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/data/domains"
+	"cryptoBot/pkg/data/dto/bybit"
+	"cryptoBot/pkg/util"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
 	"time"
 )
 
-func NewBinanceApiMock() api.ExchangeApi {
-	return &BinanceApiMock{}
+func NewBybitApiMock() api.ExchangeApi {
+	return &BybitApiMock{}
 }
 
-type BinanceApiMock struct {
+type BybitApiMock struct {
 }
 
-func (api *BinanceApiMock) GetKlines(coin *domains.Coin, interval string, limit int, fromTime time.Time) (api.KlinesDto, error) {
-	return nil, errors.New("Not implemented for Binance API")
+func (api *BybitApiMock) GetKlines(coin *domains.Coin, interval string, limit int, fromTime time.Time) (api.KlinesDto, error) {
+	resp, err := http.Get("https://api.bytick.com/public/linear/kline?" +
+		"symbol=" + coin.Symbol +
+		"&interval=" + interval +
+		"&limit=" + strconv.Itoa(limit) +
+		"&from=" + strconv.Itoa(util.GetSecondsByTime(fromTime)))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var dto bybit.KlinesDto
+	if err := json.NewDecoder(resp.Body).Decode(&dto); err != nil {
+		return nil, err
+	}
+
+	return &dto, nil
 }
 
-func (api *BinanceApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, futuresType constants.FuturesType, leverage int) (api.OrderResponseDto, error) {
+func (api *BybitApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, futuresType constants.FuturesType, leverage int) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }
-func (api *BinanceApiMock) CloseFuturesOrder(openedTransaction *domains.Transaction) (api.OrderResponseDto, error) {
+func (api *BybitApiMock) CloseFuturesOrder(openedTransaction *domains.Transaction) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }
 
-func (api *BinanceApiMock) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
+func (api *BybitApiMock) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
 	return 0, errors.New("Shouldn't be called.")
 }
 
 var countOfNotSoldTransactions = 0
 var maxCountOfNotSoldTransactions = 0
 
-func (api *BinanceApiMock) BuyCoinByMarket(coin *domains.Coin, amount float64, price int64) (api.OrderResponseDto, error) {
+func (api *BybitApiMock) BuyCoinByMarket(coin *domains.Coin, amount float64, price int64) (api.OrderResponseDto, error) {
 	countOfNotSoldTransactions = countOfNotSoldTransactions + 1
 
 	if countOfNotSoldTransactions > maxCountOfNotSoldTransactions {
@@ -48,7 +68,7 @@ func (api *BinanceApiMock) BuyCoinByMarket(coin *domains.Coin, amount float64, p
 	}, nil
 }
 
-func (api *BinanceApiMock) SellCoinByMarket(coin *domains.Coin, amount float64, price int64) (api.OrderResponseDto, error) {
+func (api *BybitApiMock) SellCoinByMarket(coin *domains.Coin, amount float64, price int64) (api.OrderResponseDto, error) {
 	countOfNotSoldTransactions = countOfNotSoldTransactions - 1
 
 	return &orderResponseMockDto{

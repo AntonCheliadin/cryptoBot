@@ -33,7 +33,7 @@ type DataService struct {
 }
 
 func (s *DataService) GetCurrentPrice(coin *domains.Coin) (int64, error) {
-	momentKline, _ := s.klineRepo.FindAtMoment(coin.Id, s.Clock.NowTime(), "1")
+	momentKline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, s.Clock.NowTime(), "1")
 	if momentKline != nil {
 		return momentKline.Open, nil
 	}

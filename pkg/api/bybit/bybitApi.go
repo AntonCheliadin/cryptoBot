@@ -26,11 +26,10 @@ func NewBybitApi() api.ExchangeApi {
 	return &BybitApi{}
 }
 
-//todo BybitApi
 type BybitApi struct {
 }
 
-func (bybitApi *BybitApi) GetKlines(coin *domains.Coin, interval string, limit int, fromTime time.Time) (*api.KlinesDto, error) {
+func (bybitApi *BybitApi) GetKlines(coin *domains.Coin, interval string, limit int, fromTime time.Time) (api.KlinesDto, error) {
 	resp, err := http.Get("https://api.bytick.com/public/linear/kline?" +
 		"symbol=" + coin.Symbol +
 		"&interval=" + interval +
@@ -46,9 +45,7 @@ func (bybitApi *BybitApi) GetKlines(coin *domains.Coin, interval string, limit i
 		return nil, err
 	}
 
-	var idto api.KlinesDto
-	idto = &dto
-	return &idto, nil
+	return &dto, nil
 }
 
 func (api *BybitApi) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
