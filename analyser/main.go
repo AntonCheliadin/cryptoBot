@@ -1,8 +1,7 @@
 package main
 
 import (
-	"cryptoBot/pkg/api/binance/mock"
-	"cryptoBot/pkg/api/bybit"
+	"cryptoBot/pkg/api/bybit/mock"
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
@@ -68,14 +67,14 @@ func main() {
 	//exchangeApi := binance.NewBinanceApi()
 	//mockExchangeApi := mock.NewBinanceApiMock()
 
-	exchangeApi := bybit.NewBybitApi()
-	mockExchangeApi := mock.NewBinanceApiMock()
+	//exchangeApi := bybit.NewBybitApi()
+	mockExchangeApi := mock.NewBybitApiMock()
 
 	//tradingService := trading.NewHolderStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi)
 	//analyserService := analyser.NewAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, tradingService)
-	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, exchangeApi, date.GetClock(), repos.Kline)
+	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, mockExchangeApi, date.GetClock(), repos.Kline)
 	maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi, date.GetClock(), exchangeDataService, repos.Kline)
-	analyserService := analyser.NewMovingAverageStrategyAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, maTradingService, repos.Kline)
+	analyserService := analyser.NewMovingAverageStrategyAnalyserService(repos.Transaction, repos.PriceChange, mockExchangeApi, maTradingService, repos.Kline)
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 	analyserService.AnalyseCoin(coin, "2022-05-12", "2022-05-13")

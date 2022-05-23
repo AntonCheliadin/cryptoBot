@@ -9,6 +9,7 @@ import (
 	"cryptoBot/pkg/service/date"
 	"cryptoBot/pkg/service/exchange"
 	"cryptoBot/pkg/util"
+	"database/sql"
 	"errors"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -93,31 +94,40 @@ func (s *MovingAverageStrategyTradingService) openOrder(coin *domains.Coin, futu
 		return
 	}
 	amountTransaction := util.CalculateAmountByPriceAndCost(currentPrice, viper.GetInt64("strategy.ma.cost"))
-	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, futuresType, viper.GetInt("strategy.ma.futures.leverage"))
+	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType, viper.GetInt("strategy.ma.futures.leverage"))
 	if err2 != nil {
 		zap.S().Errorf("Error during OpenFuturesOrder: %s", err2.Error())
 		return
 	}
 
-	transaction := s.createTransactionByOrderResponseDto(coin, futuresType, orderDto)
+	transaction := s.createOpenTransactionByOrderResponseDto(coin, futuresType, orderDto)
 	if err3 := s.transactionRepo.SaveTransaction(&transaction); err3 != nil {
 		zap.S().Errorf("Error during SaveTransaction: %s", err3.Error())
 		return
 	}
 }
 
-func (s *MovingAverageStrategyTradingService) closeOrder(lastTransaction *domains.Transaction, coin *domains.Coin) {
-	orderResponseDto, err := s.exchangeApi.CloseFuturesOrder(lastTransaction)
+func (s *MovingAverageStrategyTradingService) closeOrder(openTransaction *domains.Transaction, coin *domains.Coin) {
+	currentPrice, err := s.GetCurrentCoinPriceByKline(coin)
+	if err != nil {
+		zap.S().Errorf("Error during GetCurrentCoinPrice: %s", err.Error())
+		return
+	}
+
+	orderResponseDto, err := s.exchangeApi.CloseFuturesOrder(openTransaction, currentPrice)
 	if err != nil {
 		zap.S().Errorf("Error during CloseFuturesOrder: %s", err.Error())
 		return
 	}
 
-	transaction := s.createTransactionByOrderResponseDto(coin, lastTransaction.FuturesType, orderResponseDto)
-	if errT := s.transactionRepo.SaveTransaction(&transaction); errT != nil {
+	closeTransaction := s.createCloseTransactionByOrderResponseDto(coin, openTransaction, orderResponseDto)
+	if errT := s.transactionRepo.SaveTransaction(&closeTransaction); errT != nil {
 		zap.S().Errorf("Error during SaveTransaction: %s", errT.Error())
 		return
 	}
+
+	openTransaction.RelatedTransactionId = sql.NullInt64{Int64: closeTransaction.Id, Valid: true}
+	_ = s.transactionRepo.SaveTransaction(openTransaction)
 }
 
 func (s *MovingAverageStrategyTradingService) shouldCloseWithProfit(lastTransaction *domains.Transaction, coin *domains.Coin) bool {
@@ -172,20 +182,48 @@ func (s *MovingAverageStrategyTradingService) calculateAvg(coin *domains.Coin, l
 	return movingAvgPoints
 }
 
-func (s *MovingAverageStrategyTradingService) createTransactionByOrderResponseDto(coin *domains.Coin, futuresType constants.FuturesType,
+func (s *MovingAverageStrategyTradingService) createOpenTransactionByOrderResponseDto(coin *domains.Coin, futuresType constants.FuturesType,
 	orderDto api.OrderResponseDto) domains.Transaction {
 	transaction := domains.Transaction{
-		CoinId:     coin.Id,
-		Amount:     orderDto.GetAmount(),
-		Price:      orderDto.CalculateAvgPrice(),
-		TotalCost:  orderDto.CalculateTotalCost(),
-		Commission: orderDto.CalculateCommissionInUsd(),
+		TradingStrategy: constants.MOVING_AVARAGE,
+		FuturesType:     futuresType,
+		CoinId:          coin.Id,
+		Amount:          orderDto.GetAmount(),
+		Price:           orderDto.CalculateAvgPrice(),
+		TotalCost:       orderDto.CalculateTotalCost(),
+		Commission:      orderDto.CalculateCommissionInUsd(),
 	}
 
 	if futuresType == constants.LONG {
 		transaction.TransactionType = constants.BUY
 	} else {
 		transaction.TransactionType = constants.SELL
+	}
+	return transaction
+}
+
+func (s *MovingAverageStrategyTradingService) createCloseTransactionByOrderResponseDto(coin *domains.Coin, lastTransaction *domains.Transaction,
+	orderDto api.OrderResponseDto) domains.Transaction {
+
+	profitInUsd := orderDto.CalculateTotalCost() - lastTransaction.TotalCost - orderDto.CalculateCommissionInUsd() - lastTransaction.Commission
+
+	transaction := domains.Transaction{
+		TradingStrategy:      constants.MOVING_AVARAGE,
+		FuturesType:          lastTransaction.FuturesType,
+		CoinId:               coin.Id,
+		Amount:               orderDto.GetAmount(),
+		Price:                orderDto.CalculateAvgPrice(),
+		TotalCost:            orderDto.CalculateTotalCost(),
+		Commission:           orderDto.CalculateCommissionInUsd(),
+		RelatedTransactionId: sql.NullInt64{Int64: lastTransaction.Id, Valid: true},
+		Profit:               sql.NullInt64{Int64: profitInUsd, Valid: true},
+		PercentProfit:        sql.NullFloat64{Float64: float64(profitInUsd) / float64(lastTransaction.TotalCost) * 100, Valid: true},
+	}
+
+	if lastTransaction.FuturesType == constants.LONG {
+		transaction.TransactionType = constants.SELL
+	} else {
+		transaction.TransactionType = constants.BUY
 	}
 	return transaction
 }

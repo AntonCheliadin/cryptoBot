@@ -183,9 +183,9 @@ func (api *BybitApi) sign(data string) string {
 	return sha
 }
 
-func (api *BybitApi) OpenFuturesOrder(coin *domains.Coin, amount float64, futuresType constants.FuturesType, leverage int) (api.OrderResponseDto, error) {
+func (api *BybitApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType, leverage int) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }
-func (api *BybitApi) CloseFuturesOrder(openedTransaction *domains.Transaction) (api.OrderResponseDto, error) {
+func (api *BybitApi) CloseFuturesOrder(openedTransaction *domains.Transaction, price int64) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }

@@ -32,7 +32,14 @@ func (r *Transaction) find(query string, args ...interface{}) (*domains.Transact
 
 //language=SQL
 func (r *Transaction) FindOpenedTransaction(tradingStrategy constants.TradingStrategy) (*domains.Transaction, error) {
-	return r.find("SELECT * FROM transaction_table WHERE related_transaction_id is null AND trading_strategy=$1 order by created_at desc limit 1", tradingStrategy)
+	var transaction domains.Transaction
+	if err := r.db.Get(&transaction, "SELECT * FROM transaction_table WHERE related_transaction_id is null AND trading_strategy=$1 order by created_at desc limit 1", tradingStrategy); err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &transaction, nil
 }
 
 func (r *Transaction) FindLastByCoinId(coinId int64, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error) {
@@ -130,8 +137,8 @@ func (r *Transaction) SaveTransaction(trnsctn *domains.Transaction) error {
 	utc, _ := time.LoadLocation("UTC")
 	if trnsctn.Id == 0 {
 		transactionId := int64(0)
-		err := tx.QueryRow("INSERT INTO transaction_table (coin_id, transaction_type, amount, price, total_cost, created_at, client_order_id, api_error, related_transaction_id, profit, percent_profit, commission, trading_strategy) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id",
-			trnsctn.CoinId, trnsctn.TransactionType, trnsctn.Amount, trnsctn.Price, trnsctn.TotalCost, time.Now().In(utc), trnsctn.ClientOrderId, trnsctn.ApiError, trnsctn.RelatedTransactionId, trnsctn.Profit, trnsctn.PercentProfit, trnsctn.Commission, trnsctn.TradingStrategy,
+		err := tx.QueryRow("INSERT INTO transaction_table (coin_id, transaction_type, amount, price, total_cost, created_at, client_order_id, api_error, related_transaction_id, profit, percent_profit, commission, trading_strategy, futures_type) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id",
+			trnsctn.CoinId, trnsctn.TransactionType, trnsctn.Amount, trnsctn.Price, trnsctn.TotalCost, time.Now().In(utc), trnsctn.ClientOrderId, trnsctn.ApiError, trnsctn.RelatedTransactionId, trnsctn.Profit, trnsctn.PercentProfit, trnsctn.Commission, trnsctn.TradingStrategy, trnsctn.FuturesType,
 		).Scan(&transactionId)
 		if err != nil {
 			_ = tx.Rollback()

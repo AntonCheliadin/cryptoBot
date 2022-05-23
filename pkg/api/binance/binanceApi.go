@@ -28,7 +28,7 @@ func NewBinanceApi() api.ExchangeApi {
 type BinanceApi struct {
 }
 
-func (api *BinanceApi) GetKlines(coin *domains.Coin, interval string, limit int, fromTime time.Time) (*api.KlinesDto, error) {
+func (api *BinanceApi) GetKlines(coin *domains.Coin, interval string, limit int, fromTime time.Time) (api.KlinesDto, error) {
 	return nil, errors.New("Not implemented for Binance API")
 }
 
@@ -125,9 +125,9 @@ func (api *BinanceApi) sign(data string) string {
 	return sha
 }
 
-func (api *BinanceApi) OpenFuturesOrder(coin *domains.Coin, amount float64, futuresType constants.FuturesType, leverage int) (api.OrderResponseDto, error) {
+func (api *BinanceApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType, leverage int) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }
-func (api *BinanceApi) CloseFuturesOrder(openedTransaction *domains.Transaction) (api.OrderResponseDto, error) {
+func (api *BinanceApi) CloseFuturesOrder(openedTransaction *domains.Transaction, price int64) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }
