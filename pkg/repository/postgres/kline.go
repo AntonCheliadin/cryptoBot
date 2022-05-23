@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"cryptoBot/pkg/data/domains"
+	"cryptoBot/pkg/util"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
@@ -31,7 +32,7 @@ func (r *Kline) find(query string, arguments ...interface{}) (*domains.Kline, er
 //language=SQL
 func (r *Kline) FindOpenedAtMoment(coinId int64, momentTime time.Time, interval string) (*domains.Kline, error) {
 	var domain domains.Kline
-	if err := r.db.Get(&domain, "SELECT * FROM kline WHERE coin_id = $1 AND interval = $2 AND open_time = $3", coinId, interval, momentTime); err != nil {
+	if err := r.db.Get(&domain, "SELECT * FROM kline WHERE coin_id = $1 AND interval = $2 AND open_time = $3", coinId, interval, util.RoundToMinutes(momentTime)); err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, nil
 		}

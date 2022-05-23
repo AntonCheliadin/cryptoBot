@@ -10,7 +10,6 @@ import (
 	"cryptoBot/pkg/service/exchange"
 	"cryptoBot/pkg/util"
 	"database/sql"
-	"errors"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -53,14 +52,15 @@ func (s *MovingAverageStrategyTradingService) BotAction(coin *domains.Coin) {
 }
 
 func (s *MovingAverageStrategyTradingService) BotSingleAction(coin *domains.Coin) {
-	openedOrder, _ := s.transactionRepo.FindOpenedTransaction(constants.MOVING_AVARAGE)
+	s.closeOrderIfProfitEnough(coin)
 
-	if openedOrder != nil {
-		if s.shouldCloseWithProfit(openedOrder, coin) {
-			s.closeOrder(openedOrder, coin)
-			return
-		}
+	if s.Clock.NowTime().Minute()%viper.GetInt("strategy.ma.interval") == 0 {
+		s.calculateMovingAverage(coin)
 	}
+}
+
+func (s *MovingAverageStrategyTradingService) calculateMovingAverage(coin *domains.Coin) {
+	openedOrder, _ := s.transactionRepo.FindOpenedTransaction(constants.MOVING_AVARAGE)
 
 	shortAvgs := s.calculateAvg(coin, viper.GetInt("strategy.ma.length.short"))
 	mediumAvgs := s.calculateAvg(coin, viper.GetInt("strategy.ma.length.medium"))
@@ -87,8 +87,18 @@ func (s *MovingAverageStrategyTradingService) BotSingleAction(coin *domains.Coin
 	}
 }
 
+func (s *MovingAverageStrategyTradingService) closeOrderIfProfitEnough(coin *domains.Coin) {
+	openedOrder, _ := s.transactionRepo.FindOpenedTransaction(constants.MOVING_AVARAGE)
+
+	if openedOrder != nil {
+		if s.shouldCloseWithProfit(openedOrder, coin) {
+			s.closeOrder(openedOrder, coin)
+		}
+	}
+}
+
 func (s *MovingAverageStrategyTradingService) openOrder(coin *domains.Coin, futuresType constants.FuturesType) {
-	currentPrice, err := s.GetCurrentCoinPriceByKline(coin)
+	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
 	if err != nil {
 		zap.S().Errorf("Error during GetCurrentCoinPrice: %s", err.Error())
 		return
@@ -108,7 +118,7 @@ func (s *MovingAverageStrategyTradingService) openOrder(coin *domains.Coin, futu
 }
 
 func (s *MovingAverageStrategyTradingService) closeOrder(openTransaction *domains.Transaction, coin *domains.Coin) {
-	currentPrice, err := s.GetCurrentCoinPriceByKline(coin)
+	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
 	if err != nil {
 		zap.S().Errorf("Error during GetCurrentCoinPrice: %s", err.Error())
 		return
@@ -226,15 +236,4 @@ func (s *MovingAverageStrategyTradingService) createCloseTransactionByOrderRespo
 		transaction.TransactionType = constants.BUY
 	}
 	return transaction
-}
-
-func (s *MovingAverageStrategyTradingService) GetCurrentCoinPriceByKline(coin *domains.Coin) (int64, error) {
-	kline, err := s.klineRepo.FindOpenedAtMoment(coin.Id, s.Clock.NowTime(), viper.GetString("strategy.ma.interval"))
-	if err != nil {
-		return 0, err
-	}
-	if kline == nil {
-		return 0, errors.New("Cann't get current price!")
-	}
-	return kline.Open, nil
 }

@@ -29,7 +29,7 @@ func main() {
 		Symbol: "SOLUSDT",
 	}
 
-	testGetCurrentPrice(exchangeApi, coin)
+	//testGetCurrentPrice(exchangeApi, coin)
 
 	testGetKlines(exchangeApi, coin)
 }
@@ -49,8 +49,8 @@ func testGetCurrentPrice(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 }
 
 func testGetKlines(exchangeApi api.ExchangeApi, coin *domains.Coin) {
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-05-08")
-	klinesDto, err := exchangeApi.GetKlines(coin, "15", 10, timeFrom)
+	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-05-12")
+	klinesDto, err := exchangeApi.GetKlines(coin, "1", 10, timeFrom)
 	if err != nil {
 		zap.S().Errorf("Error on GetCurrentCoinPrice: %s", err)
 	}

@@ -55,3 +55,8 @@ func GetDateByDayOfCurrentMonth(date string) (time.Time, error) {
 	dayInt, err := strconv.Atoi(date)
 	return time.Date(now.Year(), now.Month(), dayInt, 0, 0, 0, 0, time.UTC), err
 }
+
+func RoundToMinutes(moment time.Time) time.Time {
+	d := (60 * time.Second)
+	return moment.Truncate(d)
+}

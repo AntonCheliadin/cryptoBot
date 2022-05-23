@@ -5,7 +5,7 @@ import (
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/service/date"
-	"github.com/spf13/viper"
+	"cryptoBot/pkg/util"
 )
 
 var exchangeDataServiceImpl *DataService
@@ -34,10 +34,9 @@ type DataService struct {
 }
 
 func (s *DataService) GetCurrentPrice(coin *domains.Coin) (int64, error) {
-	momentKline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, s.Clock.NowTime(), viper.GetString("strategy.ma.interval"))
-	if momentKline != nil {
-		return momentKline.Open, nil
+	kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), "1")
+	if kline != nil {
+		return kline.Open, nil
 	}
-
 	return s.exchangeApi.GetCurrentCoinPrice(coin)
 }

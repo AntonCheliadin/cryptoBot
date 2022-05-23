@@ -9,7 +9,6 @@ import (
 	"cryptoBot/pkg/service/date"
 	"cryptoBot/pkg/service/trading"
 	"fmt"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"time"
 )
@@ -41,16 +40,21 @@ type MovingAverageStrategyAnalyserService struct {
 }
 
 func (s *MovingAverageStrategyAnalyserService) AnalyseCoin(coin *domains.Coin, from string, to string) {
-	//if err := s.fetchKlinesForPeriod(coin, from, to); err != nil {
+	//if err := s.fetchKlinesForPeriod(coin, from, to, viper.GetString("strategy.ma.interval")); err != nil {
+	//	zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
+	//	return
+	//}
+	//
+	//if err := s.fetchKlinesForPeriod(coin, from, to, "1"); err != nil {
 	//	zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
 	//	return
 	//}
 
-	candleDuration := time.Duration(viper.GetInt64("strategy.ma.interval"))
 	timeMax, _ := time.Parse(constants.DATE_FORMAT, to)
 	timeIterator, _ := time.Parse(constants.DATE_FORMAT, from)
+	timeIterator = timeIterator.Add(time.Second * 2)
 
-	for ; timeIterator.Before(timeMax); timeIterator = timeIterator.Add(time.Minute * candleDuration) {
+	for ; timeIterator.Before(timeMax); timeIterator = timeIterator.Add(time.Minute) {
 		clockMock := date.GetClockMock(timeIterator)
 		s.tradingService.Clock = clockMock
 		s.tradingService.ExchangeDataService.Clock = clockMock
@@ -59,18 +63,18 @@ func (s *MovingAverageStrategyAnalyserService) AnalyseCoin(coin *domains.Coin, f
 	}
 }
 
-func (s *MovingAverageStrategyAnalyserService) fetchKlinesForPeriod(coin *domains.Coin, from string, to string) error {
+func (s *MovingAverageStrategyAnalyserService) fetchKlinesForPeriod(coin *domains.Coin, from string, to string, interval string) error {
 	timeFrom, _ := time.Parse(constants.DATE_FORMAT, from)
 	timeTo, _ := time.Parse(constants.DATE_FORMAT, to)
 
 	timeIter := timeFrom
 	for timeIter.Before(timeTo) {
-		klinesDto, err := s.exchangeApi.GetKlines(coin, viper.GetString("strategy.ma.interval"), bybit.BYBIT_MAX_LIMIT, timeFrom)
+		klinesDto, err := s.exchangeApi.GetKlines(coin, interval, bybit.BYBIT_MAX_LIMIT, timeIter)
 		if err != nil {
-			zap.S().Errorf("Error on GetCurrentCoinPrice: %s", err)
+			zap.S().Errorf("Error on fetch klines: %s", err)
 			return err
 		}
-		fmt.Printf("\nklinesDto=%s\n", klinesDto)
+		fmt.Printf("\nFetched %v klines\n", len(klinesDto.GetKlines()))
 
 		s.saveKlines(coin, klinesDto)
 
@@ -84,17 +88,19 @@ func (s *MovingAverageStrategyAnalyserService) fetchKlinesForPeriod(coin *domain
 
 func (s *MovingAverageStrategyAnalyserService) saveKlines(coin *domains.Coin, klinesDto api.KlinesDto) {
 	for _, dto := range klinesDto.GetKlines() {
-		kline := domains.Kline{
-			CoinId:    coin.Id,
-			OpenTime:  dto.GetStartAt(),
-			CloseTime: dto.GetCloseAt(),
-			Interval:  dto.GetInterval(),
-			Open:      dto.GetOpen(),
-			High:      dto.GetHigh(),
-			Low:       dto.GetLow(),
-			Close:     dto.GetClose(),
-		}
+		if existedKline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, dto.GetStartAt(), dto.GetInterval()); existedKline == nil {
+			kline := domains.Kline{
+				CoinId:    coin.Id,
+				OpenTime:  dto.GetStartAt(),
+				CloseTime: dto.GetCloseAt(),
+				Interval:  dto.GetInterval(),
+				Open:      dto.GetOpen(),
+				High:      dto.GetHigh(),
+				Low:       dto.GetLow(),
+				Close:     dto.GetClose(),
+			}
 
-		_ = s.klineRepo.SaveKline(&kline)
+			_ = s.klineRepo.SaveKline(&kline)
+		}
 	}
 }
