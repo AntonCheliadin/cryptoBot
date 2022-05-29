@@ -49,10 +49,10 @@ func testGetCurrentPrice(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 }
 
 func testGetKlines(exchangeApi api.ExchangeApi, coin *domains.Coin) {
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-05-12")
+	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-05-01")
 	klinesDto, err := exchangeApi.GetKlines(coin, "1", 10, timeFrom)
 	if err != nil {
 		zap.S().Errorf("Error on GetCurrentCoinPrice: %s", err)
 	}
-	fmt.Printf("klinesDto=%s", klinesDto)
+	fmt.Printf("klinesDto=%v", klinesDto)
 }

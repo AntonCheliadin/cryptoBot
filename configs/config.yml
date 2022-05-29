@@ -9,11 +9,11 @@ trading:
 
 strategy:
   ma:
-    percentProfit: 1 # close order with profit when price change on 1%
+    percentProfit: 1.5 # close order with profit when price change on 1%
     interval: 15
     length:
-      short: 10
-      medium: 25
+      short: 9
+      medium: 24
       long: 50
     coin: 'LUNAUSDT'
     cost: 100 # cost of order for trading

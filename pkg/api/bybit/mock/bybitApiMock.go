@@ -97,7 +97,7 @@ func (d *orderResponseMockDto) CalculateTotalCost() int64 {
 }
 
 func (d *orderResponseMockDto) CalculateCommissionInUsd() int64 {
-	return int64(float64(d.CalculateTotalCost()) * 0.001) // 0.1% commission
+	return int64(float64(d.CalculateTotalCost()) * ((0.0001 + 0.0006) / 2)) // (0.06%+0.01%)/2    Taker Fee Rate=0.06%   Maker Fee Rate=0.01%
 }
 
 func (d *orderResponseMockDto) GetAmount() float64 {

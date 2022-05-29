@@ -9,6 +9,7 @@ import (
 	"cryptoBot/pkg/service/date"
 	"cryptoBot/pkg/service/trading"
 	"fmt"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"time"
 )
@@ -40,19 +41,9 @@ type MovingAverageStrategyAnalyserService struct {
 }
 
 func (s *MovingAverageStrategyAnalyserService) AnalyseCoin(coin *domains.Coin, from string, to string) {
-	//if err := s.fetchKlinesForPeriod(coin, from, to, viper.GetString("strategy.ma.interval")); err != nil {
-	//	zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
-	//	return
-	//}
-	//
-	//if err := s.fetchKlinesForPeriod(coin, from, to, "1"); err != nil {
-	//	zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
-	//	return
-	//}
-
 	timeMax, _ := time.Parse(constants.DATE_FORMAT, to)
 	timeIterator, _ := time.Parse(constants.DATE_FORMAT, from)
-	timeIterator = timeIterator.Add(time.Second * 2)
+	timeIterator = timeIterator.Add(time.Second * 2).Add(time.Hour)
 
 	for ; timeIterator.Before(timeMax); timeIterator = timeIterator.Add(time.Minute) {
 		clockMock := date.GetClockMock(timeIterator)
@@ -61,6 +52,19 @@ func (s *MovingAverageStrategyAnalyserService) AnalyseCoin(coin *domains.Coin, f
 
 		s.tradingService.BotSingleAction(coin)
 	}
+}
+
+func (s *MovingAverageStrategyAnalyserService) FetchKlines(coin *domains.Coin, from string, to string) bool {
+	if err := s.fetchKlinesForPeriod(coin, from, to, viper.GetString("strategy.ma.interval")); err != nil {
+		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
+		return true
+	}
+
+	if err := s.fetchKlinesForPeriod(coin, from, to, "1"); err != nil {
+		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
+		return true
+	}
+	return false
 }
 
 func (s *MovingAverageStrategyAnalyserService) fetchKlinesForPeriod(coin *domains.Coin, from string, to string, interval string) error {
@@ -74,7 +78,7 @@ func (s *MovingAverageStrategyAnalyserService) fetchKlinesForPeriod(coin *domain
 			zap.S().Errorf("Error on fetch klines: %s", err)
 			return err
 		}
-		fmt.Printf("\nFetched %v klines\n", len(klinesDto.GetKlines()))
+		fmt.Printf("Fetched %v klines from %v\n", len(klinesDto.GetKlines()), timeIter)
 
 		s.saveKlines(coin, klinesDto)
 
