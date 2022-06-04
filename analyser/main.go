@@ -8,6 +8,7 @@ import (
 	"cryptoBot/pkg/service/analyser"
 	"cryptoBot/pkg/service/date"
 	"cryptoBot/pkg/service/exchange"
+	"cryptoBot/pkg/service/indicator"
 	"cryptoBot/pkg/service/trading"
 	"fmt"
 	"github.com/jmoiron/sqlx"
@@ -72,15 +73,16 @@ func main() {
 
 	//tradingService := trading.NewHolderStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi)
 	//analyserService := analyser.NewAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, tradingService)
+	maService := indicator.NewMovingAverageService(date.GetClock(), repos.Kline)
 	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, mockExchangeApi, date.GetClock(), repos.Kline)
 	priceChangeTrackingService := trading.NewPriceChangeTrackingService(repos.PriceChange)
-	maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi, date.GetClock(), exchangeDataService, repos.Kline, priceChangeTrackingService)
+	maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi, date.GetClock(), exchangeDataService, repos.Kline, priceChangeTrackingService, maService)
 	analyserService := analyser.NewMovingAverageStrategyAnalyserService(repos.Transaction, repos.PriceChange, mockExchangeApi, maTradingService, repos.Kline)
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 
-	//analyserService.FetchKlines(coin, "2022-05-20", "2022-05-25")
-	analyserService.AnalyseCoin(coin, "2022-05-02", "2022-05-23")
+	//analyserService.FetchKlines(coin, "2022-03-01", "2022-03-15")
+	analyserService.AnalyseCoin(coin, "2022-03-03", "2022-05-23") //max interval  2022-03-03 2022-05-23
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())

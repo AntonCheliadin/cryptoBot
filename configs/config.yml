@@ -4,21 +4,29 @@ server:
 
 trading:
   percentChange: 1 # do action buy/sell when price change on 5%
-  defaultCoin: 'LUNAUSDT'
+  defaultCoin: 'SOLUSDT'
   defaultCost: 100
 
 strategy:
   ma:
-    percentProfit: 1.5 # close order with profit when price change on 1%
+    percentProfit: 2 # close order with profit when price change on X%
+    percentStopLoss: -1.5 # close order by stop loss when price change on X%
+    percentTrollingProfit: 1.5 # close order by stop loss when price change on X%
     interval: 15
     length:
-      short: 9
-      medium: 24
+      short: 24
+      medium: 49
       long: 50
-    coin: 'LUNAUSDT'
+    coin: 'SOLUSDT'
     cost: 100 # cost of order for trading
     futures:
-      leverage: 2
+      leverage: 1
+
+indicator:
+  trend:
+    ma:
+      length: 50
+      points: 10
 
 
 api:
