@@ -65,7 +65,7 @@ func main() {
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 
-	if err := fetcherService.FetchKlinesForPeriod(coin, "2022-02-01", "2022-03-02", "15"); err != nil {
+	if err := fetcherService.FetchKlinesForPeriod(coin, "2022-01-01", "2022-02-02", "15"); err != nil {
 		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
 	}
 

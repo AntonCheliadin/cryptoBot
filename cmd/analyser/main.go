@@ -86,7 +86,7 @@ func main() {
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 
-	analyserService.AnalyseCoin(coin, "2022-02-04", "2022-05-23") //max interval  2022-03-04 2022-05-23
+	analyserService.AnalyseCoin(coin, "2022-01-04", "2022-05-23") //max interval  2022-03-04 2022-05-23
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
