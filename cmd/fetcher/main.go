@@ -1,4 +1,4 @@
-package fetcher
+package main
 
 import (
 	"cryptoBot/pkg/api/bybit/mock"
@@ -65,7 +65,9 @@ func main() {
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 
-	fetcherService.FetchKlines(coin, "2022-03-01", "2022-03-15")
+	if err := fetcherService.FetchKlinesForPeriod(coin, "2022-02-01", "2022-03-02", "15"); err != nil {
+		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
+	}
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())

@@ -42,7 +42,7 @@ func (s *MovingAverageService) CalculateAvg(coin *domains.Coin, length int, retu
 	var movingAvgPoints []int64
 
 	for _, kline := range klines {
-		avgPoints = append(avgPoints, (kline.Open+kline.Close+kline.High+kline.Low)/4)
+		avgPoints = append(avgPoints, kline.Close /*(kline.Open+kline.Close+kline.High+kline.Low)/4*/)
 
 		if len(avgPoints) == length {
 			averageByLength := util.Sum(avgPoints) / int64(length)
@@ -50,6 +50,11 @@ func (s *MovingAverageService) CalculateAvg(coin *domains.Coin, length int, retu
 
 			avgPoints = avgPoints[1:] //remove first element
 		}
+	}
+
+	if movingAvgPoints == nil || len(movingAvgPoints) < returnPointsSize {
+		zap.S().Errorf("Can't calculate enough points [%v] of moving averages", returnPointsSize)
+		return nil
 	}
 
 	return movingAvgPoints

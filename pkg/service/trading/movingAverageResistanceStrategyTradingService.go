@@ -72,10 +72,10 @@ func (s *MovingAverageResistanceStrategyTradingService) calculateMovingAverage(c
 		return
 	}
 
-	shortAvgs := s.MovingAverageService.CalculateAvg(coin, viper.GetInt("strategy.maResistance.length.short"), 2)
-	mediumAvgs := s.MovingAverageService.CalculateAvg(coin, viper.GetInt("strategy.maResistance.length.medium"), 2)
+	shortAvgs := s.MovingAverageService.CalculateAvg(coin, viper.GetInt("strategy.maResistance.length.short"), viper.GetInt("strategy.maResistance.length.short"))
+	mediumAvgs := s.MovingAverageService.CalculateAvg(coin, viper.GetInt("strategy.maResistance.length.medium"), viper.GetInt("strategy.maResistance.length.short"))
 
-	if shortAvgs == nil || len(shortAvgs) < 2 || mediumAvgs == nil || len(mediumAvgs) < 2 {
+	if shortAvgs == nil || mediumAvgs == nil {
 		zap.S().Errorf("Can't calculate direction of moving averages")
 		return
 	}
@@ -89,58 +89,81 @@ func (s *MovingAverageResistanceStrategyTradingService) calculateMovingAverage(c
 	prevKline := klines[0]
 	lastKline := klines[1]
 
-	if shortAvgs[0] > mediumAvgs[0] && shortAvgs[1] > mediumAvgs[1] { //is up trend
+	lastShortMa := shortAvgs[len(shortAvgs)-1]
+	lastMediumMa := mediumAvgs[len(mediumAvgs)-1]
+	prevShortMa := shortAvgs[len(shortAvgs)-2]
 
-		isLastKlineCloseBelowTube := lastKline.Close < mediumAvgs[1]
+	if s.isUpTrend(shortAvgs, mediumAvgs) {
+		isLastKlineCloseBelowTube := lastKline.Close < lastMediumMa
 		if isLastKlineCloseBelowTube {
 			s.isWaitingForCrossUp = false
 			return
 		}
 
-		isPrevKlineAboveMA := prevKline.Open > shortAvgs[0] && prevKline.Close > shortAvgs[0]
-		isLastKlineCloseInTube := lastKline.Open > shortAvgs[1] && lastKline.Close < shortAvgs[1] && lastKline.Close > mediumAvgs[1]
+		isPrevKlineAboveMA := prevKline.Open > prevShortMa && prevKline.Close > prevShortMa
+		isLastKlineCloseInTube := lastKline.Open > lastShortMa && lastKline.Close < lastShortMa && lastKline.Close > lastMediumMa
 
 		if isPrevKlineAboveMA && isLastKlineCloseInTube {
 			s.isWaitingForCrossUp = true
 		}
-		if lastKline.Open < shortAvgs[1] && lastKline.Close > shortAvgs[1] { // if cross up
+		if lastKline.Open < lastShortMa && lastKline.Close > lastShortMa { // if cross up
 			if s.isWaitingForCrossUp {
 				zap.S().Infof("Open LONG")
 				s.openOrder(coin, constants.LONG)
+				s.isWaitingForCrossUp = false
 			}
 		}
 	}
 
-	if shortAvgs[0] < mediumAvgs[0] && shortAvgs[1] < mediumAvgs[1] { //is down trend
-
-		isLastKlineCloseAboveTube := lastKline.Close > mediumAvgs[1]
+	if s.isDownTrend(shortAvgs, mediumAvgs) {
+		isLastKlineCloseAboveTube := lastKline.Close > lastMediumMa
 		if isLastKlineCloseAboveTube {
 			s.isWaitingForCrossUp = false
 			return
 		}
 
-		isPrevKlineBelowTube := prevKline.Open < shortAvgs[0] && prevKline.Close < shortAvgs[0]
-		isLastKlineCloseInTube := lastKline.Open < shortAvgs[1] && lastKline.Close > shortAvgs[1] && lastKline.Close < mediumAvgs[1]
+		isPrevKlineBelowTube := prevKline.Open < prevShortMa && prevKline.Close < prevShortMa
+		isLastKlineCloseInTube := lastKline.Open < lastShortMa && lastKline.Close > lastShortMa && lastKline.Close < lastMediumMa
 
 		if isPrevKlineBelowTube && isLastKlineCloseInTube { // if cross up
 			s.isWaitingForCrossDown = true
 		}
-		if lastKline.Open > shortAvgs[1] && lastKline.Close < shortAvgs[1] { // if cross down
+		if lastKline.Open > lastShortMa && lastKline.Close < lastShortMa { // if cross down
 			if s.isWaitingForCrossDown {
 				zap.S().Infof("Open LONG")
 				s.openOrder(coin, constants.SHORT)
+				s.isWaitingForCrossUp = false
 			}
 		}
 	}
 }
 
+func (s *MovingAverageResistanceStrategyTradingService) isUpTrend(shortAvgs []int64, mediumAvgs []int64) bool {
+	for i := 0; i < len(shortAvgs); i++ {
+		if mediumAvgs[i] > shortAvgs[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *MovingAverageResistanceStrategyTradingService) isDownTrend(shortAvgs []int64, mediumAvgs []int64) bool {
+	for i := 0; i < len(shortAvgs); i++ {
+		if mediumAvgs[i] < shortAvgs[i] {
+			return false
+		}
+	}
+	return true
+}
+
 //copied
 func (s *MovingAverageResistanceStrategyTradingService) openOrder(coin *domains.Coin, futuresType constants.FuturesType) {
-	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
+	klines, err := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coin.Id, viper.GetString("strategy.maResistance.interval"), s.Clock.NowTime(), 1)
 	if err != nil {
-		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
+		zap.S().Errorf("Error during FindClosedAtMoment at %v: %s", s.Clock.NowTime(), err.Error())
 		return
 	}
+	currentPrice := klines[0].Close
 	amountTransaction := util.CalculateAmountByPriceAndCost(currentPrice, viper.GetInt64("strategy.ma.cost"))
 	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType, viper.GetInt("strategy.ma.futures.leverage"))
 	if err2 != nil {
@@ -181,11 +204,12 @@ func (s *MovingAverageResistanceStrategyTradingService) createOpenTransactionByO
 
 //copied
 func (s *MovingAverageResistanceStrategyTradingService) closeOrder(openTransaction *domains.Transaction, coin *domains.Coin) {
-	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
+	klines, err := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coin.Id, viper.GetString("strategy.maResistance.interval"), s.Clock.NowTime(), 1)
 	if err != nil {
-		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
+		zap.S().Errorf("Error during FindClosedAtMoment at %v: %s", s.Clock.NowTime(), err.Error())
 		return
 	}
+	currentPrice := klines[0].Close
 
 	orderResponseDto, err := s.exchangeApi.CloseFuturesOrder(openTransaction, currentPrice)
 	if err != nil {

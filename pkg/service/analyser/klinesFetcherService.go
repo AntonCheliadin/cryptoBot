@@ -7,7 +7,6 @@ import (
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/repository"
 	"fmt"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"time"
 )
@@ -30,20 +29,7 @@ type KlinesFetcherService struct {
 	exchangeApi api.ExchangeApi
 }
 
-func (s *KlinesFetcherService) FetchKlines(coin *domains.Coin, from string, to string) bool {
-	if err := s.fetchKlinesForPeriod(coin, from, to, viper.GetString("strategy.ma.interval")); err != nil {
-		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
-		return true
-	}
-
-	if err := s.fetchKlinesForPeriod(coin, from, to, "1"); err != nil {
-		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
-		return true
-	}
-	return false
-}
-
-func (s *KlinesFetcherService) fetchKlinesForPeriod(coin *domains.Coin, from string, to string, interval string) error {
+func (s *KlinesFetcherService) FetchKlinesForPeriod(coin *domains.Coin, from string, to string, interval string) error {
 	timeFrom, _ := time.Parse(constants.DATE_FORMAT, from)
 	timeTo, _ := time.Parse(constants.DATE_FORMAT, to)
 
