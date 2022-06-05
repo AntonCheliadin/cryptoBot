@@ -73,16 +73,20 @@ func main() {
 
 	//tradingService := trading.NewHolderStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi)
 	//analyserService := analyser.NewAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, tradingService)
+
 	maService := indicator.NewMovingAverageService(date.GetClock(), repos.Kline)
 	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, mockExchangeApi, date.GetClock(), repos.Kline)
 	priceChangeTrackingService := trading.NewPriceChangeTrackingService(repos.PriceChange)
-	maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi, date.GetClock(), exchangeDataService, repos.Kline, priceChangeTrackingService, maService)
-	analyserService := analyser.NewMovingAverageStrategyAnalyserService(repos.Transaction, repos.PriceChange, mockExchangeApi, maTradingService, repos.Kline)
+
+	//maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi, date.GetClock(), exchangeDataService, repos.Kline, priceChangeTrackingService, maService)
+	//analyserService := analyser.NewMovingAverageStrategyAnalyserService(repos.Transaction, repos.PriceChange, mockExchangeApi, maTradingService, repos.Kline)
+
+	maResistanceTradingService := trading.NewMovingAverageResistanceStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi, date.GetClock(), exchangeDataService, repos.Kline, priceChangeTrackingService, maService)
+	analyserService := analyser.NewMovingAverageResistanceStratagyAnalyserService(repos.Transaction, repos.PriceChange, mockExchangeApi, maResistanceTradingService, repos.Kline)
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 
-	//analyserService.FetchKlines(coin, "2022-03-01", "2022-03-15")
-	analyserService.AnalyseCoin(coin, "2022-03-03", "2022-05-23") //max interval  2022-03-03 2022-05-23
+	analyserService.AnalyseCoin(coin, "2022-03-04", "2022-05-23") //max interval  2022-03-04 2022-05-23
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())

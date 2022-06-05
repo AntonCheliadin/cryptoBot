@@ -21,6 +21,11 @@ strategy:
     cost: 100 # cost of order for trading
     futures:
       leverage: 1
+  maResistance:
+    interval: 15
+    length:
+      short: 20
+      medium: 54
 
 indicator:
   trend:
