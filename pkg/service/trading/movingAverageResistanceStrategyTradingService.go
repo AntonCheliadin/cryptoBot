@@ -80,18 +80,16 @@ func (s *MovingAverageResistanceStrategyTradingService) calculateMovingAverage(c
 		return
 	}
 
-	klines, err := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coin.Id, viper.GetString("strategy.maResistance.interval"), s.Clock.NowTime(), 2)
+	klines, err := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coin.Id, viper.GetString("strategy.maResistance.interval"), s.Clock.NowTime(), 6)
 	if err != nil {
 		zap.S().Errorf("Error during FindClosedAtMoment at %v: %s", s.Clock.NowTime(), err.Error())
 		return
 	}
 
-	prevKline := klines[0]
-	lastKline := klines[1]
+	lastKline := klines[len(klines)-1]
 
 	lastShortMa := shortAvgs[len(shortAvgs)-1]
 	lastMediumMa := mediumAvgs[len(mediumAvgs)-1]
-	prevShortMa := shortAvgs[len(shortAvgs)-2]
 
 	if s.isUpTrend(shortAvgs, mediumAvgs) {
 		isLastKlineCloseBelowTube := lastKline.Close < lastMediumMa
@@ -100,10 +98,9 @@ func (s *MovingAverageResistanceStrategyTradingService) calculateMovingAverage(c
 			return
 		}
 
-		isPrevKlineAboveMA := prevKline.Open > prevShortMa && prevKline.Close > prevShortMa
 		isLastKlineCloseInTube := lastKline.Open > lastShortMa && lastKline.Close < lastShortMa && lastKline.Close > lastMediumMa
 
-		if isPrevKlineAboveMA && isLastKlineCloseInTube {
+		if s.isAllKlinesAboveMA(shortAvgs, klines[0:len(klines)-1]) && isLastKlineCloseInTube {
 			s.isWaitingForCrossUp = true
 		}
 		if lastKline.Open < lastShortMa && lastKline.Close > lastShortMa { // if cross up
@@ -122,10 +119,9 @@ func (s *MovingAverageResistanceStrategyTradingService) calculateMovingAverage(c
 			return
 		}
 
-		isPrevKlineBelowTube := prevKline.Open < prevShortMa && prevKline.Close < prevShortMa
 		isLastKlineCloseInTube := lastKline.Open < lastShortMa && lastKline.Close > lastShortMa && lastKline.Close < lastMediumMa
 
-		if isPrevKlineBelowTube && isLastKlineCloseInTube { // if cross up
+		if s.isAllKlinesBelowMA(shortAvgs, klines[0:len(klines)-1]) && isLastKlineCloseInTube { // if cross up
 			s.isWaitingForCrossDown = true
 		}
 		if lastKline.Open > lastShortMa && lastKline.Close < lastShortMa { // if cross down
@@ -136,6 +132,26 @@ func (s *MovingAverageResistanceStrategyTradingService) calculateMovingAverage(c
 			}
 		}
 	}
+}
+
+func (s *MovingAverageResistanceStrategyTradingService) isAllKlinesAboveMA(shortAvgs []int64, klines []*domains.Kline) bool {
+	for i := len(klines) - 1; i >= 0; i-- {
+		if klines[i].Open < shortAvgs[i] || klines[i].Close < shortAvgs[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (s *MovingAverageResistanceStrategyTradingService) isAllKlinesBelowMA(shortAvgs []int64, klines []*domains.Kline) bool {
+	for i := len(klines) - 1; i >= 0; i-- {
+		if klines[i].Open > shortAvgs[i] || klines[i].Close > shortAvgs[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (s *MovingAverageResistanceStrategyTradingService) isUpTrend(shortAvgs []int64, mediumAvgs []int64) bool {
