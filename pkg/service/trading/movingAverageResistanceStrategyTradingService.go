@@ -45,9 +45,6 @@ type MovingAverageResistanceStrategyTradingService struct {
 	ExchangeDataService        *exchange.DataService
 	PriceChangeTrackingService *PriceChangeTrackingService
 	MovingAverageService       *indicator.MovingAverageService
-
-	isWaitingForCrossUp   bool
-	isWaitingForCrossDown bool
 }
 
 func (s *MovingAverageResistanceStrategyTradingService) BotAction(coin *domains.Coin) {
@@ -63,7 +60,9 @@ func (s *MovingAverageResistanceStrategyTradingService) BotAction(coin *domains.
 func (s *MovingAverageResistanceStrategyTradingService) BotSingleAction(coin *domains.Coin) {
 	s.closeOrderIfProfitEnough(coin)
 
-	s.calculateMovingAverage(coin)
+	if s.Clock.NowTime().Minute()%viper.GetInt("strategy.maResistance.interval") == 0 {
+		s.calculateMovingAverage(coin)
+	}
 }
 
 func (s *MovingAverageResistanceStrategyTradingService) calculateMovingAverage(coin *domains.Coin) {
@@ -80,73 +79,36 @@ func (s *MovingAverageResistanceStrategyTradingService) calculateMovingAverage(c
 		return
 	}
 
-	klines, err := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coin.Id, viper.GetString("strategy.maResistance.interval"), s.Clock.NowTime(), 6)
+	klines, err := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coin.Id, viper.GetString("strategy.maResistance.interval"), s.Clock.NowTime(), 3)
 	if err != nil {
 		zap.S().Errorf("Error during FindClosedAtMoment at %v: %s", s.Clock.NowTime(), err.Error())
 		return
 	}
 
 	lastKline := klines[len(klines)-1]
-
 	lastShortMa := shortAvgs[len(shortAvgs)-1]
-	lastMediumMa := mediumAvgs[len(mediumAvgs)-1]
 
 	if s.isUpTrend(shortAvgs, mediumAvgs) {
-		isLastKlineCloseBelowTube := lastKline.Close < lastMediumMa
-		if isLastKlineCloseBelowTube {
-			s.isWaitingForCrossUp = false
-			return
-		}
-
-		isLastKlineCloseInTube := lastKline.Open > lastShortMa && lastKline.Close < lastShortMa && lastKline.Close > lastMediumMa
-
-		if s.isAllKlinesAboveMA(shortAvgs, klines[0:len(klines)-1]) && isLastKlineCloseInTube {
-			s.isWaitingForCrossUp = true
-		}
-		if lastKline.Open < lastShortMa && lastKline.Close > lastShortMa { // if cross up
-			if s.isWaitingForCrossUp {
-				zap.S().Infof("Open LONG")
-				s.openOrder(coin, constants.LONG)
-				s.isWaitingForCrossUp = false
-			}
+		isLastKlineCrossUpTube := lastKline.Open < lastShortMa && lastKline.Close > lastShortMa
+		if isLastKlineCrossUpTube && s.isAllKlinesInTubeMa(mediumAvgs, shortAvgs, klines[0:len(klines)-1]) {
+			zap.S().Infof("Open LONG")
+			s.openOrder(coin, constants.LONG)
 		}
 	}
 
 	if s.isDownTrend(shortAvgs, mediumAvgs) {
-		isLastKlineCloseAboveTube := lastKline.Close > lastMediumMa
-		if isLastKlineCloseAboveTube {
-			s.isWaitingForCrossUp = false
-			return
-		}
-
-		isLastKlineCloseInTube := lastKline.Open < lastShortMa && lastKline.Close > lastShortMa && lastKline.Close < lastMediumMa
-
-		if s.isAllKlinesBelowMA(shortAvgs, klines[0:len(klines)-1]) && isLastKlineCloseInTube { // if cross up
-			s.isWaitingForCrossDown = true
-		}
-		if lastKline.Open > lastShortMa && lastKline.Close < lastShortMa { // if cross down
-			if s.isWaitingForCrossDown {
-				zap.S().Infof("Open LONG")
-				s.openOrder(coin, constants.SHORT)
-				s.isWaitingForCrossUp = false
-			}
+		isLasKlineCrossDownTube := lastKline.Open > lastShortMa && lastKline.Close < lastShortMa
+		if isLasKlineCrossDownTube && s.isAllKlinesInTubeMa(shortAvgs, mediumAvgs, klines[0:len(klines)-1]) {
+			zap.S().Infof("Open SHORT")
+			s.openOrder(coin, constants.SHORT)
 		}
 	}
 }
 
-func (s *MovingAverageResistanceStrategyTradingService) isAllKlinesAboveMA(shortAvgs []int64, klines []*domains.Kline) bool {
+func (s *MovingAverageResistanceStrategyTradingService) isAllKlinesInTubeMa(downMA []int64, upMA []int64, klines []*domains.Kline) bool {
 	for i := len(klines) - 1; i >= 0; i-- {
-		if klines[i].Open < shortAvgs[i] || klines[i].Close < shortAvgs[i] {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (s *MovingAverageResistanceStrategyTradingService) isAllKlinesBelowMA(shortAvgs []int64, klines []*domains.Kline) bool {
-	for i := len(klines) - 1; i >= 0; i-- {
-		if klines[i].Open > shortAvgs[i] || klines[i].Close > shortAvgs[i] {
+		if klines[i].Open < downMA[i] || klines[i].Close < downMA[i] ||
+			klines[i].Open > upMA[i] || klines[i].Close > upMA[i] {
 			return false
 		}
 	}
@@ -174,12 +136,11 @@ func (s *MovingAverageResistanceStrategyTradingService) isDownTrend(shortAvgs []
 
 //copied
 func (s *MovingAverageResistanceStrategyTradingService) openOrder(coin *domains.Coin, futuresType constants.FuturesType) {
-	klines, err := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coin.Id, viper.GetString("strategy.maResistance.interval"), s.Clock.NowTime(), 1)
+	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
 	if err != nil {
-		zap.S().Errorf("Error during FindClosedAtMoment at %v: %s", s.Clock.NowTime(), err.Error())
+		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
 		return
 	}
-	currentPrice := klines[0].Close
 	amountTransaction := util.CalculateAmountByPriceAndCost(currentPrice, viper.GetInt64("strategy.ma.cost"))
 	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType, viper.GetInt("strategy.ma.futures.leverage"))
 	if err2 != nil {
@@ -220,12 +181,11 @@ func (s *MovingAverageResistanceStrategyTradingService) createOpenTransactionByO
 
 //copied
 func (s *MovingAverageResistanceStrategyTradingService) closeOrder(openTransaction *domains.Transaction, coin *domains.Coin) {
-	klines, err := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coin.Id, viper.GetString("strategy.maResistance.interval"), s.Clock.NowTime(), 1)
+	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
 	if err != nil {
-		zap.S().Errorf("Error during FindClosedAtMoment at %v: %s", s.Clock.NowTime(), err.Error())
+		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
 		return
 	}
-	currentPrice := klines[0].Close
 
 	orderResponseDto, err := s.exchangeApi.CloseFuturesOrder(openTransaction, currentPrice)
 	if err != nil {
@@ -287,14 +247,14 @@ func (s *MovingAverageResistanceStrategyTradingService) closeOrderIfProfitEnough
 		return
 	}
 
-	//if s.shouldCloseByStopLoss(openedOrder, coin) {
-	//s.closeOrder(openedOrder, coin)
-	//	return
-	//}
-	//if s.shouldCloseWithProfit(openedOrder, coin) {
-	//	s.closeOrder(openedOrder, coin)
-	//	return
-	//}
+	if s.shouldCloseByStopLoss(openedOrder, coin) {
+		s.closeOrder(openedOrder, coin)
+		return
+	}
+	if s.shouldCloseWithProfit(openedOrder, coin) {
+		s.closeOrder(openedOrder, coin)
+		return
+	}
 	//if s.isCloseToBreakeven(openedOrder, coin) {
 	//	s.closeOrder(openedOrder, coin)
 	//	return
@@ -303,10 +263,65 @@ func (s *MovingAverageResistanceStrategyTradingService) closeOrderIfProfitEnough
 	//	s.closeOrder(openedOrder, coin)
 	//	return
 	//}
-	if s.isCurrentPriceIntersectMA(openedOrder, coin) {
-		s.closeOrder(openedOrder, coin)
-		return
+	//if s.isCurrentPriceIntersectMA(openedOrder, coin) {
+	//	s.closeOrder(openedOrder, coin)
+	//	return
+	//}
+}
+
+func (s *MovingAverageResistanceStrategyTradingService) shouldCloseByStopLoss(lastTransaction *domains.Transaction, coin *domains.Coin) bool {
+	if s.Clock.NowTime().Minute()%viper.GetInt("strategy.maResistance.interval") != 0 {
+		return false
 	}
+	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
+	if err != nil {
+		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
+		return false
+	}
+
+	if lastTransaction.FuturesType == constants.LONG {
+		orderProfitInPercent := util.CalculatePercents(lastTransaction.Price, currentPrice)
+		if orderProfitInPercent <= viper.GetFloat64("strategy.maResistance.percentStopLoss") {
+			zap.S().Infof("at %v close order by stop loss price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, orderProfitInPercent)
+			return true
+		}
+	}
+
+	if lastTransaction.FuturesType == constants.SHORT {
+		orderProfitInPercent := -1 * util.CalculatePercents(lastTransaction.Price, currentPrice)
+		if orderProfitInPercent <= viper.GetFloat64("strategy.maResistance.percentStopLoss") {
+			zap.S().Infof("at %v close order by stop loss price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, orderProfitInPercent)
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *MovingAverageResistanceStrategyTradingService) shouldCloseWithProfit(lastTransaction *domains.Transaction, coin *domains.Coin) bool {
+	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
+	if err != nil {
+		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
+		return false
+	}
+
+	if lastTransaction.FuturesType == constants.LONG {
+		orderProfitInPercent := util.CalculatePercents(lastTransaction.Price, currentPrice)
+		if orderProfitInPercent >= viper.GetFloat64("strategy.maResistance.percentProfit") {
+			zap.S().Infof("At %v close LONG with profit price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, orderProfitInPercent)
+			return true
+		}
+	}
+
+	if lastTransaction.FuturesType == constants.SHORT {
+		orderProfitInPercent := -1 * util.CalculatePercents(lastTransaction.Price, currentPrice)
+		if orderProfitInPercent >= viper.GetFloat64("strategy.maResistance.percentProfit") {
+			zap.S().Infof("At %v close SHORT with profit price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, orderProfitInPercent)
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *MovingAverageResistanceStrategyTradingService) isCurrentPriceIntersectMA(lastTransaction *domains.Transaction, coin *domains.Coin) bool {
@@ -319,17 +334,50 @@ func (s *MovingAverageResistanceStrategyTradingService) isCurrentPriceIntersectM
 	lastKline := klines[0]
 
 	movingAvgs := s.MovingAverageService.CalculateAvg(coin, viper.GetInt("strategy.maResistance.length.medium"), 1)
+	percentsProfit := util.CalculatePercents(lastTransaction.Price, lastKline.Close)
 
 	if lastTransaction.FuturesType == constants.LONG {
 		if lastKline.Close < movingAvgs[len(movingAvgs)-1] {
-			zap.S().Infof("At %v close LONG  below MA price=%v  movingAvgs=%v \n", s.Clock.NowTime(), lastKline.Close, movingAvgs)
+			zap.S().Infof("At %v close intersect MA LONG below MA price=%v movingAvgs=%v profit=%v \n", s.Clock.NowTime(), lastKline.Close, movingAvgs, percentsProfit)
 			return true
 		}
 	}
 
 	if lastTransaction.FuturesType == constants.SHORT {
 		if lastKline.Close > movingAvgs[len(movingAvgs)-1] {
-			zap.S().Infof("At %v close SHORT above MA price=%v  movingAvgs=%v \n", s.Clock.NowTime(), lastKline.Close, movingAvgs)
+			zap.S().Infof("At %v close intersect MA SHORT MA price=%v movingAvgs=%v profit=%v \n", s.Clock.NowTime(), lastKline.Close, movingAvgs, percentsProfit)
+			zap.S().Infof("At %v close intersect MA SHORT MA price=%v movingAvgs=%v profit=%v \n", s.Clock.NowTime(), lastKline.Close, movingAvgs, percentsProfit)
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *MovingAverageResistanceStrategyTradingService) isProfitByTrolling(lastTransaction *domains.Transaction, coin *domains.Coin) bool {
+	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
+	if err != nil {
+		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
+		return false
+	}
+
+	priceChange := s.PriceChangeTrackingService.getChangePrice(lastTransaction.Id, currentPrice)
+
+	if lastTransaction.FuturesType == constants.LONG {
+		// close order if price on percentProfit lower from high
+		priceChangeInPercent := util.CalculatePercents(priceChange.HighPrice, currentPrice)
+		if priceChangeInPercent < -1*viper.GetFloat64("strategy.maResistance.percentTrollingProfit") {
+			zap.S().Infof("At %v close order trolling. Higher price %v current price %v percent %v",
+				s.Clock.NowTime(), priceChange.HighPrice, currentPrice, priceChangeInPercent)
+			return true
+		}
+	}
+	if lastTransaction.FuturesType == constants.SHORT {
+		// close order if price on percentProfit higher from low
+		priceChangeInPercent := util.CalculatePercents(priceChange.LowPrice, currentPrice)
+		if priceChangeInPercent > viper.GetFloat64("strategy.maResistance.percentTrollingProfit") {
+			zap.S().Infof("At %v close order trolling. Lower price %v current price %v percent %v",
+				s.Clock.NowTime(), priceChange.LowPrice, currentPrice, priceChangeInPercent)
 			return true
 		}
 	}

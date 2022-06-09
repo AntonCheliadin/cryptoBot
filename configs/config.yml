@@ -22,6 +22,9 @@ strategy:
     futures:
       leverage: 1
   maResistance:
+    percentProfit: 0.2
+    percentStopLoss: -1.5
+    percentTrollingProfit: 1.5 # close order by stop loss when price change on X%
     interval: 15
     length:
       short: 20
