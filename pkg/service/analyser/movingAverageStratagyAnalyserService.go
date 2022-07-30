@@ -45,11 +45,12 @@ func (s *MovingAverageStrategyAnalyserService) AnalyseCoin(coin *domains.Coin, f
 	timeIterator, _ := time.Parse(constants.DATE_FORMAT, from)
 	timeIterator = timeIterator.Add(time.Second * 2).Add(time.Hour)
 
-	for ; timeIterator.Before(timeMax); timeIterator = timeIterator.Add(time.Minute) {
+	for ; timeIterator.Before(timeMax); timeIterator = timeIterator.Add(time.Minute * 15) {
 		clockMock := date.GetClockMock(timeIterator)
 		s.tradingService.Clock = clockMock
 		s.tradingService.ExchangeDataService.Clock = clockMock
 		s.tradingService.MovingAverageService.Clock = clockMock
+		s.tradingService.StandardDeviationService.Clock = clockMock
 
 		s.tradingService.BotSingleAction(coin)
 	}

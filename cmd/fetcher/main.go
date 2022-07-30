@@ -64,8 +64,9 @@ func main() {
 	fetcherService := analyser.NewKlinesFetcherService(mockExchangeApi, repos.Kline)
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
-
-	if err := fetcherService.FetchKlinesForPeriod(coin, "2022-01-01", "2022-02-02", "15"); err != nil {
+	// "2022-01-01", "2022-07-28", "15"
+	// "2022-02-25", "2022-06-16", "1"
+	if err := fetcherService.FetchKlinesForPeriod(coin, "2022-06-16", "2022-07-28", "1"); err != nil {
 		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
 	}
 

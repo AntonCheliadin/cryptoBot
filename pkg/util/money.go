@@ -36,3 +36,14 @@ func CalculateAmountByPriceAndCost(currentPriceWithCents int64, costWithoutCents
 		return math.Round(amount*1000000) / 1000000
 	}
 }
+
+func CalculateAmountByPriceAndCostWithCents(currentPriceWithCents int64, costWithCents int64) float64 {
+	amount := float64(costWithCents) / float64(currentPriceWithCents)
+	if amount > 10 {
+		return math.Round(amount)
+	} else if amount > 0.1 {
+		return math.Round(amount*100) / 100
+	} else {
+		return math.Round(amount*1000000) / 1000000
+	}
+}

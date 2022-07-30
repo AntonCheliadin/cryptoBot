@@ -19,7 +19,8 @@ var movingAverageStrategyTradingServiceImpl *MovingAverageStrategyTradingService
 
 func NewMAStrategyTradingService(transactionRepo repository.Transaction, priceChangeRepo repository.PriceChange,
 	exchangeApi api.ExchangeApi, clock date.Clock, exchangeDataService *exchange.DataService, klineRepo repository.Kline,
-	priceChangeTrackingService *PriceChangeTrackingService, movingAverageService *indicator.MovingAverageService) *MovingAverageStrategyTradingService {
+	priceChangeTrackingService *PriceChangeTrackingService, movingAverageService *indicator.MovingAverageService,
+	standardDeviationService *indicator.StandardDeviationService) *MovingAverageStrategyTradingService {
 	if movingAverageStrategyTradingServiceImpl != nil {
 		panic("Unexpected try to create second service instance")
 	}
@@ -32,6 +33,7 @@ func NewMAStrategyTradingService(transactionRepo repository.Transaction, priceCh
 		ExchangeDataService:        exchangeDataService,
 		PriceChangeTrackingService: priceChangeTrackingService,
 		MovingAverageService:       movingAverageService,
+		StandardDeviationService:   standardDeviationService,
 	}
 	return movingAverageStrategyTradingServiceImpl
 }
@@ -45,6 +47,7 @@ type MovingAverageStrategyTradingService struct {
 	ExchangeDataService        *exchange.DataService
 	PriceChangeTrackingService *PriceChangeTrackingService
 	MovingAverageService       *indicator.MovingAverageService
+	StandardDeviationService   *indicator.StandardDeviationService
 }
 
 func (s *MovingAverageStrategyTradingService) BotAction(coin *domains.Coin) {
@@ -93,7 +96,8 @@ func (s *MovingAverageStrategyTradingService) calculateMovingAverage(coin *domai
 		}
 		if openedOrder == nil || openedOrder.FuturesType == constants.SHORT {
 			if currentPrice > shortAvgs[len(shortAvgs)-1] { // if current price above from MA
-				if s.isTrendUp(coin) {
+				//if s.isTrendUp(coin) {
+				if s.StandardDeviationService.IsVolatilityOscillatorSignal(coin, viper.GetString("strategy.ma.interval")) {
 					s.openOrder(coin, constants.LONG)
 				}
 			}
@@ -110,7 +114,8 @@ func (s *MovingAverageStrategyTradingService) calculateMovingAverage(coin *domai
 		}
 		if openedOrder == nil || openedOrder.FuturesType == constants.LONG {
 			if currentPrice < shortAvgs[len(shortAvgs)-1] { // if current price under from MA
-				if s.isTrendDown(coin) {
+				//if s.isTrendDown(coin) {
+				if s.StandardDeviationService.IsVolatilityOscillatorSignal(coin, viper.GetString("strategy.ma.interval")) {
 					s.openOrder(coin, constants.SHORT)
 				}
 			}
@@ -126,22 +131,22 @@ func (s *MovingAverageStrategyTradingService) closeOrderIfProfitEnough(coin *dom
 		return
 	}
 
-	if s.shouldCloseByStopLoss(openedOrder, coin) {
-		s.closeOrder(openedOrder, coin)
-		return
-	}
-	if s.shouldCloseWithProfit(openedOrder, coin) {
-		s.closeOrder(openedOrder, coin)
-		return
-	}
-	if s.isCloseToBreakeven(openedOrder, coin) {
-		s.closeOrder(openedOrder, coin)
-		return
-	}
-	if s.isProfitByTrolling(openedOrder, coin) {
-		s.closeOrder(openedOrder, coin)
-		return
-	}
+	//if s.shouldCloseByStopLoss(openedOrder, coin) {
+	//	s.closeOrder(openedOrder, coin)
+	//	return
+	//}
+	//if s.shouldCloseWithProfit(openedOrder, coin) {
+	//	s.closeOrder(openedOrder, coin)
+	//	return
+	//}
+	//if s.isCloseToBreakeven(openedOrder, coin) {
+	//	s.closeOrder(openedOrder, coin)
+	//	return
+	//}
+	//if s.isProfitByTrolling(openedOrder, coin) {
+	//	s.closeOrder(openedOrder, coin)
+	//	return
+	//}
 	if s.isCurrentPriceIntersectMA(openedOrder, coin) {
 		s.closeOrder(openedOrder, coin)
 		return
@@ -154,7 +159,8 @@ func (s *MovingAverageStrategyTradingService) openOrder(coin *domains.Coin, futu
 		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
 		return
 	}
-	amountTransaction := util.CalculateAmountByPriceAndCost(currentPrice, viper.GetInt64("strategy.ma.cost"))
+	sumOfProfit, err := s.transactionRepo.CalculateSumOfProfitByCoin(coin.Id, constants.MOVING_AVARAGE)
+	amountTransaction := util.CalculateAmountByPriceAndCostWithCents(currentPrice, viper.GetInt64("strategy.ma.cost")+sumOfProfit)
 	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType, viper.GetInt("strategy.ma.futures.leverage"))
 	if err2 != nil {
 		zap.S().Errorf("Error during OpenFuturesOrder: %s", err2.Error())

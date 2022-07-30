@@ -92,6 +92,12 @@ func (r *Transaction) CalculateSumOfProfit(tradingStrategy constants.TradingStra
 	return sumOfProfit, err
 }
 
+func (r *Transaction) CalculateSumOfProfitByCoin(coinId int64, tradingStrategy constants.TradingStrategy) (int64, error) {
+	var sumOfProfit int64
+	err := r.db.Get(&sumOfProfit, "select sum(profit) from transaction_table where profit is not null AND coin_id=$1 AND trading_strategy=$2", coinId, tradingStrategy)
+	return sumOfProfit, err
+}
+
 func (r *Transaction) CalculateSumOfSpentTransactions(tradingStrategy constants.TradingStrategy) (int64, error) {
 	var sumOfSpent int64
 	err := r.db.Get(&sumOfSpent, "select sum(total_cost) from transaction_table where related_transaction_id is null AND trading_strategy=$1", tradingStrategy)

@@ -9,16 +9,16 @@ trading:
 
 strategy:
   ma:
-    percentProfit: 2 # close order with profit when price change on X%
+    percentProfit: 0.5 # close order with profit when price change on X%
     percentStopLoss: -1.5 # close order by stop loss when price change on X%
     percentTrollingProfit: 1.5 # close order by stop loss when price change on X%
     interval: 15
     length:
-      short: 24
-      medium: 49
+      short: 9
+      medium: 24
       long: 50
     coin: 'SOLUSDT'
-    cost: 100 # cost of order for trading
+    cost: 10000 # cost of order for trading in cents
     futures:
       leverage: 1
   maResistance:
@@ -35,6 +35,9 @@ indicator:
     ma:
       length: 50
       points: 10
+  standardDeviation:
+      length: 100
+      percent: 1 # length of kline must be at least [1=100%] [0.6=60%] of standard
 
 
 api:

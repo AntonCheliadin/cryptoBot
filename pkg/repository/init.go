@@ -19,6 +19,7 @@ type Transaction interface {
 	FindLastBoughtNotSoldAndDate(date time.Time, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error)
 	SaveTransaction(transaction *domains.Transaction) error
 	CalculateSumOfProfit(tradingStrategy constants.TradingStrategy) (int64, error)
+	CalculateSumOfProfitByCoin(coinId int64, tradingStrategy constants.TradingStrategy) (int64, error)
 	CalculateSumOfSpentTransactions(tradingStrategy constants.TradingStrategy) (int64, error)
 	CalculateSumOfSpentTransactionsAndCreatedAfter(date time.Time, tradingStrategy constants.TradingStrategy) (int64, error)
 	CalculateSumOfProfitByDate(date time.Time, tradingStrategy constants.TradingStrategy) (int64, error)

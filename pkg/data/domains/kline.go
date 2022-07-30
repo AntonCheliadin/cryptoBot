@@ -2,6 +2,7 @@ package domains
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -22,4 +23,14 @@ type Kline struct {
 func (d *Kline) String() string {
 	return fmt.Sprintf("Kline {id: %v, coin: %v, openTime: %v, interval: %v, open: %v, high: %v, low: %v, close: %v}",
 		d.Id, d.CoinId, d.CoinId, d.OpenTime, d.Interval, d.Open, d.High, d.Low, d.Close)
+}
+
+func (d *Kline) GetIntervalInMinutes() int64 {
+	parsedInt, _ := strconv.ParseInt(d.Interval, 10, 64)
+
+	return parsedInt
+}
+
+func (d *Kline) GetPriceChange() int64 {
+	return d.Close - d.Open
 }
