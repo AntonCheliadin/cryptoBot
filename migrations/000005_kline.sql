@@ -7,8 +7,8 @@ create table if not exists kline
     coin_id    bigint    NOT NULL
         constraint kline_coin_fkey references coin,
 
-    open_time  timestamp NOT NULL,
-    close_time timestamp NOT NULL,
+    open_time  timestamp with time zone NOT NULL,
+    close_time timestamp with time zone NOT NULL,
     interval   text      NOT NULL,
 
     open       bigint    NOT NULL,

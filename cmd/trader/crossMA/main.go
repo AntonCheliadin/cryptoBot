@@ -1,14 +1,19 @@
 package main
 
 import (
-	"cryptoBot/pkg/api/bybit/mock"
+	"context"
+	"cryptoBot"
+	"cryptoBot/configs"
+	"cryptoBot/pkg/api/bybit"
+	"cryptoBot/pkg/controller"
+	"cryptoBot/pkg/cron"
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
-	"cryptoBot/pkg/service/analyser"
 	"cryptoBot/pkg/service/date"
 	"cryptoBot/pkg/service/exchange"
 	"cryptoBot/pkg/service/indicator"
+	"cryptoBot/pkg/service/telegram"
 	"cryptoBot/pkg/service/trading"
 	"fmt"
 	"github.com/jmoiron/sqlx"
@@ -17,7 +22,9 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 )
 
 func main() {
@@ -27,8 +34,9 @@ func main() {
 	if err := initConfig(); err != nil {
 		panic(fmt.Sprintf("Error during reading configs: %s", err.Error()))
 	}
+	configs.NewRuntimeConfig()
 
-	log.InitLoggerAnalyser()
+	log.InitLogger()
 
 	var closableClosure []func()
 
@@ -40,13 +48,13 @@ func main() {
 
 	zap.S().Info("Trading bot is starting...\n")
 
-	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT"), 10, 64)
+	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT_PROD"), 10, 64)
 	postgresDb, err := postgres.NewPostgresDb(&postgres.Config{
 		Host:     os.Getenv("DB_HOST"),
 		Port:     int(postgresDbPort),
 		Username: os.Getenv("DB_USERNAME"),
 		Password: os.Getenv("DB_PASSWORD"),
-		DBName:   os.Getenv("DB_ANALYSER_NAME"),
+		DBName:   os.Getenv("DB_NAME"),
 		SSLMode:  os.Getenv("DB_SSLMODE"),
 	})
 	if err != nil {
@@ -65,36 +73,44 @@ func main() {
 
 	repos := repository.NewRepositories(postgresDb)
 
-	//exchangeApi := binance.NewBinanceApi()
-	//mockExchangeApi := mock.NewBinanceApiMock()
-
-	//exchangeApi := bybit.NewBybitApi()
-	mockExchangeApi := mock.NewBybitApiMock()
-
-	//tradingService := trading.NewHolderStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi)
-	//analyserService := analyser.NewAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, tradingService)
+	exchangeApi := bybit.NewBybitApi()
 
 	maService := indicator.NewMovingAverageService(date.GetClock(), repos.Kline)
 	stdDevService := indicator.NewStandardDeviationService(date.GetClock(), repos.Kline)
-	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, mockExchangeApi, date.GetClock(), repos.Kline)
+	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, exchangeApi, date.GetClock(), repos.Kline)
 	priceChangeTrackingService := trading.NewPriceChangeTrackingService(repos.PriceChange)
-	fetcherService := exchange.NewKlinesFetcherService(mockExchangeApi, repos.Kline)
+	fetcherService := exchange.NewKlinesFetcherService(exchangeApi, repos.Kline)
 
-	maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi, date.GetClock(), exchangeDataService, repos.Kline, priceChangeTrackingService, maService, stdDevService, fetcherService)
-	analyserService := analyser.NewMovingAverageStrategyAnalyserService(repos.Transaction, repos.PriceChange, mockExchangeApi, maTradingService, repos.Kline)
+	maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, exchangeApi, date.GetClock(), exchangeDataService, repos.Kline, priceChangeTrackingService, maService, stdDevService, fetcherService)
 
-	//maResistanceTradingService := trading.NewMovingAverageResistanceStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi, date.GetClock(), exchangeDataService, repos.Kline, priceChangeTrackingService, maService)
-	//analyserService := analyser.NewMovingAverageResistanceStratagyAnalyserService(repos.Transaction, repos.PriceChange, mockExchangeApi, maResistanceTradingService, repos.Kline)
+	telegramService := telegram.NewTelegramService(repos.Transaction, repos.Coin, exchangeApi)
 
-	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
+	if enabled, err := strconv.ParseBool(os.Getenv("TRADING_ENABLED")); enabled && err == nil {
+		cron.InitCronJobs(maTradingService, repos.Coin)
+	}
 
-	analyserService.AnalyseCoin(coin, "2022-01-10", "2022-08-06") //max interval  2022-03-04 2022-07-28
+	router := controller.InitControllers(telegramService)
+
+	srv := new(cryptoBot.Server)
+	go func() {
+		zap.S().Info("Server is doing to be up right now!\n")
+		if err := srv.Run(viper.GetString("server.port"), router); err != nil {
+			panic(fmt.Sprintf("Error when starting the http server: %s", err.Error()))
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+
+	zap.S().Info("Logging before Background")
+	if err := srv.Shutdown(context.Background()); err != nil {
+		zap.S().Errorf("error occured on server shutting down: %s", err.Error())
+	}
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
 	}
-
-	os.Exit(0)
 }
 
 func initConfig() error {

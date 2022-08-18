@@ -53,6 +53,18 @@ func (r *Kline) FindClosedAtMoment(coinId int64, momentTime time.Time, interval 
 	return &domain, nil
 }
 
+//language=SQL
+func (r *Kline) FindLast(coinId int64, interval string) (*domains.Kline, error) {
+	var domain domains.Kline
+	if err := r.db.Get(&domain, "SELECT * FROM kline WHERE coin_id = $1 AND interval = $2 ORDER BY open_time DESC LIMIT 1", coinId, interval); err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &domain, nil
+}
+
 func (r *Kline) FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(
 	coinId int64, interval string, closeTime time.Time, limit int64) ([]*domains.Kline, error) {
 	var klines []domains.Kline
@@ -75,6 +87,7 @@ func listRelationsToListRelationsPointers(domainList []domains.Kline) []*domains
 	return result
 }
 
+//language=SQL
 func (r *Kline) SaveKline(domain *domains.Kline) error {
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -97,7 +110,7 @@ func (r *Kline) SaveKline(domain *domains.Kline) error {
 		return tx.Commit()
 	}
 
-	resp, err := tx.Exec("UPDATE kline SET close_time = $2 high = $3, low = $4, close = $5 WHERE id = $1",
+	resp, err := tx.Exec("UPDATE kline SET close_time = $2, high = $3, low = $4, close = $5 WHERE id = $1",
 		domain.Id, domain.CloseTime, domain.High, domain.Low, domain.Close)
 	if err != nil {
 		_ = tx.Rollback()

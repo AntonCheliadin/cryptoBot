@@ -25,7 +25,7 @@ type Transaction struct {
 
 	CreatedAt time.Time `db:"created_at"`
 
-	/* External order id in Binance for easy search */
+	/* External order id in Binance or Bybit for easy search */
 	ClientOrderId sql.NullString `db:"client_order_id"`
 
 	/* api error*/

@@ -1,0 +1,11 @@
+version: '3'
+services:
+  db-prod:
+    image: postgres
+    container_name: tradingBot-pgdb-prod
+    ports:
+      - 3298:5432
+    environment:
+      POSTGRES_USER: bot
+      POSTGRES_PASSWORD: securepass
+      POSTGRES_DB: botdb

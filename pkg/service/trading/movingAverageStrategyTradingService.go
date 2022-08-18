@@ -4,6 +4,7 @@ import (
 	"cryptoBot/configs"
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/constants/bybit"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/service/date"
@@ -13,6 +14,7 @@ import (
 	"database/sql"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"time"
 )
 
 var movingAverageStrategyTradingServiceImpl *MovingAverageStrategyTradingService
@@ -20,7 +22,7 @@ var movingAverageStrategyTradingServiceImpl *MovingAverageStrategyTradingService
 func NewMAStrategyTradingService(transactionRepo repository.Transaction, priceChangeRepo repository.PriceChange,
 	exchangeApi api.ExchangeApi, clock date.Clock, exchangeDataService *exchange.DataService, klineRepo repository.Kline,
 	priceChangeTrackingService *PriceChangeTrackingService, movingAverageService *indicator.MovingAverageService,
-	standardDeviationService *indicator.StandardDeviationService) *MovingAverageStrategyTradingService {
+	standardDeviationService *indicator.StandardDeviationService, klinesFetcherService *exchange.KlinesFetcherService) *MovingAverageStrategyTradingService {
 	if movingAverageStrategyTradingServiceImpl != nil {
 		panic("Unexpected try to create second service instance")
 	}
@@ -34,6 +36,7 @@ func NewMAStrategyTradingService(transactionRepo repository.Transaction, priceCh
 		PriceChangeTrackingService: priceChangeTrackingService,
 		MovingAverageService:       movingAverageService,
 		StandardDeviationService:   standardDeviationService,
+		KlinesFetcherService:       klinesFetcherService,
 	}
 	return movingAverageStrategyTradingServiceImpl
 }
@@ -48,6 +51,7 @@ type MovingAverageStrategyTradingService struct {
 	PriceChangeTrackingService *PriceChangeTrackingService
 	MovingAverageService       *indicator.MovingAverageService
 	StandardDeviationService   *indicator.StandardDeviationService
+	KlinesFetcherService       *exchange.KlinesFetcherService
 }
 
 func (s *MovingAverageStrategyTradingService) BotAction(coin *domains.Coin) {
@@ -55,9 +59,34 @@ func (s *MovingAverageStrategyTradingService) BotAction(coin *domains.Coin) {
 		return
 	}
 
-	//todo fetch needed bars from bybit
+	if s.fetchActualKlines(coin) {
+		return
+	}
 
 	s.BotSingleAction(coin)
+}
+
+func (s *MovingAverageStrategyTradingService) fetchActualKlines(coin *domains.Coin) bool {
+	lastKline, err := s.klineRepo.FindLast(coin.Id, viper.GetString("strategy.ma.interval"))
+	if err != nil {
+		zap.S().Errorf("Error FindLast %s", err.Error())
+		return true
+	}
+	var fetchKlinesFrom time.Time
+	if lastKline == nil {
+		fetchKlinesFrom = s.Clock.NowTime().Add(time.Minute * time.Duration(viper.GetInt("strategy.ma.interval")) * (bybit.BYBIT_MAX_LIMIT) * (-1))
+	} else {
+		fetchKlinesFrom = lastKline.OpenTime
+		if s.Clock.NowTime().Before(lastKline.CloseTime) {
+			return true
+		}
+	}
+
+	if err := s.KlinesFetcherService.FetchKlinesForPeriod(coin, fetchKlinesFrom, s.Clock.NowTime(), viper.GetString("strategy.ma.interval")); err != nil {
+		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
+		return true
+	}
+	return false
 }
 
 func (s *MovingAverageStrategyTradingService) BotSingleAction(coin *domains.Coin) {
@@ -161,7 +190,7 @@ func (s *MovingAverageStrategyTradingService) openOrder(coin *domains.Coin, futu
 	}
 	sumOfProfit, err := s.transactionRepo.CalculateSumOfProfitByCoin(coin.Id, constants.MOVING_AVARAGE)
 	amountTransaction := util.CalculateAmountByPriceAndCostWithCents(currentPrice, viper.GetInt64("strategy.ma.cost")+sumOfProfit)
-	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType, viper.GetInt("strategy.ma.futures.leverage"))
+	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType)
 	if err2 != nil {
 		zap.S().Errorf("Error during OpenFuturesOrder: %s", err2.Error())
 		return
@@ -183,7 +212,7 @@ func (s *MovingAverageStrategyTradingService) closeOrder(openTransaction *domain
 		return
 	}
 
-	orderResponseDto, err := s.exchangeApi.CloseFuturesOrder(openTransaction, currentPrice)
+	orderResponseDto, err := s.exchangeApi.CloseFuturesOrder(coin, openTransaction, currentPrice)
 	if err != nil {
 		zap.S().Errorf("Error during CloseFuturesOrder: %s", err.Error())
 		return

@@ -142,7 +142,7 @@ func (s *MovingAverageResistanceStrategyTradingService) openOrder(coin *domains.
 		return
 	}
 	amountTransaction := util.CalculateAmountByPriceAndCost(currentPrice, viper.GetInt64("strategy.ma.cost"))
-	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType, viper.GetInt("strategy.ma.futures.leverage"))
+	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType)
 	if err2 != nil {
 		zap.S().Errorf("Error during OpenFuturesOrder: %s", err2.Error())
 		return
@@ -187,7 +187,7 @@ func (s *MovingAverageResistanceStrategyTradingService) closeOrder(openTransacti
 		return
 	}
 
-	orderResponseDto, err := s.exchangeApi.CloseFuturesOrder(openTransaction, currentPrice)
+	orderResponseDto, err := s.exchangeApi.CloseFuturesOrder(coin, openTransaction, currentPrice)
 	if err != nil {
 		zap.S().Errorf("Error during CloseFuturesOrder: %s", err.Error())
 		return

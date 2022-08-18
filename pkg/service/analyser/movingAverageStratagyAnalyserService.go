@@ -3,14 +3,10 @@ package analyser
 import (
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/constants"
-	"cryptoBot/pkg/constants/bybit"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/service/date"
 	"cryptoBot/pkg/service/trading"
-	"fmt"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
 	"time"
 )
 
@@ -54,42 +50,6 @@ func (s *MovingAverageStrategyAnalyserService) AnalyseCoin(coin *domains.Coin, f
 
 		s.tradingService.BotSingleAction(coin)
 	}
-}
-
-func (s *MovingAverageStrategyAnalyserService) FetchKlines(coin *domains.Coin, from string, to string) bool {
-	if err := s.fetchKlinesForPeriod(coin, from, to, viper.GetString("strategy.ma.interval")); err != nil {
-		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
-		return true
-	}
-
-	if err := s.fetchKlinesForPeriod(coin, from, to, "1"); err != nil {
-		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
-		return true
-	}
-	return false
-}
-
-func (s *MovingAverageStrategyAnalyserService) fetchKlinesForPeriod(coin *domains.Coin, from string, to string, interval string) error {
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, from)
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, to)
-
-	timeIter := timeFrom
-	for timeIter.Before(timeTo) {
-		klinesDto, err := s.exchangeApi.GetKlines(coin, interval, bybit.BYBIT_MAX_LIMIT, timeIter)
-		if err != nil {
-			zap.S().Errorf("Error on fetch klines: %s", err)
-			return err
-		}
-		fmt.Printf("Fetched %v klines from %v\n", len(klinesDto.GetKlines()), timeIter)
-
-		s.saveKlines(coin, klinesDto)
-
-		klineLength := len(klinesDto.GetKlines())
-		lastKline := klinesDto.GetKlines()[klineLength-1]
-		timeIter = lastKline.GetCloseAt()
-	}
-
-	return nil
 }
 
 func (s *MovingAverageStrategyAnalyserService) saveKlines(coin *domains.Coin, klinesDto api.KlinesDto) {

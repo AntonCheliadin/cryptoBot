@@ -2,10 +2,11 @@ package main
 
 import (
 	"cryptoBot/pkg/api/bybit/mock"
+	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
-	"cryptoBot/pkg/service/analyser"
+	"cryptoBot/pkg/service/exchange"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
@@ -14,6 +15,7 @@ import (
 	"go.uber.org/zap"
 	"os"
 	"strconv"
+	"time"
 )
 
 func main() {
@@ -61,12 +63,16 @@ func main() {
 
 	repos := repository.NewRepositories(postgresDb)
 	mockExchangeApi := mock.NewBybitApiMock()
-	fetcherService := analyser.NewKlinesFetcherService(mockExchangeApi, repos.Kline)
+	fetcherService := exchange.NewKlinesFetcherService(mockExchangeApi, repos.Kline)
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 	// "2022-01-01", "2022-07-28", "15"
 	// "2022-02-25", "2022-06-16", "1"
-	if err := fetcherService.FetchKlinesForPeriod(coin, "2022-06-16", "2022-07-28", "1"); err != nil {
+
+	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-07-29")
+	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-08-06")
+
+	if err := fetcherService.FetchKlinesForPeriod(coin, timeFrom, timeTo, "15"); err != nil {
 		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
 	}
 

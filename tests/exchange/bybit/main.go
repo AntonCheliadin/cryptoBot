@@ -23,15 +23,23 @@ func main() {
 
 	log.InitLoggerAnalyser()
 
-	exchangeApi := bybit.NewBybitApi()
+	exchangeApi := bybit.NewBybitApi().(*bybit.BybitApi)
 
 	coin := &domains.Coin{
 		Symbol: "SOLUSDT",
 	}
 
-	//testGetCurrentPrice(exchangeApi, coin)
+	testGetCurrentPrice(exchangeApi, coin)
 
-	testGetKlines(exchangeApi, coin)
+	//testGetKlines(exchangeApi, coin)
+
+	//err := exchangeApi.SetFuturesLeverage(coin, 3)
+	//if err != nil {
+	//	zap.S().Errorf("API error: %s", err.Error())
+	//}
+
+	//testOpenFutures(exchangeApi, coin)
+	//testCloseFutures(exchangeApi, coin)
 }
 
 func initConfig() error {
@@ -55,4 +63,22 @@ func testGetKlines(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 		zap.S().Errorf("Error on GetCurrentCoinPrice: %s", err)
 	}
 	fmt.Printf("klinesDto=%v", klinesDto)
+}
+
+func testOpenFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) {
+	order, err := exchangeApi.OpenFuturesOrder(coin, 1, 3850, constants.SHORT)
+	if err != nil {
+		zap.S().Errorf("API error: %s", err.Error())
+		return
+	}
+	zap.S().Infof("testOpenFutures response: %v", order)
+}
+
+func testCloseFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) {
+	transaction := domains.Transaction{}
+	transaction.Amount = 2
+	transaction.FuturesType = constants.SHORT
+	transaction.Price = 3854
+
+	exchangeApi.CloseFuturesOrder(coin, &transaction, 3836)
 }

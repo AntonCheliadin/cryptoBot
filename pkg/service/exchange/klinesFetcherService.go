@@ -1,8 +1,7 @@
-package analyser
+package exchange
 
 import (
 	"cryptoBot/pkg/api"
-	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/constants/bybit"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/repository"
@@ -14,7 +13,7 @@ import (
 var klinesFetcherServiceImpl *KlinesFetcherService
 
 func NewKlinesFetcherService(exchangeApi api.ExchangeApi, klineRepo repository.Kline) *KlinesFetcherService {
-	if movingAverageStrategyAnalyserServiceImpl != nil {
+	if klinesFetcherServiceImpl != nil {
 		panic("Unexpected try to create second service instance")
 	}
 	klinesFetcherServiceImpl = &KlinesFetcherService{
@@ -29,10 +28,7 @@ type KlinesFetcherService struct {
 	exchangeApi api.ExchangeApi
 }
 
-func (s *KlinesFetcherService) FetchKlinesForPeriod(coin *domains.Coin, from string, to string, interval string) error {
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, from)
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, to)
-
+func (s *KlinesFetcherService) FetchKlinesForPeriod(coin *domains.Coin, timeFrom time.Time, timeTo time.Time, interval string) error {
 	timeIter := timeFrom
 	for timeIter.Before(timeTo) {
 		klinesDto, err := s.exchangeApi.GetKlines(coin, interval, bybit.BYBIT_MAX_LIMIT, timeIter)
@@ -54,19 +50,22 @@ func (s *KlinesFetcherService) FetchKlinesForPeriod(coin *domains.Coin, from str
 
 func (s *KlinesFetcherService) saveKlines(coin *domains.Coin, klinesDto api.KlinesDto) {
 	for _, dto := range klinesDto.GetKlines() {
-		if existedKline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, dto.GetStartAt(), dto.GetInterval()); existedKline == nil {
-			kline := domains.Kline{
+		existedKline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, dto.GetStartAt(), dto.GetInterval())
+
+		if existedKline == nil {
+			existedKline = &domains.Kline{
 				CoinId:    coin.Id,
 				OpenTime:  dto.GetStartAt(),
 				CloseTime: dto.GetCloseAt(),
 				Interval:  dto.GetInterval(),
 				Open:      dto.GetOpen(),
-				High:      dto.GetHigh(),
-				Low:       dto.GetLow(),
-				Close:     dto.GetClose(),
 			}
-
-			_ = s.klineRepo.SaveKline(&kline)
 		}
+
+		existedKline.High = dto.GetHigh()
+		existedKline.Low = dto.GetLow()
+		existedKline.Close = dto.GetClose()
+
+		_ = s.klineRepo.SaveKline(existedKline)
 	}
 }

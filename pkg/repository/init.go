@@ -40,6 +40,7 @@ type Kline interface {
 	SaveKline(domain *domains.Kline) error
 	FindOpenedAtMoment(coinId int64, momentTime time.Time, interval string) (*domains.Kline, error)
 	FindClosedAtMoment(coinId int64, momentTime time.Time, interval string) (*domains.Kline, error)
+	FindLast(coinId int64, interval string) (*domains.Kline, error)
 }
 
 type Repository struct {
