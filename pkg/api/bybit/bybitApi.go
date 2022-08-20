@@ -11,6 +11,7 @@ import (
 	"cryptoBot/pkg/util"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -278,6 +279,10 @@ func (api *BybitApi) futuresOrderByMarket(queryParams map[string]interface{}) (a
 	if errUnmarshal != nil {
 		zap.S().Error("Unmarshal error: ", errUnmarshal.Error())
 		return nil, errUnmarshal
+	}
+
+	if dto.RetCode != 0 {
+		return nil, errors.New("Create order failed!")
 	}
 
 	return &dto, nil
