@@ -41,11 +41,11 @@ type FuturesOrderResponseDto struct {
 }
 
 func (d *FuturesOrderResponseDto) CalculateAvgPrice() int64 {
-	return int64(d.Result.Price)
+	return int64(d.Result.Price) * 100
 }
 
 func (d *FuturesOrderResponseDto) CalculateTotalCost() int64 {
-	return int64(d.Result.Qty)
+	return int64(d.GetAmount() * float64(d.CalculateAvgPrice()))
 }
 
 func (d *FuturesOrderResponseDto) CalculateCommissionInUsd() int64 {
@@ -53,5 +53,5 @@ func (d *FuturesOrderResponseDto) CalculateCommissionInUsd() int64 {
 }
 
 func (d *FuturesOrderResponseDto) GetAmount() float64 {
-	return float64(d.CalculateTotalCost()) / float64(d.CalculateAvgPrice())
+	return d.Result.Qty
 }
