@@ -41,7 +41,7 @@ type FuturesOrderResponseDto struct {
 }
 
 func (d *FuturesOrderResponseDto) CalculateAvgPrice() int64 {
-	return int64(d.Result.Price) * 100
+	return int64(d.Result.Price * 100)
 }
 
 func (d *FuturesOrderResponseDto) CalculateTotalCost() int64 {
