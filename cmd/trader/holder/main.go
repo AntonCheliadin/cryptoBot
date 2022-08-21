@@ -4,7 +4,7 @@ import (
 	"context"
 	"cryptoBot"
 	"cryptoBot/configs"
-	"cryptoBot/pkg/api/bybit"
+	"cryptoBot/pkg/api/binance"
 	"cryptoBot/pkg/controller"
 	"cryptoBot/pkg/cron"
 	"cryptoBot/pkg/log"
@@ -70,8 +70,7 @@ func main() {
 
 	repos := repository.NewRepositories(postgresDb)
 
-	//exchangeApi := binance.NewBinanceApi()
-	exchangeApi := bybit.NewBybitApi()
+	exchangeApi := binance.NewBinanceApi()
 
 	tradingService := trading.NewHolderStrategyTradingService(repos.Transaction, repos.PriceChange, exchangeApi)
 	telegramService := telegram.NewTelegramService(repos.Transaction, repos.Coin, exchangeApi)

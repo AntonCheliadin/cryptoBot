@@ -19,17 +19,21 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
-func NewBybitApi() api.ExchangeApi {
-	return &BybitApi{}
+func NewBybitApi(apiKey string, secretKey string) api.ExchangeApi {
+	return &BybitApi{
+		apiKey:    apiKey,
+		secretKey: secretKey,
+	}
 }
 
 type BybitApi struct {
+	apiKey    string
+	secretKey string
 }
 
 func (bybitApi *BybitApi) GetKlines(coin *domains.Coin, interval string, limit int, fromTime time.Time) (api.KlinesDto, error) {
@@ -95,7 +99,7 @@ func (api *BybitApi) orderCoinByMarket(queryParams string) (api.OrderResponseDto
 }
 
 func (api *BybitApi) getSignedApiRequest(uri string, queryParams map[string]interface{}) ([]byte, error) {
-	sign := api.getSignature(queryParams, os.Getenv("BYBIT_CryptoBotFutures_API_SECRET"))
+	sign := api.getSignature(queryParams)
 	url := uri + "?" + util.ConvertMapParamsToString(queryParams) + "&sign=" + sign
 
 	zap.S().Infof("getSignedApiRequest = %s", url)
@@ -104,7 +108,7 @@ func (api *BybitApi) getSignedApiRequest(uri string, queryParams map[string]inte
 }
 
 func (api *BybitApi) postSignedApiRequest(uri string, queryParams map[string]interface{}) ([]byte, error) {
-	queryParams["sign"] = api.getSignature(queryParams, os.Getenv("BYBIT_CryptoBotFutures_API_SECRET"))
+	queryParams["sign"] = api.getSignature(queryParams)
 	jsonString, _ := json.Marshal(queryParams)
 
 	zap.S().Infof("postSignedApiRequest = %s  json= %v", uri, string(jsonString))
@@ -140,7 +144,7 @@ func (api *BybitApi) signedApiRequest(method, uri string, requestBody io.Reader)
 }
 
 func (api *BybitApi) getOrderDetails(orderResponseDto bybit.OrderResponseDto) (api.OrderResponseDto, error) {
-	//queryParams := "api_key=" + os.Getenv("BYBIT_CryptoBotSubAcc_API_KEY") +
+	//queryParams := "api_key=" + api.apiKey +
 	//	"&orderId=" + orderResponseDto.Result.OrderId +
 	//	"&timestamp=" + util.MakeTimestamp()
 
@@ -160,7 +164,7 @@ func (api *BybitApi) getOrderDetails(orderResponseDto bybit.OrderResponseDto) (a
 }
 
 func (api *BybitApi) buildParams(coin *domains.Coin, amount float64, side string) string {
-	return "api_key=" + os.Getenv("BYBIT_CryptoBotSubAcc_API_KEY") +
+	return "api_key=" + api.apiKey +
 		"&qty=" + api.buildQty(amount, side) +
 		"&side=" + side +
 		"&symbol=" + coin.Symbol +
@@ -183,10 +187,8 @@ func (api *BybitApi) buildQty(amount float64, side string) string {
 }
 
 func (api *BybitApi) sign(data string) string {
-	secret := os.Getenv("BYBIT_CryptoBotFutures_API_SECRET")
-
 	// Create a new HMAC by defining the hash type and the key (as byte array)
-	h := hmac.New(sha256.New, []byte(secret))
+	h := hmac.New(sha256.New, []byte(api.secretKey))
 
 	// Write Data to it
 	h.Write([]byte(data))
@@ -197,8 +199,8 @@ func (api *BybitApi) sign(data string) string {
 	return sha
 }
 
-func (api *BybitApi) getSignature(params map[string]interface{}, key string) string {
-	h := hmac.New(sha256.New, []byte(key))
+func (api *BybitApi) getSignature(params map[string]interface{}) string {
+	h := hmac.New(sha256.New, []byte(api.secretKey))
 	io.WriteString(h, util.ConvertMapParamsToString(params))
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
@@ -206,7 +208,7 @@ func (api *BybitApi) getSignature(params map[string]interface{}, key string) str
 func (api *BybitApi) SetFuturesLeverage(coin *domains.Coin, leverage int) error {
 	_, err := api.postSignedApiRequest("/private/linear/position/set-leverage",
 		map[string]interface{}{
-			"api_key":       os.Getenv("BYBIT_CryptoBotFutures_API_KEY"),
+			"api_key":       api.apiKey,
 			"buy_leverage":  strconv.Itoa(leverage),
 			"sell_leverage": strconv.Itoa(leverage),
 			"symbol":        coin.Symbol,
@@ -253,7 +255,7 @@ func (api *BybitApi) buildCloseFuturesParams(coin *domains.Coin, openedTransacti
 
 func (api *BybitApi) buildFuturesParams(coin *domains.Coin, amount float64, side string, positionIdx int) map[string]interface{} {
 	return map[string]interface{}{
-		"api_key":          os.Getenv("BYBIT_CryptoBotFutures_API_KEY"),
+		"api_key":          api.apiKey,
 		"qty":              amount,
 		"side":             side,
 		"symbol":           coin.Symbol,
@@ -300,7 +302,7 @@ func (api *BybitApi) futuresOrderByMarketWithResponseDetails(queryParams map[str
 
 func (api *BybitApi) GetActiveOrdersByCoin(coin *domains.Coin) (*bybit.ActiveOrdersResponseDto, error) {
 	requestParams := map[string]interface{}{
-		"api_key":   os.Getenv("BYBIT_CryptoBotFutures_API_KEY"),
+		"api_key":   api.apiKey,
 		"timestamp": util.MakeTimestamp(),
 		"symbol":    coin.Symbol,
 	}
@@ -322,7 +324,7 @@ func (api *BybitApi) GetActiveOrdersByCoin(coin *domains.Coin) (*bybit.ActiveOrd
 
 func (api *BybitApi) GetActiveOrder(orderDto *bybit.FuturesOrderResponseDto) (api.OrderResponseDto, error) {
 	requestParams := map[string]interface{}{
-		"api_key":   os.Getenv("BYBIT_CryptoBotFutures_API_KEY"),
+		"api_key":   api.apiKey,
 		"order_id":  orderDto.Result.OrderId,
 		"timestamp": util.MakeTimestamp(),
 		"symbol":    orderDto.Result.Symbol,
@@ -345,7 +347,7 @@ func (api *BybitApi) GetActiveOrder(orderDto *bybit.FuturesOrderResponseDto) (ap
 
 func (api *BybitApi) GetWalletBalance() (api.WalletBalanceDto, error) {
 	requestParams := map[string]interface{}{
-		"api_key":   os.Getenv("BYBIT_CryptoBotFutures_API_KEY"),
+		"api_key":   api.apiKey,
 		"coin":      "USDT",
 		"timestamp": util.MakeTimestamp(),
 	}
