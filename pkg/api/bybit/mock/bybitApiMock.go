@@ -2,6 +2,7 @@ package mock
 
 import (
 	"cryptoBot/pkg/api"
+	"cryptoBot/pkg/api/mock"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/data/dto/bybit"
@@ -81,6 +82,14 @@ func (api *BybitApiMock) SellCoinByMarket(coin *domains.Coin, amount float64, pr
 		price:  price,
 		amount: amount,
 	}, nil
+}
+
+func (api *BybitApiMock) GetWalletBalance() (api.WalletBalanceDto, error) {
+	return &mock.BalanceDtoMock{}, nil
+}
+
+func (api *BybitApiMock) SetFuturesLeverage(coin *domains.Coin, leverage int) error {
+	return nil
 }
 
 type orderResponseMockDto struct {

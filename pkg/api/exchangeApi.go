@@ -15,6 +15,9 @@ type ExchangeApi interface {
 
 	OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType) (OrderResponseDto, error)
 	CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price int64) (OrderResponseDto, error)
+
+	GetWalletBalance() (WalletBalanceDto, error)
+	SetFuturesLeverage(coin *domains.Coin, leverage int) error
 }
 
 type OrderResponseDto interface {
@@ -37,4 +40,8 @@ type KlineDto interface {
 	GetHigh() int64
 	GetLow() int64
 	GetClose() int64
+}
+
+type WalletBalanceDto interface {
+	GetAvailableBalanceInCents() int64
 }

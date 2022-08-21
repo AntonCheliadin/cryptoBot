@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"cryptoBot/pkg/api"
+	"cryptoBot/pkg/api/mock"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/data/dto/binance"
@@ -130,4 +131,12 @@ func (api *BinanceApi) OpenFuturesOrder(coin *domains.Coin, amount float64, pric
 }
 func (api *BinanceApi) CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price int64) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
+}
+
+func (api *BinanceApi) GetWalletBalance() (api.WalletBalanceDto, error) {
+	return &mock.BalanceDtoMock{}, nil
+}
+
+func (api *BinanceApi) SetFuturesLeverage(coin *domains.Coin, leverage int) error {
+	return nil
 }

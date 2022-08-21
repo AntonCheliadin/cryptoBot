@@ -2,6 +2,7 @@ package mock
 
 import (
 	"cryptoBot/pkg/api"
+	"cryptoBot/pkg/api/mock"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/data/domains"
 	"errors"
@@ -29,6 +30,14 @@ func (api *BinanceApiMock) CloseFuturesOrder(coin *domains.Coin, openedTransacti
 
 func (api *BinanceApiMock) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
 	return 0, errors.New("Shouldn't be called.")
+}
+
+func (api *BinanceApiMock) GetWalletBalance() (api.WalletBalanceDto, error) {
+	return &mock.BalanceDtoMock{}, nil
+}
+
+func (api *BinanceApiMock) SetFuturesLeverage(coin *domains.Coin, leverage int) error {
+	return nil
 }
 
 var countOfNotSoldTransactions = 0

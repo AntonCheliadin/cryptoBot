@@ -8,6 +8,7 @@ import (
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/data/dto/bybit"
+	"cryptoBot/pkg/data/dto/bybit/wallet"
 	"cryptoBot/pkg/util"
 	"encoding/hex"
 	"encoding/json"
@@ -340,4 +341,26 @@ func (api *BybitApi) GetActiveOrder(orderDto *bybit.FuturesOrderResponseDto) (ap
 	}
 
 	return &dto.Result.Data[0], nil
+}
+
+func (api *BybitApi) GetWalletBalance() (api.WalletBalanceDto, error) {
+	requestParams := map[string]interface{}{
+		"api_key":   os.Getenv("BYBIT_CryptoBotFutures_API_KEY"),
+		"coin":      "USDT",
+		"timestamp": util.MakeTimestamp(),
+	}
+
+	body, err := api.getSignedApiRequest("/v2/private/wallet/balance", requestParams)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := wallet.GetWalletBalanceDto{}
+	errUnmarshal := json.Unmarshal(body, &dto)
+	if errUnmarshal != nil {
+		zap.S().Error("Unmarshal error", errUnmarshal.Error())
+		return nil, errUnmarshal
+	}
+
+	return &dto, nil
 }

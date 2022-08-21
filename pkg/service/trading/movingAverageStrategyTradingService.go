@@ -54,6 +54,14 @@ type MovingAverageStrategyTradingService struct {
 	KlinesFetcherService       *exchange.KlinesFetcherService
 }
 
+func (s *MovingAverageStrategyTradingService) InitializeTrading(coin *domains.Coin) error {
+	err := s.exchangeApi.SetFuturesLeverage(coin, viper.GetInt("strategy.ma.futures.leverage"))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *MovingAverageStrategyTradingService) BotAction(coin *domains.Coin) {
 	if !configs.RuntimeConfig.TradingEnabled {
 		return
@@ -188,8 +196,8 @@ func (s *MovingAverageStrategyTradingService) openOrder(coin *domains.Coin, futu
 		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
 		return
 	}
-	sumOfProfit, err := s.transactionRepo.CalculateSumOfProfitByCoin(coin.Id, constants.MOVING_AVARAGE)
-	amountTransaction := util.CalculateAmountByPriceAndCostWithCents(currentPrice, viper.GetInt64("strategy.ma.cost")+sumOfProfit)
+
+	amountTransaction := util.CalculateAmountByPriceAndCostWithCents(currentPrice, s.getCostOfOrder())
 	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType)
 	if err2 != nil {
 		zap.S().Errorf("Error during OpenFuturesOrder: %s", err2.Error())
@@ -456,4 +464,16 @@ func (s *MovingAverageStrategyTradingService) isProfitByTrolling(lastTransaction
 	}
 
 	return false
+}
+
+func (s *MovingAverageStrategyTradingService) getCostOfOrder() int64 {
+	walletBalanceDto, err := s.exchangeApi.GetWalletBalance()
+	if err != nil {
+		zap.S().Errorf("Error during GetWalletBalance at %v: %s", s.Clock.NowTime(), err.Error())
+		return 0
+	}
+
+	maxOrderCost := walletBalanceDto.GetAvailableBalanceInCents() * viper.GetInt64("strategy.ma.futures.leverage")
+
+	return maxOrderCost
 }

@@ -16,6 +16,7 @@ import (
 
 type TradingService interface {
 	BotAction(coin *domains.Coin)
+	InitializeTrading(coin *domains.Coin) error
 }
 
 var tradingServiceImpl *HolderStrategyTradingService
@@ -36,6 +37,10 @@ type HolderStrategyTradingService struct {
 	transactionRepo repository.Transaction
 	priceChangeRepo repository.PriceChange
 	exchangeApi     api.ExchangeApi
+}
+
+func (s *HolderStrategyTradingService) InitializeTrading(coin *domains.Coin) error {
+	return nil
 }
 
 func (s *HolderStrategyTradingService) BotAction(coin *domains.Coin) {

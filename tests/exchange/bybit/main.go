@@ -47,6 +47,13 @@ func main() {
 	//	return
 	//}
 	//zap.S().Infof("GetActiveOrdersByCoin response: %v", result)
+
+	result, err := exchangeApi.GetWalletBalance()
+	if err != nil {
+		zap.S().Errorf("API error: %s", err.Error())
+		return
+	}
+	zap.S().Infof("GetWalletBalance response: %v", result)
 }
 
 func initConfig() error {

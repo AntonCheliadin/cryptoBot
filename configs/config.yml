@@ -20,7 +20,7 @@ strategy:
     coin: 'SOLUSDT'
     cost: 10000 # cost of order for trading in cents
     futures:
-      leverage: 1
+      leverage: 2
   maResistance:
     percentProfit: 0.2
     percentStopLoss: -1.5

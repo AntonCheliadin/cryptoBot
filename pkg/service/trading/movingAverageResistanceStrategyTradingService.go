@@ -47,6 +47,10 @@ type MovingAverageResistanceStrategyTradingService struct {
 	MovingAverageService       *indicator.MovingAverageService
 }
 
+func (s *MovingAverageResistanceStrategyTradingService) InitializeTrading(coin *domains.Coin) error {
+	return nil
+}
+
 func (s *MovingAverageResistanceStrategyTradingService) BotAction(coin *domains.Coin) {
 	if !configs.RuntimeConfig.TradingEnabled {
 		return
