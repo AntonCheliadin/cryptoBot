@@ -19,7 +19,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -94,17 +93,28 @@ func (api *BybitApi) orderCoinByMarket(queryParams string) (api.OrderResponseDto
 	return api.getOrderDetails(dto)
 }
 
+func (api *BybitApi) getSignedApiRequest(uri string, queryParams map[string]interface{}) ([]byte, error) {
+	sign := api.getSignature(queryParams, os.Getenv("BYBIT_CryptoBotFutures_API_SECRET"))
+	url := uri + "?" + util.ConvertMapParamsToString(queryParams) + "&sign=" + sign
+
+	zap.S().Infof("getSignedApiRequest = %s", url)
+
+	return api.signedApiRequest(http.MethodGet, url, nil)
+}
+
 func (api *BybitApi) postSignedApiRequest(uri string, queryParams map[string]interface{}) ([]byte, error) {
 	queryParams["sign"] = api.getSignature(queryParams, os.Getenv("BYBIT_CryptoBotFutures_API_SECRET"))
 	jsonString, _ := json.Marshal(queryParams)
 
+	zap.S().Infof("postSignedApiRequest = %s  json= %v", uri, string(jsonString))
+
+	return api.signedApiRequest(http.MethodPost, uri, bytes.NewBuffer(jsonString))
+}
+
+func (api *BybitApi) signedApiRequest(method, uri string, requestBody io.Reader) ([]byte, error) {
 	urlRequest := "https://api.bytick.com" + uri
-
-	zap.S().Infof("postSignedApiRequest = %s  json= %v", urlRequest, string(jsonString))
-
-	method := http.MethodPost
 	client := &http.Client{}
-	req, err := http.NewRequest(method, urlRequest, bytes.NewBuffer(jsonString))
+	req, err := http.NewRequest(method, urlRequest, requestBody)
 
 	if err != nil {
 		zap.S().Errorf("API error: %s", err)
@@ -187,20 +197,8 @@ func (api *BybitApi) sign(data string) string {
 }
 
 func (api *BybitApi) getSignature(params map[string]interface{}, key string) string {
-	keys := make([]string, len(params))
-	i := 0
-	_val := ""
-	for k, _ := range params {
-		keys[i] = k
-		i++
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		_val += k + "=" + fmt.Sprintf("%v", params[k]) + "&"
-	}
-	_val = _val[0 : len(_val)-1]
 	h := hmac.New(sha256.New, []byte(key))
-	io.WriteString(h, _val)
+	io.WriteString(h, util.ConvertMapParamsToString(params))
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
@@ -220,13 +218,12 @@ func (api *BybitApi) SetFuturesLeverage(coin *domains.Coin, leverage int) error 
 
 func (api *BybitApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType) (api.OrderResponseDto, error) {
 	queryParams := api.buildOpenFuturesParams(coin, amount, price, futuresType)
-	return api.futuresOrderByMarket(queryParams)
+	return api.futuresOrderByMarketWithResponseDetails(queryParams)
 }
 
 func (api *BybitApi) CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price int64) (api.OrderResponseDto, error) {
 	queryParams := api.buildCloseFuturesParams(coin, openedTransaction, price)
-
-	return api.futuresOrderByMarket(queryParams)
+	return api.futuresOrderByMarketWithResponseDetails(queryParams)
 }
 
 func (api *BybitApi) buildOpenFuturesParams(coin *domains.Coin, amount float64, priceInCents int64,
@@ -260,6 +257,7 @@ func (api *BybitApi) buildFuturesParams(coin *domains.Coin, amount float64, side
 		"side":             side,
 		"symbol":           coin.Symbol,
 		"timestamp":        util.MakeTimestamp(),
+		"order_link_id":    coin.Symbol + "-" + time.Now().Format(constants.DATE_TIME_FORMAT),
 		"order_type":       "Market",
 		"time_in_force":    "GoodTillCancel",
 		"reduce_only":      false,
@@ -268,7 +266,7 @@ func (api *BybitApi) buildFuturesParams(coin *domains.Coin, amount float64, side
 	}
 }
 
-func (api *BybitApi) futuresOrderByMarket(queryParams map[string]interface{}) (api.OrderResponseDto, error) {
+func (api *BybitApi) futuresOrderByMarket(queryParams map[string]interface{}) (*bybit.FuturesOrderResponseDto, error) {
 	body, err := api.postSignedApiRequest("/private/linear/order/create", queryParams)
 	if err != nil {
 		return nil, err
@@ -286,4 +284,60 @@ func (api *BybitApi) futuresOrderByMarket(queryParams map[string]interface{}) (a
 	}
 
 	return &dto, nil
+}
+
+func (api *BybitApi) futuresOrderByMarketWithResponseDetails(queryParams map[string]interface{}) (api.OrderResponseDto, error) {
+	dto, err := api.futuresOrderByMarket(queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	time.Sleep(10 * time.Second)
+
+	return api.GetActiveOrder(dto)
+}
+
+func (api *BybitApi) GetActiveOrdersByCoin(coin *domains.Coin) (*bybit.ActiveOrdersResponseDto, error) {
+	requestParams := map[string]interface{}{
+		"api_key":   os.Getenv("BYBIT_CryptoBotFutures_API_KEY"),
+		"timestamp": util.MakeTimestamp(),
+		"symbol":    coin.Symbol,
+	}
+
+	body, err := api.getSignedApiRequest("/private/linear/order/list", requestParams)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := bybit.ActiveOrdersResponseDto{}
+	errUnmarshal := json.Unmarshal(body, &dto)
+	if errUnmarshal != nil {
+		zap.S().Error("Unmarshal error", errUnmarshal.Error())
+		return nil, errUnmarshal
+	}
+
+	return &dto, nil
+}
+
+func (api *BybitApi) GetActiveOrder(orderDto *bybit.FuturesOrderResponseDto) (api.OrderResponseDto, error) {
+	requestParams := map[string]interface{}{
+		"api_key":   os.Getenv("BYBIT_CryptoBotFutures_API_KEY"),
+		"order_id":  orderDto.Result.OrderId,
+		"timestamp": util.MakeTimestamp(),
+		"symbol":    orderDto.Result.Symbol,
+	}
+
+	body, err := api.getSignedApiRequest("/private/linear/order/list", requestParams)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := bybit.ActiveOrdersResponseDto{}
+	errUnmarshal := json.Unmarshal(body, &dto)
+	if errUnmarshal != nil {
+		zap.S().Error("Unmarshal error", errUnmarshal.Error())
+		return nil, errUnmarshal
+	}
+
+	return &dto.Result.Data[0], nil
 }

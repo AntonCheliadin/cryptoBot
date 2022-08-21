@@ -40,6 +40,13 @@ func main() {
 
 	//testOpenFutures(exchangeApi, coin)
 	//testCloseFutures(exchangeApi, coin)
+
+	//result, err := exchangeApi.GetActiveOrdersByCoin(coin)
+	//if err != nil {
+	//	zap.S().Errorf("API error: %s", err.Error())
+	//	return
+	//}
+	//zap.S().Infof("GetActiveOrdersByCoin response: %v", result)
 }
 
 func initConfig() error {
@@ -66,7 +73,7 @@ func testGetKlines(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 }
 
 func testOpenFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) {
-	order, err := exchangeApi.OpenFuturesOrder(coin, 1, 3850, constants.SHORT)
+	order, err := exchangeApi.OpenFuturesOrder(coin, 2, 3850, constants.LONG)
 	if err != nil {
 		zap.S().Errorf("API error: %s", err.Error())
 		return
@@ -77,7 +84,7 @@ func testOpenFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 func testCloseFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 	transaction := domains.Transaction{}
 	transaction.Amount = 2
-	transaction.FuturesType = constants.SHORT
+	transaction.FuturesType = constants.LONG
 	transaction.Price = 3854
 
 	exchangeApi.CloseFuturesOrder(coin, &transaction, 3836)
