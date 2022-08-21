@@ -29,6 +29,9 @@ strategy:
     length:
       short: 20
       medium: 54
+  trendScalper:
+    futures:
+      leverage: 1
 
 indicator:
   trend:
