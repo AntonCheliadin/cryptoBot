@@ -16,7 +16,7 @@ import (
 var analyserServiceImpl *AnalyserService
 
 func NewAnalyserService(transactionRepo repository.Transaction, priceChangeRepo repository.PriceChange,
-	exchangeApi api.ExchangeApi, tradingService trading.TradingService) *AnalyserService {
+	exchangeApi api.ExchangeApi, tradingService *trading.HolderStrategyTradingService) *AnalyserService {
 	if analyserServiceImpl != nil {
 		panic("Unexpected try to create second service instance")
 	}
@@ -33,7 +33,7 @@ type AnalyserService struct {
 	transactionRepo repository.Transaction
 	priceChangeRepo repository.PriceChange
 	exchangeApi     api.ExchangeApi
-	tradingService  trading.TradingService
+	tradingService  *trading.HolderStrategyTradingService
 }
 
 func (s *AnalyserService) AnalyseCoin(coin *domains.Coin, from string, to string, interval string) {

@@ -15,7 +15,19 @@ func MakeTimestamp() string {
 
 func GetMillisByDate(date string) int64 {
 	t, _ := time.Parse(constants.DATE_FORMAT, date)
-	return t.UnixNano() / 1000000
+	return t.UnixNano() / int64(time.Millisecond)
+}
+
+func GetSecondsByTime(date time.Time) int {
+	return int(date.UnixNano() / int64(time.Second))
+}
+
+func GetTimeByMillis(millis int) time.Time {
+	return time.Unix(0, int64(millis)*int64(time.Millisecond))
+}
+
+func GetTimeBySeconds(seconds int) time.Time {
+	return time.Unix(int64(seconds), 0)
 }
 
 func ParseDate(date string) (time.Time, error) {
@@ -42,4 +54,9 @@ func GetDateByDayOfCurrentMonth(date string) (time.Time, error) {
 	now := time.Now()
 	dayInt, err := strconv.Atoi(date)
 	return time.Date(now.Year(), now.Month(), dayInt, 0, 0, 0, 0, time.UTC), err
+}
+
+func RoundToMinutes(moment time.Time) time.Time {
+	d := (60 * time.Second)
+	return moment.Truncate(d)
 }

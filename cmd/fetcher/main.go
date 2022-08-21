@@ -1,17 +1,12 @@
 package main
 
 import (
-	"context"
-	"cryptoBot"
-	"cryptoBot/configs"
-	"cryptoBot/pkg/api/binance"
-	"cryptoBot/pkg/controller"
-	"cryptoBot/pkg/cron"
+	"cryptoBot/pkg/api/bybit/mock"
+	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
-	"cryptoBot/pkg/service/telegram"
-	"cryptoBot/pkg/service/trading"
+	"cryptoBot/pkg/service/exchange"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
@@ -19,9 +14,8 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
+	"time"
 )
 
 func main() {
@@ -31,9 +25,8 @@ func main() {
 	if err := initConfig(); err != nil {
 		panic(fmt.Sprintf("Error during reading configs: %s", err.Error()))
 	}
-	configs.NewRuntimeConfig()
 
-	log.InitLogger()
+	log.InitLoggerAnalyser()
 
 	var closableClosure []func()
 
@@ -51,7 +44,7 @@ func main() {
 		Port:     int(postgresDbPort),
 		Username: os.Getenv("DB_USERNAME"),
 		Password: os.Getenv("DB_PASSWORD"),
-		DBName:   os.Getenv("DB_NAME"),
+		DBName:   os.Getenv("DB_ANALYSER_NAME"),
 		SSLMode:  os.Getenv("DB_SSLMODE"),
 	})
 	if err != nil {
@@ -69,38 +62,25 @@ func main() {
 	initMigrations(postgresDb)
 
 	repos := repository.NewRepositories(postgresDb)
+	mockExchangeApi := mock.NewBybitApiMock()
+	fetcherService := exchange.NewKlinesFetcherService(mockExchangeApi, repos.Kline)
 
-	exchangeApi := binance.NewBinanceApi()
+	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
+	// "2022-01-01", "2022-07-28", "15"
+	// "2022-02-25", "2022-06-16", "1"
 
-	tradingService := trading.NewTradingService(repos.Transaction, repos.PriceChange, exchangeApi)
-	telegramService := telegram.NewTelegramService(repos.Transaction, repos.Coin, exchangeApi)
+	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-07-29")
+	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-08-06")
 
-	if enabled, err := strconv.ParseBool(os.Getenv("TRADING_ENABLED")); enabled && err == nil {
-		cron.InitCronJobs(tradingService, repos.Coin)
-	}
-
-	router := controller.InitControllers(telegramService)
-
-	srv := new(cryptoBot.Server)
-	go func() {
-		zap.S().Info("Server is doing to be up right now!\n")
-		if err := srv.Run(viper.GetString("server.port"), router); err != nil {
-			panic(fmt.Sprintf("Error when starting the http server: %s", err.Error()))
-		}
-	}()
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
-	<-quit
-
-	zap.S().Info("Logging before Background")
-	if err := srv.Shutdown(context.Background()); err != nil {
-		zap.S().Errorf("error occured on server shutting down: %s", err.Error())
+	if err := fetcherService.FetchKlinesForPeriod(coin, timeFrom, timeTo, "15"); err != nil {
+		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
 	}
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
 	}
+
+	os.Exit(0)
 }
 
 func initConfig() error {

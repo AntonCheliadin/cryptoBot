@@ -11,22 +11,21 @@ import (
 	"database/sql"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"math"
 	"time"
 )
 
 type TradingService interface {
 	BotAction(coin *domains.Coin)
-	BotActionForPrice(coin *domains.Coin, price int64)
+	InitializeTrading(coin *domains.Coin) error
 }
 
-var tradingServiceImpl *tradingService
+var tradingServiceImpl *HolderStrategyTradingService
 
-func NewTradingService(transactionRepo repository.Transaction, priceChangeRepo repository.PriceChange, exchangeApi api.ExchangeApi) TradingService {
+func NewHolderStrategyTradingService(transactionRepo repository.Transaction, priceChangeRepo repository.PriceChange, exchangeApi api.ExchangeApi) *HolderStrategyTradingService {
 	if tradingServiceImpl != nil {
 		panic("Unexpected try to create second service instance")
 	}
-	tradingServiceImpl = &tradingService{
+	tradingServiceImpl = &HolderStrategyTradingService{
 		transactionRepo: transactionRepo,
 		priceChangeRepo: priceChangeRepo,
 		exchangeApi:     exchangeApi,
@@ -34,13 +33,17 @@ func NewTradingService(transactionRepo repository.Transaction, priceChangeRepo r
 	return tradingServiceImpl
 }
 
-type tradingService struct {
+type HolderStrategyTradingService struct {
 	transactionRepo repository.Transaction
 	priceChangeRepo repository.PriceChange
 	exchangeApi     api.ExchangeApi
 }
 
-func (s *tradingService) BotAction(coin *domains.Coin) {
+func (s *HolderStrategyTradingService) InitializeTrading(coin *domains.Coin) error {
+	return nil
+}
+
+func (s *HolderStrategyTradingService) BotAction(coin *domains.Coin) {
 	if !configs.RuntimeConfig.TradingEnabled {
 		return
 	}
@@ -54,8 +57,8 @@ func (s *tradingService) BotAction(coin *domains.Coin) {
 	s.BotActionForPrice(coin, currentPrice)
 }
 
-func (s *tradingService) BotActionForPrice(coin *domains.Coin, currentPrice int64) {
-	boughtNotSoldTransaction, err := s.transactionRepo.FindLastBoughtNotSold(coin.Id)
+func (s *HolderStrategyTradingService) BotActionForPrice(coin *domains.Coin, currentPrice int64) {
+	boughtNotSoldTransaction, err := s.transactionRepo.FindLastBoughtNotSold(coin.Id, constants.HOLDER)
 	if err != nil {
 		zap.S().Error(err)
 		return
@@ -71,7 +74,7 @@ func (s *tradingService) BotActionForPrice(coin *domains.Coin, currentPrice int6
 				boughtNotSoldTransaction.Price, currentPrice, s.getPriceChangeInPercent(boughtNotSoldTransaction, currentPrice))
 		}
 	} else {
-		anyLastTransaction, err := s.transactionRepo.FindLastByCoinId(coin.Id)
+		anyLastTransaction, err := s.transactionRepo.FindLastByCoinId(coin.Id, constants.HOLDER)
 		if err != nil {
 			zap.S().Error(err)
 			return
@@ -87,7 +90,7 @@ func (s *tradingService) BotActionForPrice(coin *domains.Coin, currentPrice int6
 	}
 }
 
-func (s *tradingService) shouldBuy(lastTransaction *domains.Transaction, currentPrice int64) bool {
+func (s *HolderStrategyTradingService) shouldBuy(lastTransaction *domains.Transaction, currentPrice int64) bool {
 	if lastTransaction == nil {
 		return true
 	}
@@ -107,24 +110,24 @@ func (s *tradingService) shouldBuy(lastTransaction *domains.Transaction, current
 	return false
 }
 
-func (s *tradingService) shouldSell(lastTransaction *domains.Transaction, currentPrice int64) bool {
+func (s *HolderStrategyTradingService) shouldSell(lastTransaction *domains.Transaction, currentPrice int64) bool {
 	tradingPercent := viper.GetFloat64("trading.percentChange")
-	priceChangeInPercent := s.getPriceChangeInPercent(lastTransaction, currentPrice)
+	priceChangeInPercent := util.CalculatePercents(lastTransaction.Price, currentPrice)
 
 	return priceChangeInPercent >= tradingPercent
 }
 
-func (s *tradingService) getPriceChangeInPercent(lastTransaction *domains.Transaction, currentPrice int64) float64 {
+func (s *HolderStrategyTradingService) getPriceChangeInPercent(lastTransaction *domains.Transaction, currentPrice int64) float64 {
 	return util.CalculatePercents(lastTransaction.Price, currentPrice)
 }
 
-func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
+func (s *HolderStrategyTradingService) buy(coin *domains.Coin, currentPrice int64) {
 	if !configs.RuntimeConfig.TradingEnabled {
 		return
 	}
 	if configs.RuntimeConfig.HasLimitSpendDay() {
 		var dayAgo = time.Now().AddDate(0, 0, -1)
-		spentForTheLast24Hours, err := s.transactionRepo.CalculateSumOfSpentTransactionsAndCreatedAfter(dayAgo)
+		spentForTheLast24Hours, err := s.transactionRepo.CalculateSumOfSpentTransactionsAndCreatedAfter(dayAgo, constants.HOLDER)
 		if err != nil {
 			zap.S().Errorf("Error on CalculateSumOfSpentTransactionsAndCreatedAfter: %s", err)
 			return
@@ -135,7 +138,7 @@ func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
 		}
 	}
 
-	amountTransaction := s.calculateAmountByPriceAndCost(currentPrice, viper.GetInt64("trading.defaultCost"))
+	amountTransaction := util.CalculateAmountByPriceAndCost(currentPrice, viper.GetInt64("trading.defaultCost"))
 
 	orderDto, err := s.exchangeApi.BuyCoinByMarket(coin, amountTransaction, currentPrice)
 	if err != nil || orderDto.GetAmount() == 0 {
@@ -148,18 +151,7 @@ func (s *tradingService) buy(coin *domains.Coin, currentPrice int64) {
 	s.createBuyTransaction(coin, constants.BUY, orderDto, err)
 }
 
-func (s *tradingService) calculateAmountByPriceAndCost(currentPriceWithCents int64, costWithoutCents int64) float64 {
-	amount := float64(costWithoutCents*100) / float64(currentPriceWithCents)
-	if amount > 10 {
-		return math.Round(amount)
-	} else if amount > 0.1 {
-		return math.Round(amount*100) / 100
-	} else {
-		return math.Round(amount*1000000) / 1000000
-	}
-}
-
-func (s *tradingService) sell(coin *domains.Coin, buyTransaction *domains.Transaction, currentPrice int64) {
+func (s *HolderStrategyTradingService) sell(coin *domains.Coin, buyTransaction *domains.Transaction, currentPrice int64) {
 	orderDto, err := s.exchangeApi.SellCoinByMarket(coin, buyTransaction.Amount, currentPrice)
 	if err != nil || orderDto.GetAmount() == 0 {
 		zap.S().Errorf("Error during sell coin by market")
@@ -175,7 +167,7 @@ func (s *tradingService) sell(coin *domains.Coin, buyTransaction *domains.Transa
 	}
 }
 
-func (s *tradingService) createBuyTransaction(coin *domains.Coin, tType constants.TransactionType, orderDto api.OrderResponseDto, apiError error) *domains.Transaction {
+func (s *HolderStrategyTradingService) createBuyTransaction(coin *domains.Coin, tType constants.TransactionType, orderDto api.OrderResponseDto, apiError error) *domains.Transaction {
 	transaction := domains.Transaction{
 		CoinId:          coin.Id,
 		TransactionType: tType,
@@ -201,7 +193,7 @@ func (s *tradingService) createBuyTransaction(coin *domains.Coin, tType constant
 	return &transaction
 }
 
-func (s *tradingService) createSellTransaction(coin *domains.Coin, tType constants.TransactionType, orderDto api.OrderResponseDto, apiError error, buyTransaction *domains.Transaction) *domains.Transaction {
+func (s *HolderStrategyTradingService) createSellTransaction(coin *domains.Coin, tType constants.TransactionType, orderDto api.OrderResponseDto, apiError error, buyTransaction *domains.Transaction) *domains.Transaction {
 	sellTotalCost := orderDto.CalculateTotalCost()
 	commissionInUsd := orderDto.CalculateCommissionInUsd()
 
@@ -233,30 +225,4 @@ func (s *tradingService) createSellTransaction(coin *domains.Coin, tType constan
 	telegramApi.SendTextToTelegramChat(transaction.String())
 
 	return &transaction
-}
-
-func (s tradingService) getChangePrice(transactionId int64, currentPrice int64) *domains.PriceChange {
-	priceChange, _ := s.priceChangeRepo.FindByTransactionId(transactionId)
-	if priceChange != nil {
-		s.saveNewPriceIfNeeded(priceChange, currentPrice)
-	} else {
-		priceChange = &domains.PriceChange{
-			TransactionId: transactionId,
-			LowPrice:      currentPrice,
-			HighPrice:     currentPrice,
-		}
-		priceChange.RecalculatePercent()
-		_ = s.priceChangeRepo.SavePriceChange(priceChange)
-	}
-	return priceChange
-}
-
-func (s tradingService) saveNewPriceIfNeeded(priceChange *domains.PriceChange, currentPrice int64) {
-	if currentPrice > priceChange.HighPrice {
-		priceChange.SetHigh(currentPrice)
-		_ = s.priceChangeRepo.SavePriceChange(priceChange)
-	} else if currentPrice < priceChange.LowPrice {
-		priceChange.SetLow(currentPrice)
-		_ = s.priceChangeRepo.SavePriceChange(priceChange)
-	}
 }

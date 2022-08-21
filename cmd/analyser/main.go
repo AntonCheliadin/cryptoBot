@@ -1,12 +1,14 @@
 package main
 
 import (
-	"cryptoBot/pkg/api/binance"
-	"cryptoBot/pkg/api/binance/mock"
+	"cryptoBot/pkg/api/bybit/mock"
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
 	"cryptoBot/pkg/service/analyser"
+	"cryptoBot/pkg/service/date"
+	"cryptoBot/pkg/service/exchange"
+	"cryptoBot/pkg/service/indicator"
 	"cryptoBot/pkg/service/trading"
 	"fmt"
 	"github.com/jmoiron/sqlx"
@@ -63,14 +65,30 @@ func main() {
 
 	repos := repository.NewRepositories(postgresDb)
 
-	exchangeApi := binance.NewBinanceApi()
-	mockExchangeApi := mock.NewBinanceApiMock()
+	//exchangeApi := binance.NewBinanceApi()
+	//mockExchangeApi := mock.NewBinanceApiMock()
 
-	tradingService := trading.NewTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi)
-	analyserService := analyser.NewAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, tradingService)
+	//exchangeApi := bybit.NewBybitApi()
+	mockExchangeApi := mock.NewBybitApiMock()
 
-	coin, _ := repos.Coin.FindBySymbol("LUNAUSDT")
-	analyserService.AnalyseCoin(coin, "2021-12-08", "2021-12-10", "1m")
+	//tradingService := trading.NewHolderStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi)
+	//analyserService := analyser.NewAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, tradingService)
+
+	maService := indicator.NewMovingAverageService(date.GetClock(), repos.Kline)
+	stdDevService := indicator.NewStandardDeviationService(date.GetClock(), repos.Kline)
+	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, mockExchangeApi, date.GetClock(), repos.Kline)
+	priceChangeTrackingService := trading.NewPriceChangeTrackingService(repos.PriceChange)
+	fetcherService := exchange.NewKlinesFetcherService(mockExchangeApi, repos.Kline)
+
+	maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi, date.GetClock(), exchangeDataService, repos.Kline, priceChangeTrackingService, maService, stdDevService, fetcherService)
+	analyserService := analyser.NewMovingAverageStrategyAnalyserService(repos.Transaction, repos.PriceChange, mockExchangeApi, maTradingService, repos.Kline)
+
+	//maResistanceTradingService := trading.NewMovingAverageResistanceStrategyTradingService(repos.Transaction, repos.PriceChange, mockExchangeApi, date.GetClock(), exchangeDataService, repos.Kline, priceChangeTrackingService, maService)
+	//analyserService := analyser.NewMovingAverageResistanceStratagyAnalyserService(repos.Transaction, repos.PriceChange, mockExchangeApi, maResistanceTradingService, repos.Kline)
+
+	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
+
+	analyserService.AnalyseCoin(coin, "2022-01-10", "2022-08-06") //max interval  2022-03-04 2022-07-28
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())

@@ -118,17 +118,17 @@ func (s *TelegramService) buildProfitResponse(command string) string {
 	sumSold := int64(0)
 
 	for dayIterator.Before(maxDate) || dayIterator.Equal(maxDate) {
-		profitInCentsByDate, _ := s.transactionRepo.CalculateSumOfProfitByDate(dayIterator)
+		profitInCentsByDate, _ := s.transactionRepo.CalculateSumOfProfitByDate(dayIterator, constants.HOLDER)
 		sumProfit += profitInCentsByDate
 
 		response += fmt.Sprintf("\n| %v | %8v |", dayIterator.Format(constants.DATE_FORMAT),
 			util.RoundCentsToUsd(profitInCentsByDate))
 
 		if !shortResult {
-			spentInCentsByDate, _ := s.transactionRepo.CalculateSumOfSpentTransactionsByDate(dayIterator)
-			boughtInCentsByDate, _ := s.transactionRepo.CalculateSumOfTransactionsByDateAndType(dayIterator, constants.BUY)
-			soldInCentsByDate, _ := s.transactionRepo.CalculateSumOfTransactionsByDateAndType(dayIterator, constants.SELL)
-			minPrice, _ := s.transactionRepo.FindMinPriceByDate(dayIterator)
+			spentInCentsByDate, _ := s.transactionRepo.CalculateSumOfSpentTransactionsByDate(dayIterator, constants.HOLDER)
+			boughtInCentsByDate, _ := s.transactionRepo.CalculateSumOfTransactionsByDateAndType(dayIterator, constants.BUY, constants.HOLDER)
+			soldInCentsByDate, _ := s.transactionRepo.CalculateSumOfTransactionsByDateAndType(dayIterator, constants.SELL, constants.HOLDER)
+			minPrice, _ := s.transactionRepo.FindMinPriceByDate(dayIterator, constants.HOLDER)
 			sumNotSold += spentInCentsByDate
 			sumBought += boughtInCentsByDate
 			sumSold += soldInCentsByDate
@@ -156,17 +156,17 @@ func (s *TelegramService) buildStatistics(command string) string {
 
 	coin, _ := s.coinRepo.FindBySymbol(viper.GetString("trading.defaultCoin"))
 	currentPrice, _ := s.exchangeApi.GetCurrentCoinPrice(coin)
-	boughtNotSoldTransaction, _ := s.transactionRepo.FindLastBoughtNotSold(coin.Id)
+	boughtNotSoldTransaction, _ := s.transactionRepo.FindLastBoughtNotSold(coin.Id, constants.HOLDER)
 
 	if boughtNotSoldTransaction != nil && currentPrice > 0 {
 		response += fmt.Sprintf("last bought for %v \ncurrent price %v (%.2f%%) \n",
 			util.RoundCentsToUsd(boughtNotSoldTransaction.Price), util.RoundCentsToUsd(currentPrice), util.CalculatePercents(boughtNotSoldTransaction.Price, currentPrice))
 	}
 
-	spentInCents, _ := s.transactionRepo.CalculateSumOfSpentTransactions()
+	spentInCents, _ := s.transactionRepo.CalculateSumOfSpentTransactions(constants.HOLDER)
 	response += "\ntotal spent " + util.RoundCentsToUsd(spentInCents) + "\n"
 
-	profitInCents, _ := s.transactionRepo.CalculateSumOfProfit()
+	profitInCents, _ := s.transactionRepo.CalculateSumOfProfit(constants.HOLDER)
 	response += "total profit " + util.RoundCentsToUsd(profitInCents)
 
 	if profitInCents > 0 && spentInCents > 0 {
@@ -174,10 +174,10 @@ func (s *TelegramService) buildStatistics(command string) string {
 	}
 
 	if date, err := util.ParseDate(command); err == nil {
-		spentInCentsByDate, _ := s.transactionRepo.CalculateSumOfSpentTransactionsByDate(date)
+		spentInCentsByDate, _ := s.transactionRepo.CalculateSumOfSpentTransactionsByDate(date, constants.HOLDER)
 		response += fmt.Sprintf("\n%v spent %v \n", date.Format(constants.DATE_FORMAT), util.RoundCentsToUsd(spentInCentsByDate))
 
-		profitInCentsByDate, _ := s.transactionRepo.CalculateSumOfProfitByDate(date)
+		profitInCentsByDate, _ := s.transactionRepo.CalculateSumOfProfitByDate(date, constants.HOLDER)
 		response += fmt.Sprintf("%v profit %v", date.Format(constants.DATE_FORMAT), util.RoundCentsToUsd(profitInCentsByDate))
 
 		if spentInCentsByDate > 0 && profitInCentsByDate > 0 {

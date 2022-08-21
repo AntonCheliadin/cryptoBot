@@ -4,8 +4,41 @@ server:
 
 trading:
   percentChange: 1 # do action buy/sell when price change on 5%
-  defaultCoin: 'LUNAUSDT'
+  defaultCoin: 'SOLUSDT'
   defaultCost: 100
+
+strategy:
+  ma:
+    percentProfit: 0.5 # close order with profit when price change on X%
+    percentStopLoss: -1.5 # close order by stop loss when price change on X%
+    percentTrollingProfit: 1.5 # close order by stop loss when price change on X%
+    interval: 15
+    length:
+      short: 9
+      medium: 24
+      long: 50
+    coin: 'SOLUSDT'
+    cost: 10000 # cost of order for trading in cents
+    futures:
+      leverage: 2
+  maResistance:
+    percentProfit: 0.2
+    percentStopLoss: -1.5
+    percentTrollingProfit: 1.5 # close order by stop loss when price change on X%
+    interval: 15
+    length:
+      short: 20
+      medium: 54
+
+indicator:
+  trend:
+    ma:
+      length: 50
+      points: 10
+  standardDeviation:
+      length: 100
+      percent: 1 # length of kline must be at least [1=100%] [0.6=60%] of standard
+
 
 api:
   binance:
