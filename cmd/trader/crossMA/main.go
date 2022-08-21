@@ -73,7 +73,7 @@ func main() {
 
 	repos := repository.NewRepositories(postgresDb)
 
-	exchangeApi := bybit.NewBybitApi()
+	exchangeApi := bybit.NewBybitApi(os.Getenv("BYBIT_CryptoBotFutures_API_KEY"), os.Getenv("BYBIT_CryptoBotFutures_API_SECRET"))
 
 	maService := indicator.NewMovingAverageService(date.GetClock(), repos.Kline)
 	stdDevService := indicator.NewStandardDeviationService(date.GetClock(), repos.Kline)

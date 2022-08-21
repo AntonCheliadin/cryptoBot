@@ -20,7 +20,7 @@ var movingAverageResistanceStrategyTradingServiceImpl *MovingAverageResistanceSt
 func NewMovingAverageResistanceStrategyTradingService(transactionRepo repository.Transaction, priceChangeRepo repository.PriceChange,
 	exchangeApi api.ExchangeApi, clock date.Clock, exchangeDataService *exchange.DataService, klineRepo repository.Kline,
 	priceChangeTrackingService *PriceChangeTrackingService, movingAverageService *indicator.MovingAverageService) *MovingAverageResistanceStrategyTradingService {
-	if movingAverageStrategyTradingServiceImpl != nil {
+	if movingAverageResistanceStrategyTradingServiceImpl != nil {
 		panic("Unexpected try to create second service instance")
 	}
 	movingAverageResistanceStrategyTradingServiceImpl = &MovingAverageResistanceStrategyTradingService{

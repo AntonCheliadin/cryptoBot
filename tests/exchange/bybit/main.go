@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"os"
 	"time"
 )
 
@@ -23,7 +24,7 @@ func main() {
 
 	log.InitLoggerAnalyser()
 
-	exchangeApi := bybit.NewBybitApi().(*bybit.BybitApi)
+	exchangeApi := bybit.NewBybitApi(os.Getenv("BYBIT_CryptoBotTrendScalper_API_KEY"), os.Getenv("BYBIT_CryptoBotTrendScalper_API_SECRET")).(*bybit.BybitApi)
 
 	coin := &domains.Coin{
 		Symbol: "SOLUSDT",
@@ -33,27 +34,27 @@ func main() {
 
 	//testGetKlines(exchangeApi, coin)
 
-	//err := exchangeApi.SetFuturesLeverage(coin, 3)
+	//err := exchangeApi.SetFuturesLeverage(coin, 5)
 	//if err != nil {
 	//	zap.S().Errorf("API error: %s", err.Error())
 	//}
 
 	//testOpenFutures(exchangeApi, coin)
-	//testCloseFutures(exchangeApi, coin)
+	testCloseFutures(exchangeApi, coin)
 
-	//result, err := exchangeApi.GetActiveOrdersByCoin(coin)
-	//if err != nil {
-	//	zap.S().Errorf("API error: %s", err.Error())
-	//	return
-	//}
-	//zap.S().Infof("GetActiveOrdersByCoin response: %v", result)
-
-	result, err := exchangeApi.GetWalletBalance()
+	result, err := exchangeApi.GetActiveOrdersByCoin(coin)
 	if err != nil {
 		zap.S().Errorf("API error: %s", err.Error())
 		return
 	}
-	zap.S().Infof("GetWalletBalance response: %v", result)
+	zap.S().Infof("GetActiveOrdersByCoin response: %v", result)
+
+	//result, err := exchangeApi.GetWalletBalance()
+	//if err != nil {
+	//	zap.S().Errorf("API error: %s", err.Error())
+	//	return
+	//}
+	//zap.S().Infof("GetWalletBalance response: %v", result)
 }
 
 func initConfig() error {
@@ -67,7 +68,7 @@ func testGetCurrentPrice(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 	if err != nil {
 		zap.S().Errorf("Error on GetCurrentCoinPrice: %s", err)
 	}
-	fmt.Printf("coinPrice=%s", coinPrice)
+	fmt.Printf("coinPrice=%v\n", coinPrice)
 }
 
 func testGetKlines(exchangeApi api.ExchangeApi, coin *domains.Coin) {
@@ -80,7 +81,7 @@ func testGetKlines(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 }
 
 func testOpenFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) {
-	order, err := exchangeApi.OpenFuturesOrder(coin, 2, 3850, constants.LONG)
+	order, err := exchangeApi.OpenFuturesOrder(coin, 1, 3850, constants.SHORT)
 	if err != nil {
 		zap.S().Errorf("API error: %s", err.Error())
 		return
@@ -90,8 +91,8 @@ func testOpenFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 
 func testCloseFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 	transaction := domains.Transaction{}
-	transaction.Amount = 2
-	transaction.FuturesType = constants.LONG
+	transaction.Amount = 1
+	transaction.FuturesType = constants.SHORT
 	transaction.Price = 3854
 
 	exchangeApi.CloseFuturesOrder(coin, &transaction, 3836)
