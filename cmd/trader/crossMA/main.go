@@ -48,7 +48,7 @@ func main() {
 
 	zap.S().Info("Trading bot is starting...\n")
 
-	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT_PROD"), 10, 64)
+	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT"), 10, 64)
 	postgresDb, err := postgres.NewPostgresDb(&postgres.Config{
 		Host:     os.Getenv("DB_HOST"),
 		Port:     int(postgresDbPort),

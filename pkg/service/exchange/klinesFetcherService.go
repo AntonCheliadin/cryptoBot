@@ -5,7 +5,6 @@ import (
 	"cryptoBot/pkg/constants/bybit"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/repository"
-	"fmt"
 	"go.uber.org/zap"
 	"time"
 )
@@ -36,7 +35,7 @@ func (s *KlinesFetcherService) FetchKlinesForPeriod(coin *domains.Coin, timeFrom
 			zap.S().Errorf("Error on fetch klines: %s", err)
 			return err
 		}
-		fmt.Printf("Fetched %v klines from %v\n", len(klinesDto.GetKlines()), timeIter)
+		zap.S().Infof("Fetched %v klines from %v", len(klinesDto.GetKlines()), timeIter)
 
 		s.saveKlines(coin, klinesDto)
 
