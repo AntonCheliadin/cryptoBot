@@ -295,9 +295,15 @@ func (api *BybitApi) futuresOrderByMarketWithResponseDetails(queryParams map[str
 		return nil, err
 	}
 
-	time.Sleep(10 * time.Second)
+	for i := 0; i < 10; i++ {
+		time.Sleep(10 * time.Second)
 
-	return api.GetActiveOrder(dto)
+		responseDto, err := api.GetActiveOrder(dto)
+		if err == nil {
+			return responseDto, nil
+		}
+	}
+	return api.futuresOrderByMarketWithResponseDetails(queryParams)
 }
 
 func (api *BybitApi) GetActiveOrdersByCoin(coin *domains.Coin) (*bybit.ActiveOrdersResponseDto, error) {
@@ -340,6 +346,10 @@ func (api *BybitApi) GetActiveOrder(orderDto *bybit.FuturesOrderResponseDto) (ap
 	if errUnmarshal != nil {
 		zap.S().Error("Unmarshal error", errUnmarshal.Error())
 		return nil, errUnmarshal
+	}
+
+	if len(dto.Result.Data) == 0 {
+		return nil, errors.New("empty response")
 	}
 
 	return &dto.Result.Data[0], nil
