@@ -160,7 +160,7 @@ func (s *TelegramService) buildStatistics(command string) string {
 
 	if boughtNotSoldTransaction != nil && currentPrice > 0 {
 		response += fmt.Sprintf("last bought for %v \ncurrent price %v (%.2f%%) \n",
-			util.RoundCentsToUsd(boughtNotSoldTransaction.Price), util.RoundCentsToUsd(currentPrice), util.CalculatePercents(boughtNotSoldTransaction.Price, currentPrice))
+			util.RoundCentsToUsd(boughtNotSoldTransaction.Price), util.RoundCentsToUsd(currentPrice), util.CalculateChangeInPercents(boughtNotSoldTransaction.Price, currentPrice))
 	}
 
 	spentInCents, _ := s.transactionRepo.CalculateSumOfSpentTransactions(constants.HOLDER)

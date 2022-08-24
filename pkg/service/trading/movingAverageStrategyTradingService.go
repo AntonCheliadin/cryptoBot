@@ -198,7 +198,7 @@ func (s *MovingAverageStrategyTradingService) openOrder(coin *domains.Coin, futu
 	}
 
 	amountTransaction := util.CalculateAmountByPriceAndCostWithCents(currentPrice, s.getCostOfOrder())
-	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType)
+	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType, viper.GetFloat64("strategy.ma.percentStopLoss"))
 	if err2 != nil {
 		zap.S().Errorf("Error during OpenFuturesOrder: %s", err2.Error())
 		return
@@ -244,7 +244,7 @@ func (s *MovingAverageStrategyTradingService) shouldCloseWithProfit(lastTransact
 	}
 
 	if lastTransaction.FuturesType == constants.LONG {
-		orderProfitInPercent := util.CalculatePercents(lastTransaction.Price, currentPrice)
+		orderProfitInPercent := util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 		if orderProfitInPercent >= viper.GetFloat64("strategy.ma.percentProfit") {
 			zap.S().Infof("At %v close LONG with profit price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, orderProfitInPercent)
 			return true
@@ -252,7 +252,7 @@ func (s *MovingAverageStrategyTradingService) shouldCloseWithProfit(lastTransact
 	}
 
 	if lastTransaction.FuturesType == constants.SHORT {
-		orderProfitInPercent := -1 * util.CalculatePercents(lastTransaction.Price, currentPrice)
+		orderProfitInPercent := -1 * util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 		if orderProfitInPercent >= viper.GetFloat64("strategy.ma.percentProfit") {
 			zap.S().Infof("At %v close SHORT with profit price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, orderProfitInPercent)
 			return true
@@ -272,8 +272,8 @@ func (s *MovingAverageStrategyTradingService) isCloseToBreakeven(lastTransaction
 	priceChange := s.PriceChangeTrackingService.getChangePrice(lastTransaction.Id, currentPrice)
 
 	if lastTransaction.FuturesType == constants.LONG {
-		maxProfitInPercent := util.CalculatePercents(lastTransaction.Price, priceChange.HighPrice)
-		currentProfitInPercent := util.CalculatePercents(lastTransaction.Price, currentPrice)
+		maxProfitInPercent := util.CalculateChangeInPercents(lastTransaction.Price, priceChange.HighPrice)
+		currentProfitInPercent := util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 
 		if maxProfitInPercent > 0.5 && currentProfitInPercent < 0.2 {
 			zap.S().Infof("At %v close long  order with price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, currentProfitInPercent)
@@ -282,8 +282,8 @@ func (s *MovingAverageStrategyTradingService) isCloseToBreakeven(lastTransaction
 	}
 
 	if lastTransaction.FuturesType == constants.SHORT {
-		maxProfitInPercent := -1 * util.CalculatePercents(lastTransaction.Price, priceChange.LowPrice)
-		currentProfitInPercent := -1 * util.CalculatePercents(lastTransaction.Price, currentPrice)
+		maxProfitInPercent := -1 * util.CalculateChangeInPercents(lastTransaction.Price, priceChange.LowPrice)
+		currentProfitInPercent := -1 * util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 
 		if maxProfitInPercent > 0.5 && currentProfitInPercent < 0.2 {
 			zap.S().Infof("At %v close short order with price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, currentProfitInPercent)
@@ -393,7 +393,7 @@ func (s *MovingAverageStrategyTradingService) shouldCloseByStopLoss(lastTransact
 	}
 
 	if lastTransaction.FuturesType == constants.LONG {
-		orderProfitInPercent := util.CalculatePercents(lastTransaction.Price, currentPrice)
+		orderProfitInPercent := util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 		if orderProfitInPercent <= viper.GetFloat64("strategy.ma.percentStopLoss") {
 			zap.S().Infof("at %v close order by stop loss price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, orderProfitInPercent)
 			return true
@@ -401,7 +401,7 @@ func (s *MovingAverageStrategyTradingService) shouldCloseByStopLoss(lastTransact
 	}
 
 	if lastTransaction.FuturesType == constants.SHORT {
-		orderProfitInPercent := -1 * util.CalculatePercents(lastTransaction.Price, currentPrice)
+		orderProfitInPercent := -1 * util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 		if orderProfitInPercent <= viper.GetFloat64("strategy.ma.percentStopLoss") {
 			zap.S().Infof("at %v close order by stop loss price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, orderProfitInPercent)
 			return true
@@ -446,7 +446,7 @@ func (s *MovingAverageStrategyTradingService) isProfitByTrolling(lastTransaction
 
 	if lastTransaction.FuturesType == constants.LONG {
 		// close order if price on percentProfit lower from high
-		priceChangeInPercent := util.CalculatePercents(priceChange.HighPrice, currentPrice)
+		priceChangeInPercent := util.CalculateChangeInPercents(priceChange.HighPrice, currentPrice)
 		if priceChangeInPercent < -1*viper.GetFloat64("strategy.ma.percentTrollingProfit") {
 			zap.S().Infof("At %v close order. Higher price %v current price %v percent %v",
 				s.Clock.NowTime(), priceChange.HighPrice, currentPrice, priceChangeInPercent)
@@ -455,7 +455,7 @@ func (s *MovingAverageStrategyTradingService) isProfitByTrolling(lastTransaction
 	}
 	if lastTransaction.FuturesType == constants.SHORT {
 		// close order if price on percentProfit higher from low
-		priceChangeInPercent := util.CalculatePercents(priceChange.LowPrice, currentPrice)
+		priceChangeInPercent := util.CalculateChangeInPercents(priceChange.LowPrice, currentPrice)
 		if priceChangeInPercent > viper.GetFloat64("strategy.ma.percentTrollingProfit") {
 			zap.S().Infof("At %v close order. Lower price %v current price %v percent %v",
 				s.Clock.NowTime(), priceChange.LowPrice, currentPrice, priceChangeInPercent)

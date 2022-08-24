@@ -112,13 +112,13 @@ func (s *HolderStrategyTradingService) shouldBuy(lastTransaction *domains.Transa
 
 func (s *HolderStrategyTradingService) shouldSell(lastTransaction *domains.Transaction, currentPrice int64) bool {
 	tradingPercent := viper.GetFloat64("trading.percentChange")
-	priceChangeInPercent := util.CalculatePercents(lastTransaction.Price, currentPrice)
+	priceChangeInPercent := util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 
 	return priceChangeInPercent >= tradingPercent
 }
 
 func (s *HolderStrategyTradingService) getPriceChangeInPercent(lastTransaction *domains.Transaction, currentPrice int64) float64 {
-	return util.CalculatePercents(lastTransaction.Price, currentPrice)
+	return util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 }
 
 func (s *HolderStrategyTradingService) buy(coin *domains.Coin, currentPrice int64) {
