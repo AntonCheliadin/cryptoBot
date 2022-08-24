@@ -41,7 +41,7 @@ func (api *BybitApiMock) GetKlines(coin *domains.Coin, interval string, limit in
 	return &dto, nil
 }
 
-func (api *BybitApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType) (api.OrderResponseDto, error) {
+func (api *BybitApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType, stopLossInPercent float64) (api.OrderResponseDto, error) {
 	return &orderResponseMockDto{
 		price:  price,
 		amount: amount,

@@ -24,7 +24,7 @@ func (d *PriceChange) SetHigh(high int64) {
 }
 
 func (d *PriceChange) RecalculatePercent() {
-	d.ChangePercents = util.CalculatePercentsAbs(d.LowPrice, d.HighPrice)
+	d.ChangePercents = util.CalculateChangeInPercentsAbs(d.LowPrice, d.HighPrice)
 }
 
 func (d *PriceChange) String() string {

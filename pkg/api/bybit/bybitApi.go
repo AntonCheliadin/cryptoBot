@@ -219,8 +219,8 @@ func (api *BybitApi) SetFuturesLeverage(coin *domains.Coin, leverage int) error 
 	return err
 }
 
-func (api *BybitApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType) (api.OrderResponseDto, error) {
-	queryParams := api.buildOpenFuturesParams(coin, amount, price, futuresType)
+func (api *BybitApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType, stopLossInPercent float64) (api.OrderResponseDto, error) {
+	queryParams := api.buildOpenFuturesParams(coin, amount, price, futuresType, stopLossInPercent)
 	return api.futuresOrderByMarketWithResponseDetails(queryParams)
 }
 
@@ -230,7 +230,7 @@ func (api *BybitApi) CloseFuturesOrder(coin *domains.Coin, openedTransaction *do
 }
 
 func (api *BybitApi) buildOpenFuturesParams(coin *domains.Coin, amount float64, priceInCents int64,
-	futuresType constants.FuturesType) map[string]interface{} {
+	futuresType constants.FuturesType, stopLossInPercent float64) map[string]interface{} {
 
 	side := "Buy"
 	positionIdx := 1
@@ -239,7 +239,11 @@ func (api *BybitApi) buildOpenFuturesParams(coin *domains.Coin, amount float64, 
 		positionIdx = 2
 	}
 
-	return api.buildFuturesParams(coin, amount, side, positionIdx)
+	requestParams := api.buildFuturesParams(coin, amount, side, positionIdx)
+
+	requestParams["stop_loss"] = util.GetDollarsByCents(util.CalculatePriceForStopLoss(priceInCents, stopLossInPercent, futuresType))
+
+	return requestParams
 }
 
 func (api *BybitApi) buildCloseFuturesParams(coin *domains.Coin, openedTransaction *domains.Transaction, priceInCents int64) map[string]interface{} {
