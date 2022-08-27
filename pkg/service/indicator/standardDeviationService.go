@@ -60,7 +60,7 @@ func (s *StandardDeviationService) calculateStandardDeviation(coin *domains.Coin
 func (s *StandardDeviationService) IsVolatilityOscillatorSignal(coin *domains.Coin, candleDuration string) bool {
 	stdDev := s.calculateStandardDeviation(coin, candleDuration)
 
-	kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, s.Clock.NowTime(), candleDuration)
+	kline, _ := s.klineRepo.FindClosedAtMoment(coin.Id, s.Clock.NowTime(), candleDuration)
 
 	priceChange := kline.GetPriceChange()
 	priceChangeInDecimal := big.NewDecimal(float64(priceChange) / 100)
