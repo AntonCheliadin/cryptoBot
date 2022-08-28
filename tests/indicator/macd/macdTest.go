@@ -1,17 +1,15 @@
 package main
 
 import (
-	"cryptoBot/pkg/api/bybit/mock"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
-	"cryptoBot/pkg/service/exchange"
+	"cryptoBot/pkg/service/date"
+	"cryptoBot/pkg/service/indicator"
+	"cryptoBot/pkg/service/indicator/techanLib"
 	"fmt"
-	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
-	migrate "github.com/rubenv/sql-migrate"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"os"
 	"strconv"
@@ -21,9 +19,6 @@ import (
 func main() {
 	if err := godotenv.Load(); err != nil {
 		panic(fmt.Sprintf("Failed load env file: %s", err.Error()))
-	}
-	if err := initConfig(); err != nil {
-		panic(fmt.Sprintf("Error during reading configs: %s", err.Error()))
 	}
 
 	log.InitLoggerAnalyser()
@@ -59,22 +54,9 @@ func main() {
 		}
 	})
 
-	initMigrations(postgresDb)
-
 	repos := repository.NewRepositories(postgresDb)
-	mockExchangeApi := mock.NewBybitApiMock()
-	fetcherService := exchange.NewKlinesFetcherService(mockExchangeApi, repos.Kline)
 
-	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
-	// "2022-01-01", "2022-08-22", "15"
-	// "2022-02-25", "2022-06-16", "1"
-
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-08-28")
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-08-29")
-
-	if err := fetcherService.FetchKlinesForPeriod(coin, timeFrom, timeTo, "15"); err != nil {
-		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
-	}
+	testMACD(repos)
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
@@ -83,20 +65,13 @@ func main() {
 	os.Exit(0)
 }
 
-func initConfig() error {
-	viper.AddConfigPath("configs")
-	viper.SetConfigName("config")
-	return viper.ReadInConfig()
-}
+func testMACD(repos *repository.Repository) {
+	timeMock, _ := time.Parse(constants.DATE_TIME_FORMAT, "2022-08-28 12:03:01")
+	seriesConvertorService := techanLib.NewTechanConvertorService(date.GetClockMock(timeMock), repos.Kline)
+	macdIndicatorService := indicator.NewMACDService(seriesConvertorService)
 
-func initMigrations(db *sqlx.DB) {
-	migrations := &migrate.FileMigrationSource{
-		Dir: "./migrations",
-	}
+	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 
-	n, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
-	if err != nil {
-		zap.S().Errorf("Error during applying migrations! %s", err.Error())
-	}
-	zap.S().Infof("Applied %d migrations!\n", n)
+	macdResult := macdIndicatorService.CalculateMACD(coin, "15", 8, 21, 5)
+	zap.S().Infof("MACD=%v at %v", macdResult, timeMock)
 }

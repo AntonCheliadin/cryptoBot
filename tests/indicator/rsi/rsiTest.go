@@ -70,7 +70,7 @@ func main() {
 }
 
 func testRSI(repos *repository.Repository) {
-	timeMock, _ := time.Parse(constants.DATE_TIME_FORMAT, "2022-08-22 03:30:01")
+	timeMock, _ := time.Parse(constants.DATE_TIME_FORMAT, "2022-08-28 11:03:01")
 	seriesConvertorService := techanLib.NewTechanConvertorService(date.GetClockMock(timeMock), repos.Kline)
 	rsiIndicatorService := indicator.NewRelativeStrengthIndexService(seriesConvertorService)
 
