@@ -9,6 +9,7 @@ import (
 	"cryptoBot/pkg/service/date"
 	"cryptoBot/pkg/service/exchange"
 	"cryptoBot/pkg/service/indicator"
+	"cryptoBot/pkg/service/indicator/techanLib"
 	"cryptoBot/pkg/service/trading"
 	"fmt"
 	"github.com/jmoiron/sqlx"
@@ -75,7 +76,8 @@ func main() {
 	//analyserService := analyser.NewAnalyserService(repos.Transaction, repos.PriceChange, exchangeApi, tradingService)
 
 	maService := indicator.NewMovingAverageService(date.GetClock(), repos.Kline)
-	stdDevService := indicator.NewStandardDeviationService(date.GetClock(), repos.Kline)
+	seriesConvertorService := techanLib.NewTechanConvertorService(date.GetClock(), repos.Kline)
+	stdDevService := indicator.NewStandardDeviationService(date.GetClock(), repos.Kline, seriesConvertorService)
 	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, mockExchangeApi, date.GetClock(), repos.Kline)
 	priceChangeTrackingService := trading.NewPriceChangeTrackingService(repos.PriceChange)
 	fetcherService := exchange.NewKlinesFetcherService(mockExchangeApi, repos.Kline)
@@ -88,7 +90,7 @@ func main() {
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 
-	analyserService.AnalyseCoin(coin, "2022-01-10", "2022-08-06") //max interval  2022-03-04 2022-07-28
+	analyserService.AnalyseCoin(coin, "2022-01-10", "2022-08-27") //max interval  2022-03-04 2022-07-28
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
