@@ -13,6 +13,7 @@ import (
 	"cryptoBot/pkg/service/date"
 	"cryptoBot/pkg/service/exchange"
 	"cryptoBot/pkg/service/indicator"
+	"cryptoBot/pkg/service/indicator/techanLib"
 	"cryptoBot/pkg/service/telegram"
 	"cryptoBot/pkg/service/trading"
 	"fmt"
@@ -76,7 +77,8 @@ func main() {
 	exchangeApi := bybit.NewBybitApi(os.Getenv("BYBIT_CryptoBotFutures_API_KEY"), os.Getenv("BYBIT_CryptoBotFutures_API_SECRET"))
 
 	maService := indicator.NewMovingAverageService(date.GetClock(), repos.Kline)
-	stdDevService := indicator.NewStandardDeviationService(date.GetClock(), repos.Kline)
+	techanConvertorService := techanLib.NewTechanConvertorService(date.GetClock(), repos.Kline)
+	stdDevService := indicator.NewStandardDeviationService(date.GetClock(), repos.Kline, techanConvertorService)
 	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, exchangeApi, date.GetClock(), repos.Kline)
 	priceChangeTrackingService := trading.NewPriceChangeTrackingService(repos.PriceChange)
 	fetcherService := exchange.NewKlinesFetcherService(exchangeApi, repos.Kline)
