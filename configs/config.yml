@@ -44,3 +44,10 @@ api:
   binance:
     commission:
       bnbCost: 600
+
+orders:
+  stopLoss:
+    deviationPercent: 0.25
+    minPercent: 0.5
+    maxPercent: 3
+    klinesLimit: 25
