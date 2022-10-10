@@ -5,6 +5,7 @@ import (
 	"cryptoBot"
 	"cryptoBot/configs"
 	"cryptoBot/pkg/api/bybit"
+	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/controller"
 	"cryptoBot/pkg/cron"
 	"cryptoBot/pkg/log"
@@ -29,11 +30,17 @@ import (
 	"syscall"
 )
 
+func initLocalConfig() error {
+	viper.AddConfigPath("configs")
+	viper.SetConfigName("config")
+	return viper.ReadInConfig()
+}
+
 func main() {
 	if err := godotenv.Load(); err != nil {
 		panic(fmt.Sprintf("Failed load env file: %s", err.Error()))
 	}
-	if err := initConfig(); err != nil {
+	if err := initLocalConfig(); err != nil {
 		panic(fmt.Sprintf("Error during reading configs: %s", err.Error()))
 	}
 	configs.NewRuntimeConfig()
@@ -56,7 +63,7 @@ func main() {
 		Port:     int(postgresDbPort),
 		Username: os.Getenv("DB_USERNAME"),
 		Password: os.Getenv("DB_PASSWORD"),
-		DBName:   os.Getenv("DB_NAME"),
+		DBName:   os.Getenv("DB_ANALYSER_NAME"), // DB_ANALYSER_NAME DB_NAME
 		SSLMode:  os.Getenv("DB_SSLMODE"),
 	})
 	if err != nil {
@@ -77,19 +84,26 @@ func main() {
 
 	exchangeApi := bybit.NewBybitApi(os.Getenv("BYBIT_CryptoBotFutures_API_KEY"), os.Getenv("BYBIT_CryptoBotFutures_API_SECRET"))
 
-	maService := indicator.NewMovingAverageService(date.GetClock(), repos.Kline)
+	priceChangeTrackingService := orders.NewPriceChangeTrackingService(repos.PriceChange)
+
 	techanConvertorService := techanLib.NewTechanConvertorService(date.GetClock(), repos.Kline)
 	stdDevService := indicator.NewStandardDeviationService(date.GetClock(), repos.Kline, techanConvertorService)
 	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, exchangeApi, date.GetClock(), repos.Kline)
-	priceChangeTrackingService := orders.NewPriceChangeTrackingService(repos.PriceChange)
 	fetcherService := exchange.NewKlinesFetcherService(exchangeApi, repos.Kline)
 
-	maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, exchangeApi, date.GetClock(), exchangeDataService, repos.Kline, priceChangeTrackingService, maService, stdDevService, fetcherService)
+	macdService := indicator.NewMACDService(techanConvertorService)
+	rsiService := indicator.NewRelativeStrengthIndexService(techanConvertorService)
+	emaService := indicator.NewExponentialMovingAverageService(techanConvertorService)
+
+	orderManagerService := orders.NewOrderManagerService(repos.Transaction, exchangeApi, date.GetClock(), exchangeDataService, repos.Kline, constants.TREND_METER, priceChangeTrackingService, viper.GetInt64("strategy.trendMeter.futures.leverage"),
+		1.2, 0.2, 4.0, 1.0)
+
+	tradingService := trading.NewTrendMeterStrategyTradingService(repos.Transaction, date.GetClock(), exchangeDataService, repos.Kline, stdDevService, fetcherService, macdService, rsiService, emaService, orders.NewProfitLossFinderService(date.GetClock(), repos.Kline), orderManagerService, priceChangeTrackingService)
 
 	telegramService := telegram.NewTelegramService(repos.Transaction, repos.Coin, exchangeApi)
 
 	if enabled, err := strconv.ParseBool(os.Getenv("TRADING_ENABLED")); enabled && err == nil {
-		cron.InitCronJobs(maTradingService, repos.Coin)
+		cron.InitCronJobs(tradingService, repos.Coin)
 	}
 
 	router := controller.InitControllers(telegramService)

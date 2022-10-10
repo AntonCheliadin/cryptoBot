@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/api/mock"
-	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/data/dto/binance"
 	"cryptoBot/pkg/util"
@@ -126,7 +126,7 @@ func (api *BinanceApi) sign(data string) string {
 	return sha
 }
 
-func (api *BinanceApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType, stopLossInPercent float64) (api.OrderResponseDto, error) {
+func (api *BinanceApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }
 func (api *BinanceApi) CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price int64) (api.OrderResponseDto, error) {

@@ -4,6 +4,7 @@ import (
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/api/bybit"
 	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/log"
 	"fmt"
@@ -24,7 +25,7 @@ func main() {
 
 	log.InitLoggerAnalyser()
 
-	exchangeApi := bybit.NewBybitApi(os.Getenv("BYBIT_CryptoBotTrendScalper_API_KEY"), os.Getenv("BYBIT_CryptoBotTrendScalper_API_SECRET")).(*bybit.BybitApi)
+	exchangeApi := bybit.NewBybitApi(os.Getenv("BYBIT_CryptoBotFutures_API_KEY"), os.Getenv("BYBIT_CryptoBotFutures_API_SECRET")).(*bybit.BybitApi)
 
 	coin := &domains.Coin{
 		Symbol: "SOLUSDT",
@@ -39,15 +40,15 @@ func main() {
 	//	zap.S().Errorf("API error: %s", err.Error())
 	//}
 
-	//testOpenFutures(exchangeApi, coin)
-	testCloseFutures(exchangeApi, coin)
+	testOpenFutures(exchangeApi, coin)
+	//testCloseFutures(exchangeApi, coin)
 
-	result, err := exchangeApi.GetActiveOrdersByCoin(coin)
-	if err != nil {
-		zap.S().Errorf("API error: %s", err.Error())
-		return
-	}
-	zap.S().Infof("GetActiveOrdersByCoin response: %v", result)
+	//result, err := exchangeApi.GetActiveOrdersByCoin(coin)
+	//if err != nil {
+	//	zap.S().Errorf("API error: %s", err.Error())
+	//	return
+	//}
+	//zap.S().Infof("GetActiveOrdersByCoin response: %v", result)
 
 	//result, err := exchangeApi.GetWalletBalance()
 	//if err != nil {
@@ -81,7 +82,7 @@ func testGetKlines(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 }
 
 func testOpenFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) {
-	order, err := exchangeApi.OpenFuturesOrder(coin, 1, 3850, constants.SHORT)
+	order, err := exchangeApi.OpenFuturesOrder(coin, 2, 3580, futureType.LONG, 10)
 	if err != nil {
 		zap.S().Errorf("API error: %s", err.Error())
 		return
@@ -92,7 +93,7 @@ func testOpenFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 func testCloseFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 	transaction := domains.Transaction{}
 	transaction.Amount = 1
-	transaction.FuturesType = constants.SHORT
+	transaction.FuturesType = futureType.SHORT
 	transaction.Price = 3854
 
 	exchangeApi.CloseFuturesOrder(coin, &transaction, 3836)

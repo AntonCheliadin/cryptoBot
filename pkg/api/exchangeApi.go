@@ -1,7 +1,7 @@
 package api
 
 import (
-	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/data/domains"
 	"time"
 )
@@ -13,7 +13,7 @@ type ExchangeApi interface {
 	BuyCoinByMarket(coin *domains.Coin, amount float64, price int64) (OrderResponseDto, error)
 	SellCoinByMarket(coin *domains.Coin, amount float64, price int64) (OrderResponseDto, error)
 
-	OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType, stopLossInPercent float64) (OrderResponseDto, error)
+	OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (OrderResponseDto, error)
 	CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price int64) (OrderResponseDto, error)
 
 	GetWalletBalance() (WalletBalanceDto, error)

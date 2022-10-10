@@ -101,7 +101,7 @@ func (s *HolderStrategyTradingService) shouldBuy(lastTransaction *domains.Transa
 		return true
 	}
 
-	//priceChange := s.getChangePrice(lastTransaction.Id, currentPrice)
+	//priceChange := s.GetChangePrice(lastTransaction.Id, currentPrice)
 	//if priceChange.ChangePercents > tradingPercent && util.AlmostEquals(currentPrice, priceChange.LowPrice) {
 	//	zap.S().Debugf("High[%v] Low[%v] Percents[%v]. currentPrice[%v]", priceChange.HighPrice, priceChange.LowPrice, priceChange.ChangePercents, currentPrice)
 	//	return true

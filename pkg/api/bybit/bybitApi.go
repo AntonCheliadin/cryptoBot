@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/data/dto/bybit"
 	"cryptoBot/pkg/data/dto/bybit/wallet"
@@ -219,8 +220,8 @@ func (api *BybitApi) SetFuturesLeverage(coin *domains.Coin, leverage int) error 
 	return err
 }
 
-func (api *BybitApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType, stopLossInPercent float64) (api.OrderResponseDto, error) {
-	queryParams := api.buildOpenFuturesParams(coin, amount, price, futuresType, stopLossInPercent)
+func (api *BybitApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
+	queryParams := api.buildOpenFuturesParams(coin, amount, price, futuresType, stopLossPriceInCents)
 	return api.futuresOrderByMarketWithResponseDetails(queryParams)
 }
 
@@ -230,18 +231,18 @@ func (api *BybitApi) CloseFuturesOrder(coin *domains.Coin, openedTransaction *do
 }
 
 func (api *BybitApi) buildOpenFuturesParams(coin *domains.Coin, amount float64, priceInCents int64,
-	futuresType constants.FuturesType, stopLossInPercent float64) map[string]interface{} {
+	futuresType futureType.FuturesType, stopLossPriceInCents int64) map[string]interface{} {
 
 	side := "Buy"
 	positionIdx := 1
-	if futuresType == constants.SHORT {
+	if futuresType == futureType.SHORT {
 		side = "Sell"
 		positionIdx = 2
 	}
 
 	requestParams := api.buildFuturesParams(coin, amount, side, positionIdx)
 
-	requestParams["stop_loss"] = util.GetDollarsByCents(util.CalculatePriceForStopLoss(priceInCents, stopLossInPercent, futuresType))
+	requestParams["stop_loss"] = util.GetDollarsByCents(stopLossPriceInCents)
 
 	return requestParams
 }
@@ -249,7 +250,7 @@ func (api *BybitApi) buildOpenFuturesParams(coin *domains.Coin, amount float64, 
 func (api *BybitApi) buildCloseFuturesParams(coin *domains.Coin, openedTransaction *domains.Transaction, priceInCents int64) map[string]interface{} {
 	side := "Sell"
 	positionIdx := 1
-	if openedTransaction.FuturesType == constants.SHORT {
+	if openedTransaction.FuturesType == futureType.SHORT {
 		side = "Buy"
 		positionIdx = 2
 	}

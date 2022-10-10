@@ -3,7 +3,7 @@ package mock
 import (
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/api/mock"
-	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/data/domains"
 	"errors"
 	"fmt"
@@ -21,7 +21,7 @@ func (api *BinanceApiMock) GetKlines(coin *domains.Coin, interval string, limit 
 	return nil, errors.New("Not implemented for Binance API")
 }
 
-func (api *BinanceApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType, stopLossInPercent float64) (api.OrderResponseDto, error) {
+func (api *BinanceApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }
 func (api *BinanceApiMock) CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price int64) (api.OrderResponseDto, error) {

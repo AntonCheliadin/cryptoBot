@@ -3,7 +3,7 @@ package mock
 import (
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/api/mock"
-	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/data/dto/bybit"
 	"cryptoBot/pkg/util"
@@ -41,7 +41,7 @@ func (api *BybitApiMock) GetKlines(coin *domains.Coin, interval string, limit in
 	return &dto, nil
 }
 
-func (api *BybitApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType, stopLossInPercent float64) (api.OrderResponseDto, error) {
+func (api *BybitApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
 	return &orderResponseMockDto{
 		price:  price,
 		amount: amount,

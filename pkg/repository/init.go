@@ -37,6 +37,7 @@ type PriceChange interface {
 
 type Kline interface {
 	FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coinId int64, interval string, closeTime time.Time, limit int64) ([]*domains.Kline, error)
+	FindAllByCoinIdAndIntervalAndCloseTimeInRange(coinId int64, interval string, openTime time.Time, closeTime time.Time) ([]*domains.Kline, error)
 	SaveKline(domain *domains.Kline) error
 	FindOpenedAtMoment(coinId int64, momentTime time.Time, interval string) (*domains.Kline, error)
 	FindClosedAtMoment(coinId int64, momentTime time.Time, interval string) (*domains.Kline, error)

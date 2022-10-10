@@ -60,3 +60,13 @@ func RoundToMinutes(moment time.Time) time.Time {
 	d := (60 * time.Second)
 	return moment.Truncate(d)
 }
+
+func RoundToMinutesWithInterval(moment time.Time, interval string) time.Time {
+	intervalInt, _ := strconv.Atoi(interval)
+
+	d := (60 * time.Second)
+	roundTime := moment.Truncate(d)
+	roundTime.Add(time.Minute * time.Duration(moment.Minute()%intervalInt) * -1)
+
+	return roundTime
+}

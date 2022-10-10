@@ -6,6 +6,7 @@ import (
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/service/date"
 	"cryptoBot/pkg/util"
+	"go.uber.org/zap"
 )
 
 var exchangeDataServiceImpl *DataService
@@ -38,5 +39,9 @@ func (s *DataService) GetCurrentPrice(coin *domains.Coin) (int64, error) {
 	if kline != nil {
 		return kline.Open, nil
 	}
-	return s.exchangeApi.GetCurrentCoinPrice(coin)
+	currentCoinPrice, err := s.exchangeApi.GetCurrentCoinPrice(coin)
+	if err != nil {
+		zap.S().Errorf("Error during GetCurrentCoinPrice at %s (rounded to %s) - %s", s.Clock.NowTime(), util.RoundToMinutes(s.Clock.NowTime()), err.Error())
+	}
+	return currentCoinPrice, err
 }

@@ -72,6 +72,6 @@ func testMACD(repos *repository.Repository) {
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 
-	macdResult := macdIndicatorService.CalculateMACD(coin, "15", 8, 21, 5)
+	macdResult := macdIndicatorService.CalculateCurrentMACD(coin, "15", 8, 21, 5)
 	zap.S().Infof("MACD=%v at %v", macdResult, timeMock)
 }

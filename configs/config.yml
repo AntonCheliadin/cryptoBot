@@ -29,6 +29,34 @@ strategy:
     length:
       short: 20
       medium: 54
+  trendMeter:
+    interval: 15
+    futures:
+      leverage: 1
+    takeProfit:
+      min: 6.0
+    emaFastLength: 50
+    emaSlowLength: 200
+    trendMeter1:
+      macd:
+        fastLength: 8
+        slowLength: 21
+        signalLength: 5
+    trendMeter2:
+      rsi:
+        length: 13
+        signalPoint: 50
+    trendMeter3:
+      rsi:
+        length: 5
+        signalPoint: 50
+    trendBar1:
+      fastLength: 5
+      slowLength: 11
+    trendBar2:
+      fastLength: 13
+      slowLength: 36
+
 
 indicator:
   trend:
@@ -36,8 +64,8 @@ indicator:
       length: 50
       points: 10
   standardDeviation:
-      length: 100
-      percent: 1 # length of kline must be at least [1=100%] [0.6=60%] of standard
+    length: 100
+    percent: 1 # length of kline must be at least [1=100%] [0.6=60%] of standard
 
 
 api:
@@ -46,8 +74,8 @@ api:
       bnbCost: 600
 
 orders:
-  stopLoss:
+  dynamicStopLoss:
     deviationPercent: 0.25
-    minPercent: 0.5
-    maxPercent: 3
+    minPercent: 1.0
+    maxPercent: 1.0
     klinesLimit: 25

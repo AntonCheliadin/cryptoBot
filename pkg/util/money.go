@@ -1,7 +1,7 @@
 package util
 
 import (
-	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/constants/futureType"
 	"fmt"
 	"math"
 	"strconv"
@@ -53,12 +53,16 @@ func CalculateAmountByPriceAndCostWithCents(currentPriceWithCents int64, costWit
 	}
 }
 
-func CalculatePriceForStopLoss(priceInCents int64, stopLossPercent float64, futuresType constants.FuturesType) int64 {
+func CalculatePriceForStopLoss(priceInCents int64, stopLossPercent float64, futuresType futureType.FuturesType) int64 {
 	percentOfPriceValue := int64(CalculatePercentOf(float64(priceInCents), stopLossPercent))
 
-	if futuresType == constants.LONG {
+	if futuresType == futureType.LONG {
 		return priceInCents + percentOfPriceValue
 	} else {
 		return priceInCents - percentOfPriceValue
 	}
+}
+
+func CalculateProfitInPercent(prevPrice int64, currentPrice int64, futuresType futureType.FuturesType) float64 {
+	return CalculateChangeInPercents(prevPrice, currentPrice) * futureType.GetFuturesSignFloat64(futuresType)
 }

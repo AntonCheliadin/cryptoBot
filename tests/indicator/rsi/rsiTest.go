@@ -76,10 +76,10 @@ func testRSI(repos *repository.Repository) {
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 
-	rsi5 := rsiIndicatorService.CalculateRSI(coin, "15", 5)
+	rsi5 := rsiIndicatorService.CalculateCurrentRSI(coin, "15", 5)
 	zap.S().Infof("RSI=%v at %v with length=%v", rsi5, timeMock, 5)
 
-	rsi13 := rsiIndicatorService.CalculateRSI(coin, "15", 13)
+	rsi13 := rsiIndicatorService.CalculateCurrentRSI(coin, "15", 13)
 	zap.S().Infof("RSI=%v at %v with length=%v ", rsi13, timeMock, 13)
 }
 
