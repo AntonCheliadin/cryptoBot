@@ -66,11 +66,11 @@ func main() {
 	fetcherService := exchange.NewKlinesFetcherService(mockExchangeApi, repos.Kline)
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
-	// "2022-01-01", "2022-09-28", "15"
-	// "2022-02-25", "2022-09-27", "1"
+	// "2022-01-01", "2022-10-10", "15"
+	// "2022-02-25", "2022-10-10", "1"
 
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-07-27")
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-09-27")
+	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-10-09")
+	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-10-11")
 
 	if err := fetcherService.FetchKlinesForPeriod(coin, timeFrom, timeTo, "1"); err != nil {
 		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())

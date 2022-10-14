@@ -92,6 +92,20 @@ func (api *BybitApiMock) SetFuturesLeverage(coin *domains.Coin, leverage int) er
 	return nil
 }
 
+func (api *BybitApiMock) IsFuturesPositionOpened(coin *domains.Coin, openedOrder *domains.Transaction) bool {
+	return true
+}
+func (api *BybitApiMock) GetCloseTradeRecord(coin *domains.Coin, openTransaction *domains.Transaction) (api.OrderResponseDto, error) {
+	return nil, nil
+}
+
+func (api *BybitApiMock) GetLastFuturesOrder(coin *domains.Coin, clientOrderId string) (api.OrderResponseDto, error) {
+	return nil, nil
+}
+func (api *BybitApiMock) GetActiveFuturesConditionalOrder(coin *domains.Coin, conditionalOrder *domains.ConditionalOrder) (api.OrderResponseDto, error) {
+	return nil, nil
+}
+
 type orderResponseMockDto struct {
 	price  int64
 	amount float64
@@ -111,4 +125,7 @@ func (d *orderResponseMockDto) CalculateCommissionInUsd() int64 {
 
 func (d *orderResponseMockDto) GetAmount() float64 {
 	return d.amount
+}
+func (d *orderResponseMockDto) GetCreatedAt() *time.Time {
+	return nil
 }

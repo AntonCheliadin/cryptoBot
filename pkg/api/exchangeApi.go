@@ -15,6 +15,12 @@ type ExchangeApi interface {
 
 	OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (OrderResponseDto, error)
 	CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price int64) (OrderResponseDto, error)
+	IsFuturesPositionOpened(coin *domains.Coin, openedOrder *domains.Transaction) bool
+	GetCloseTradeRecord(coin *domains.Coin, openTransaction *domains.Transaction) (OrderResponseDto, error)
+	GetLastFuturesOrder(coin *domains.Coin, clientOrderId string) (OrderResponseDto, error)
+
+	//OpenFuturesConditionalOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLoss bool, takeProfit bool)
+	GetActiveFuturesConditionalOrder(coin *domains.Coin, conditionalOrder *domains.ConditionalOrder) (OrderResponseDto, error)
 
 	GetWalletBalance() (WalletBalanceDto, error)
 	SetFuturesLeverage(coin *domains.Coin, leverage int) error
@@ -25,6 +31,7 @@ type OrderResponseDto interface {
 	CalculateTotalCost() int64
 	CalculateCommissionInUsd() int64
 	GetAmount() float64
+	GetCreatedAt() *time.Time
 }
 
 type KlinesDto interface {

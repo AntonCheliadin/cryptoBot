@@ -4,6 +4,7 @@ import (
 	"cryptoBot/pkg/util"
 	"github.com/spf13/viper"
 	"strconv"
+	"time"
 )
 
 type OrderResponseBinanceDto struct {
@@ -67,4 +68,7 @@ func (d OrderResponseBinanceDto) CalculateCommissionInUsd() int64 {
 func (d OrderResponseBinanceDto) GetAmount() float64 {
 	amount, _ := strconv.ParseFloat(d.ExecutedQty, 64)
 	return amount
+}
+func (d OrderResponseBinanceDto) GetCreatedAt() *time.Time {
+	return nil
 }

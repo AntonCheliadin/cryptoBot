@@ -95,10 +95,12 @@ func main() {
 	rsiService := indicator.NewRelativeStrengthIndexService(techanConvertorService)
 	emaService := indicator.NewExponentialMovingAverageService(techanConvertorService)
 
-	orderManagerService := orders.NewOrderManagerService(repos.Transaction, exchangeApi, date.GetClock(), exchangeDataService, repos.Kline, constants.TREND_METER, priceChangeTrackingService, viper.GetInt64("strategy.trendMeter.futures.leverage"),
-		1.2, 0.2, 4.0, 1.0)
+	orderManagerService := orders.NewOrderManagerService(repos.Transaction, exchangeApi, date.GetClock(), exchangeDataService, repos.Kline, constants.TREND_METER, priceChangeTrackingService,
+		orders.NewProfitLossFinderService(date.GetClock(), repos.Kline),
+		viper.GetInt64("strategy.trendMeter.futures.leverage"),
+		1.2, 0.2, 0.0, 0.0)
 
-	tradingService := trading.NewTrendMeterStrategyTradingService(repos.Transaction, date.GetClock(), exchangeDataService, repos.Kline, stdDevService, fetcherService, macdService, rsiService, emaService, orders.NewProfitLossFinderService(date.GetClock(), repos.Kline), orderManagerService, priceChangeTrackingService)
+	tradingService := trading.NewTrendMeterStrategyTradingService(repos.Transaction, date.GetClock(), exchangeDataService, repos.Kline, stdDevService, fetcherService, macdService, rsiService, emaService, orderManagerService, priceChangeTrackingService)
 
 	telegramService := telegram.NewTelegramService(repos.Transaction, repos.Coin, exchangeApi)
 

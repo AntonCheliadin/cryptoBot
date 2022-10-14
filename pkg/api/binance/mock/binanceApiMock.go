@@ -40,6 +40,21 @@ func (api *BinanceApiMock) SetFuturesLeverage(coin *domains.Coin, leverage int) 
 	return nil
 }
 
+func (api *BinanceApiMock) IsFuturesPositionOpened(coin *domains.Coin, openedOrder *domains.Transaction) bool {
+	return true
+}
+func (api *BinanceApiMock) GetCloseTradeRecord(coin *domains.Coin, openTransaction *domains.Transaction) (api.OrderResponseDto, error) {
+	return nil, nil
+}
+
+func (api *BinanceApiMock) GetLastFuturesOrder(coin *domains.Coin, clientOrderId string) (api.OrderResponseDto, error) {
+	return nil, nil
+}
+
+func (api *BinanceApiMock) GetActiveFuturesConditionalOrder(coin *domains.Coin, conditionalOrder *domains.ConditionalOrder) (api.OrderResponseDto, error) {
+	return nil, nil
+}
+
 var countOfNotSoldTransactions = 0
 var maxCountOfNotSoldTransactions = 0
 
@@ -85,4 +100,8 @@ func (d *orderResponseMockDto) CalculateCommissionInUsd() int64 {
 
 func (d *orderResponseMockDto) GetAmount() float64 {
 	return d.amount
+}
+
+func (d *orderResponseMockDto) GetCreatedAt() *time.Time {
+	return nil
 }

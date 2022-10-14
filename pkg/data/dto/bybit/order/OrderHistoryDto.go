@@ -1,8 +1,9 @@
-package bybit
+package order
 
 import (
 	"cryptoBot/pkg/util"
 	"strconv"
+	"time"
 )
 
 type OrderHistoryDto struct {
@@ -49,4 +50,8 @@ func (d *OrderHistoryDto) CalculateCommissionInUsd() int64 {
 func (d *OrderHistoryDto) GetAmount() float64 {
 	amount, _ := strconv.ParseFloat(d.Result[0].OrigQty, 64)
 	return amount
+}
+
+func (d *OrderHistoryDto) GetCreatedAt() *time.Time {
+	return nil
 }

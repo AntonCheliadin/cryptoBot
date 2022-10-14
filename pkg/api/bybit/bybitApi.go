@@ -9,6 +9,8 @@ import (
 	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/data/dto/bybit"
+	"cryptoBot/pkg/data/dto/bybit/order"
+	"cryptoBot/pkg/data/dto/bybit/position"
 	"cryptoBot/pkg/data/dto/bybit/wallet"
 	"cryptoBot/pkg/util"
 	"encoding/hex"
@@ -87,7 +89,7 @@ func (api *BybitApi) orderCoinByMarket(queryParams string) (api.OrderResponseDto
 		return nil, err
 	}
 
-	dto := bybit.OrderResponseDto{}
+	dto := order.OrderResponseDto{}
 	errUnmarshal := json.Unmarshal(body, &dto)
 	if errUnmarshal != nil {
 		zap.S().Error("Unmarshal error", errUnmarshal.Error())
@@ -144,7 +146,7 @@ func (api *BybitApi) signedApiRequest(method, uri string, requestBody io.Reader)
 	return body, nil
 }
 
-func (api *BybitApi) getOrderDetails(orderResponseDto bybit.OrderResponseDto) (api.OrderResponseDto, error) {
+func (api *BybitApi) getOrderDetails(orderResponseDto order.OrderResponseDto) (api.OrderResponseDto, error) {
 	//queryParams := "api_key=" + api.apiKey +
 	//	"&orderId=" + orderResponseDto.Result.OrderId +
 	//	"&timestamp=" + util.MakeTimestamp()
@@ -154,7 +156,7 @@ func (api *BybitApi) getOrderDetails(orderResponseDto bybit.OrderResponseDto) (a
 		return nil, err
 	}
 
-	dto := bybit.OrderHistoryDto{}
+	dto := order.OrderHistoryDto{}
 	errUnmarshal := json.Unmarshal(body, &dto)
 	if errUnmarshal != nil {
 		zap.S().Error("Unmarshal error", errUnmarshal.Error())
@@ -274,13 +276,13 @@ func (api *BybitApi) buildFuturesParams(coin *domains.Coin, amount float64, side
 	}
 }
 
-func (api *BybitApi) futuresOrderByMarket(queryParams map[string]interface{}) (*bybit.FuturesOrderResponseDto, error) {
+func (api *BybitApi) futuresOrderByMarket(queryParams map[string]interface{}) (*order.FuturesOrderResponseDto, error) {
 	body, err := api.postSignedApiRequest("/private/linear/order/create", queryParams)
 	if err != nil {
 		return nil, err
 	}
 
-	dto := bybit.FuturesOrderResponseDto{}
+	dto := order.FuturesOrderResponseDto{}
 	errUnmarshal := json.Unmarshal(body, &dto)
 	if errUnmarshal != nil {
 		zap.S().Error("Unmarshal error: ", errUnmarshal.Error())
@@ -311,7 +313,77 @@ func (api *BybitApi) futuresOrderByMarketWithResponseDetails(queryParams map[str
 	return api.futuresOrderByMarketWithResponseDetails(queryParams)
 }
 
-func (api *BybitApi) GetActiveOrdersByCoin(coin *domains.Coin) (*bybit.ActiveOrdersResponseDto, error) {
+func (api *BybitApi) IsFuturesPositionOpened(coin *domains.Coin, openedOrder *domains.Transaction) bool {
+	positionDto, err := api.GetPosition(coin)
+	if err != nil {
+		zap.S().Error("Error on getting position", err.Error())
+		return true
+	}
+
+	for _, positionDto := range positionDto.Result {
+		if strings.EqualFold(positionDto.Side, futureType.GetString(openedOrder.FuturesType)) {
+			return positionDto.Size > 0
+		}
+	}
+	zap.S().Error("Error on searching position")
+	return true
+}
+
+func (api *BybitApi) GetLastFuturesOrder(coin *domains.Coin, clientOrderId string) (api.OrderResponseDto, error) {
+	requestParams := map[string]interface{}{
+		"api_key":   api.apiKey,
+		"order_id":  clientOrderId,
+		"timestamp": util.MakeTimestamp(),
+		"symbol":    coin.Symbol,
+	}
+
+	body, err := api.getSignedApiRequest("/private/linear/order/list", requestParams)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := order.ActiveOrdersResponseDto{}
+	errUnmarshal := json.Unmarshal(body, &dto)
+	if errUnmarshal != nil {
+		zap.S().Error("Unmarshal error", errUnmarshal.Error())
+		return nil, errUnmarshal
+	}
+
+	if len(dto.Result.Data) > 0 {
+		return &dto.Result.Data[0], nil
+	}
+
+	return nil, nil
+}
+
+func (api *BybitApi) GetActiveFuturesConditionalOrder(coin *domains.Coin, conditionalOrder *domains.ConditionalOrder) (api.OrderResponseDto, error) {
+	requestParams := map[string]interface{}{
+		"api_key":   api.apiKey,
+		"order_id":  conditionalOrder.ClientOrderId.String,
+		"timestamp": util.MakeTimestamp(),
+		"symbol":    coin.Symbol,
+	}
+
+	body, err := api.getSignedApiRequest("/private/linear/stop-order/list", requestParams)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := order.ActiveOrdersResponseDto{}
+	errUnmarshal := json.Unmarshal(body, &dto)
+	if errUnmarshal != nil {
+		zap.S().Error("Unmarshal error", errUnmarshal.Error())
+		return nil, errUnmarshal
+	}
+
+	if len(dto.Result.Data) > 0 {
+		return &dto.Result.Data[0], nil
+	}
+
+	return nil, nil
+}
+
+func (api *BybitApi) GetFuturesActiveOrdersByCoin(coin *domains.Coin) (*order.ActiveOrdersResponseDto, error) {
 	requestParams := map[string]interface{}{
 		"api_key":   api.apiKey,
 		"timestamp": util.MakeTimestamp(),
@@ -323,7 +395,7 @@ func (api *BybitApi) GetActiveOrdersByCoin(coin *domains.Coin) (*bybit.ActiveOrd
 		return nil, err
 	}
 
-	dto := bybit.ActiveOrdersResponseDto{}
+	dto := order.ActiveOrdersResponseDto{}
 	errUnmarshal := json.Unmarshal(body, &dto)
 	if errUnmarshal != nil {
 		zap.S().Error("Unmarshal error", errUnmarshal.Error())
@@ -333,7 +405,7 @@ func (api *BybitApi) GetActiveOrdersByCoin(coin *domains.Coin) (*bybit.ActiveOrd
 	return &dto, nil
 }
 
-func (api *BybitApi) GetActiveOrder(orderDto *bybit.FuturesOrderResponseDto) (api.OrderResponseDto, error) {
+func (api *BybitApi) GetActiveOrder(orderDto *order.FuturesOrderResponseDto) (api.OrderResponseDto, error) {
 	requestParams := map[string]interface{}{
 		"api_key":   api.apiKey,
 		"order_id":  orderDto.Result.OrderId,
@@ -346,7 +418,7 @@ func (api *BybitApi) GetActiveOrder(orderDto *bybit.FuturesOrderResponseDto) (ap
 		return nil, err
 	}
 
-	dto := bybit.ActiveOrdersResponseDto{}
+	dto := order.ActiveOrdersResponseDto{}
 	errUnmarshal := json.Unmarshal(body, &dto)
 	if errUnmarshal != nil {
 		zap.S().Error("Unmarshal error", errUnmarshal.Error())
@@ -377,6 +449,171 @@ func (api *BybitApi) GetWalletBalance() (api.WalletBalanceDto, error) {
 	if errUnmarshal != nil {
 		zap.S().Error("Unmarshal error", errUnmarshal.Error())
 		return nil, errUnmarshal
+	}
+
+	return &dto, nil
+}
+
+func (api *BybitApi) OpenFuturesConditionalOrder(coin *domains.Coin, amount float64, price int64, basePrice int64, stopPX int64, futuresType futureType.FuturesType) (api.OrderResponseDto, error) {
+	side := "Buy"
+	positionIdx := 1
+	if futuresType == futureType.SHORT {
+		side = "Sell"
+		positionIdx = 2
+	}
+
+	queryParams := map[string]interface{}{
+		"api_key":          api.apiKey,
+		"qty":              amount,
+		"side":             side,
+		"symbol":           coin.Symbol,
+		"timestamp":        util.MakeTimestamp(),
+		"order_link_id":    coin.Symbol + "-" + time.Now().Format(constants.DATE_TIME_FORMAT),
+		"order_type":       "Limit",
+		"price":            util.GetDollarsByCents(price),
+		"base_price":       util.GetDollarsByCents(basePrice), /*It will be used to compare with the value of stop_px, to decide whether your conditional order will be triggered by crossing trigger price from upper side or lower side. Mainly used to identify the expected direction of the current conditional order.*/
+		"stop_px":          util.GetDollarsByCents(stopPX),    /*Trigger price. If you're expecting the price to rise to trigger your conditional order, make sure stop_px > max(market price, base_price) else, stop_px < min(market price, base_price)*/
+		"time_in_force":    "GoodTillCancel",
+		"trigger_by":       "LastPrice",
+		"reduce_only":      false,
+		"close_on_trigger": true,
+		"position_idx":     positionIdx,
+	}
+
+	body, err := api.postSignedApiRequest("/private/linear/stop-order/create", queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := order.FuturesOrderResponseDto{}
+	errUnmarshal := json.Unmarshal(body, &dto)
+	if errUnmarshal != nil {
+		zap.S().Error("Unmarshal error: ", errUnmarshal.Error())
+		return nil, errUnmarshal
+	}
+
+	if dto.RetCode != 0 {
+		return nil, errors.New("Create order failed!")
+	}
+
+	return &dto, nil
+}
+
+func (api *BybitApi) GetConditionalOrder(coin *domains.Coin) (*order.GetConditionalOrderDto, error) {
+	requestParams := map[string]interface{}{
+		"api_key":   api.apiKey,
+		"timestamp": util.MakeTimestamp(),
+		"symbol":    coin.Symbol,
+	}
+
+	body, err := api.getSignedApiRequest("/private/linear/stop-order/list", requestParams)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := order.GetConditionalOrderDto{}
+	errUnmarshal := json.Unmarshal(body, &dto)
+	if errUnmarshal != nil {
+		zap.S().Error("Unmarshal error", errUnmarshal.Error())
+		return nil, errUnmarshal
+	}
+
+	return &dto, nil
+}
+
+func (api *BybitApi) GetPosition(coin *domains.Coin) (*position.GetPositionDto, error) {
+	requestParams := map[string]interface{}{
+		"api_key":   api.apiKey,
+		"symbol":    coin.Symbol,
+		"timestamp": util.MakeTimestamp(),
+	}
+
+	body, err := api.getSignedApiRequest("/private/linear/position/list", requestParams)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := position.GetPositionDto{}
+	errUnmarshal := json.Unmarshal(body, &dto)
+	if errUnmarshal != nil {
+		zap.S().Error("Unmarshal error", errUnmarshal.Error())
+		return nil, errUnmarshal
+	}
+
+	return &dto, nil
+}
+
+func (api *BybitApi) GetTradeRecords(coin *domains.Coin, openTransaction *domains.Transaction) (*position.GetTradeRecordsDto, error) {
+	requestParams := map[string]interface{}{
+		"api_key":    api.apiKey,
+		"symbol":     coin.Symbol,
+		"exec_type":  "Trade",
+		"start_time": util.GetMillisByTime(openTransaction.CreatedAt),
+		"timestamp":  util.MakeTimestamp(),
+	}
+
+	body, err := api.getSignedApiRequest("/private/linear/trade/execution/list", requestParams)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := position.GetTradeRecordsDto{}
+	errUnmarshal := json.Unmarshal(body, &dto)
+	if errUnmarshal != nil {
+		zap.S().Error("Unmarshal error", errUnmarshal.Error())
+		return nil, errUnmarshal
+	}
+
+	return &dto, nil
+}
+
+func (api *BybitApi) GetCloseTradeRecord(coin *domains.Coin, openTransaction *domains.Transaction) (api.OrderResponseDto, error) {
+	tradeRecordsDto, err := api.GetTradeRecords(coin, openTransaction)
+	if err != nil {
+		return nil, err
+	}
+
+	var trades []position.TradeRecordDto
+
+	for _, tradeRecordDto := range tradeRecordsDto.Result.Data {
+		if "Sell" == tradeRecordDto.Side && openTransaction.FuturesType == futureType.LONG ||
+			"Buy" == tradeRecordDto.Side && openTransaction.FuturesType == futureType.SHORT {
+			trades = append(trades, tradeRecordDto)
+		}
+	}
+
+	tradesSummaryDto := position.TradesSummaryDto{Trades: trades}
+
+	if tradesSummaryDto.GetAmount() != openTransaction.Amount {
+		panic(fmt.Sprintf("Unexpected amount in trade records. Expected: %v; actual: %v", openTransaction.Amount, tradesSummaryDto.GetAmount()))
+	}
+
+	return &tradesSummaryDto, nil
+}
+
+func (api *BybitApi) ReplaceFuturesActiveOrder(coin *domains.Coin, transaction *domains.Transaction, stopLossPriceInCents int64) (*order.ReplaceFuturesActiveOrder, error) {
+	queryParams := map[string]interface{}{
+		"api_key":   api.apiKey,
+		"order_id":  transaction.ClientOrderId.String,
+		"symbol":    coin.Symbol,
+		"stop_loss": util.GetDollarsByCents(stopLossPriceInCents),
+		"timestamp": util.MakeTimestamp(),
+	}
+
+	body, err := api.postSignedApiRequest("/private/linear/order/replace", queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := order.ReplaceFuturesActiveOrder{}
+	errUnmarshal := json.Unmarshal(body, &dto)
+	if errUnmarshal != nil {
+		zap.S().Error("Unmarshal error: ", errUnmarshal.Error())
+		return nil, errUnmarshal
+	}
+
+	if dto.RetCode != 0 {
+		return nil, errors.New("Failed!")
 	}
 
 	return &dto, nil

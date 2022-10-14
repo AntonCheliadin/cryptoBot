@@ -140,3 +140,17 @@ func (api *BinanceApi) GetWalletBalance() (api.WalletBalanceDto, error) {
 func (api *BinanceApi) SetFuturesLeverage(coin *domains.Coin, leverage int) error {
 	return nil
 }
+
+func (api *BinanceApi) IsFuturesPositionOpened(coin *domains.Coin, openedOrder *domains.Transaction) bool {
+	return true
+}
+func (api *BinanceApi) GetCloseTradeRecord(coin *domains.Coin, openTransaction *domains.Transaction) (api.OrderResponseDto, error) {
+	return nil, nil
+}
+
+func (api *BinanceApi) GetLastFuturesOrder(coin *domains.Coin, clientOrderId string) (api.OrderResponseDto, error) {
+	return nil, nil
+}
+func (api *BinanceApi) GetActiveFuturesConditionalOrder(coin *domains.Coin, conditionalOrder *domains.ConditionalOrder) (api.OrderResponseDto, error) {
+	return nil, nil
+}

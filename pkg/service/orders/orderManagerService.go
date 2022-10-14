@@ -11,6 +11,7 @@ import (
 	"cryptoBot/pkg/util"
 	"database/sql"
 	"go.uber.org/zap"
+	"time"
 )
 
 var orderManagerServiceImpl *OrderManagerService
@@ -18,6 +19,7 @@ var orderManagerServiceImpl *OrderManagerService
 func NewOrderManagerService(transactionRepo repository.Transaction, exchangeApi api.ExchangeApi, clock date.Clock,
 	exchangeDataService *exchange.DataService, klineRepo repository.Kline, tradingStrategy constants.TradingStrategy,
 	priceChangeTrackingService *PriceChangeTrackingService,
+	profitLossFinderService *ProfitLossFinderService,
 	leverage int64, minProfitForBreakEven float64, closeToEntryForBreakEven float64,
 	minTrailingTakeProfitPercent float64, trailingTakeProfitPercent float64) *OrderManagerService {
 	if orderManagerServiceImpl != nil {
@@ -36,6 +38,7 @@ func NewOrderManagerService(transactionRepo repository.Transaction, exchangeApi 
 		closeToEntryForBreakEven:     closeToEntryForBreakEven,
 		minTrailingTakeProfitPercent: minTrailingTakeProfitPercent,
 		trailingTakeProfitPercent:    trailingTakeProfitPercent,
+		ProfitLossFinderService:      profitLossFinderService,
 	}
 	return orderManagerServiceImpl
 }
@@ -48,6 +51,7 @@ type OrderManagerService struct {
 	ExchangeDataService          *exchange.DataService
 	tradingStrategy              constants.TradingStrategy
 	PriceChangeTrackingService   *PriceChangeTrackingService
+	ProfitLossFinderService      *ProfitLossFinderService
 	leverage                     int64
 	minProfitForBreakEven        float64
 	closeToEntryForBreakEven     float64
@@ -71,6 +75,19 @@ func (s *OrderManagerService) OpenOrderWithPercentStopLoss(coin *domains.Coin, f
 	}
 
 	stopLossPrice := util.CalculatePriceForStopLoss(currentPrice, stopLossInPercent, futuresType)
+
+	s.OpenOrderWithFixedStopLoss(coin, futuresType, stopLossPrice)
+}
+
+func (s *OrderManagerService) OpenOrderWithCalculateStopLoss(coin *domains.Coin, futuresType futureType.FuturesType, klineLengthInMinutes string) {
+	zap.S().Infof("OPEN SIGNAL %v", futureType.GetString(futuresType))
+
+	stopLossPrice, err := s.ProfitLossFinderService.FindStopLoss(coin, s.Clock.NowTime(), klineLengthInMinutes, futuresType)
+
+	if err != nil {
+		zap.S().Errorf("Error %s", err.Error())
+		return
+	}
 
 	s.OpenOrderWithFixedStopLoss(coin, futuresType, stopLossPrice)
 }
@@ -106,7 +123,7 @@ func (s *OrderManagerService) CloseOrder(openTransaction *domains.Transaction, c
 	}
 
 	closeTransaction := s.createCloseTransactionByOrderResponseDto(coin, openTransaction, orderResponseDto)
-	if errT := s.transactionRepo.SaveTransaction(&closeTransaction); errT != nil {
+	if errT := s.transactionRepo.SaveTransaction(closeTransaction); errT != nil {
 		zap.S().Errorf("Error during SaveTransaction: %s", errT.Error())
 		return
 	}
@@ -117,6 +134,14 @@ func (s *OrderManagerService) CloseOrder(openTransaction *domains.Transaction, c
 
 func (s *OrderManagerService) createOpenTransactionByOrderResponseDto(coin *domains.Coin, futuresType futureType.FuturesType,
 	orderDto api.OrderResponseDto) domains.Transaction {
+
+	var createdAt time.Time
+	if orderDto.GetCreatedAt() != nil {
+		createdAt = *orderDto.GetCreatedAt()
+	} else {
+		createdAt = s.Clock.NowTime()
+	}
+
 	transaction := domains.Transaction{
 		TradingStrategy: s.tradingStrategy,
 		FuturesType:     futuresType,
@@ -125,7 +150,7 @@ func (s *OrderManagerService) createOpenTransactionByOrderResponseDto(coin *doma
 		Price:           orderDto.CalculateAvgPrice(),
 		TotalCost:       orderDto.CalculateTotalCost(),
 		Commission:      orderDto.CalculateCommissionInUsd(),
-		CreatedAt:       s.Clock.NowTime(),
+		CreatedAt:       createdAt,
 	}
 
 	if futuresType == futureType.LONG {
@@ -137,7 +162,7 @@ func (s *OrderManagerService) createOpenTransactionByOrderResponseDto(coin *doma
 }
 
 func (s *OrderManagerService) createCloseTransactionByOrderResponseDto(coin *domains.Coin, openedTransaction *domains.Transaction,
-	orderDto api.OrderResponseDto) domains.Transaction {
+	orderDto api.OrderResponseDto) *domains.Transaction {
 
 	var buyCost int64
 	var sellCost int64
@@ -169,7 +194,7 @@ func (s *OrderManagerService) createCloseTransactionByOrderResponseDto(coin *dom
 		PercentProfit:        sql.NullFloat64{Float64: float64(profitInUsd) / float64(openedTransaction.TotalCost) * 100, Valid: true},
 		CreatedAt:            s.Clock.NowTime(),
 	}
-	return transaction
+	return &transaction
 }
 
 func (s *OrderManagerService) getCostOfOrder() int64 {
@@ -231,4 +256,14 @@ func (s *OrderManagerService) getBestProfitInPercent(openedTransaction *domains.
 	} else {
 		return util.CalculateProfitInPercent(openedTransaction.Price, changePrice.LowPrice, openedTransaction.FuturesType)
 	}
+}
+
+func (s *OrderManagerService) CreateCloseTransactionOnOrderClosedByExchange(coin *domains.Coin, openedTransaction *domains.Transaction) *domains.Transaction {
+	closeTradeRecord, err := s.exchangeApi.GetCloseTradeRecord(coin, openedTransaction)
+	if closeTradeRecord == nil || err != nil {
+		zap.S().Errorf("Error during GetCloseTradeRecord")
+		return nil
+	}
+
+	return s.createCloseTransactionByOrderResponseDto(coin, openedTransaction, closeTradeRecord)
 }

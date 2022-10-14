@@ -78,4 +78,4 @@ orders:
     deviationPercent: 0.25
     minPercent: 1.0
     maxPercent: 1.0
-    klinesLimit: 25
+    klinesLimit: 2

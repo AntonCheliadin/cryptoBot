@@ -1,4 +1,4 @@
-package bybit
+package order
 
 type OrderResponseDto struct {
 	RetCode int         `json:"ret_code"`

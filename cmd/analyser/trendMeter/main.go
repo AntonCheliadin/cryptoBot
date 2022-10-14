@@ -76,6 +76,11 @@ func main() {
 	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, mockExchangeApi, clockMock, repos.Kline)
 	priceChangeTrackingService := orders.NewPriceChangeTrackingService(repos.PriceChange)
 
+	orderManagerService := orders.NewOrderManagerService(repos.Transaction, mockExchangeApi, clockMock, exchangeDataService, repos.Kline, constants.TREND_METER, priceChangeTrackingService,
+		orders.NewProfitLossFinderService(clockMock, repos.Kline),
+		viper.GetInt64("strategy.trendMeter.futures.leverage"),
+		1.2, 0.2, 0.0, 0.0)
+
 	tradingService := trading.NewTrendMeterStrategyTradingService(
 		repos.Transaction,
 		clockMock,
@@ -86,16 +91,14 @@ func main() {
 		indicator.NewMACDService(seriesConvertorService),
 		indicator.NewRelativeStrengthIndexService(seriesConvertorService),
 		indicator.NewExponentialMovingAverageService(seriesConvertorService),
-		orders.NewProfitLossFinderService(clockMock, repos.Kline),
-		orders.NewOrderManagerService(repos.Transaction, mockExchangeApi, clockMock, exchangeDataService, repos.Kline, constants.TREND_METER, priceChangeTrackingService, viper.GetInt64("strategy.trendMeter.futures.leverage"),
-			1.2, 0.2, 5.0, 1.0),
+		orderManagerService,
 		priceChangeTrackingService,
 	)
 	analyserService := analyser.NewTrendMeterStratagyAnalyserService(tradingService)
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 
-	analyserService.AnalyseCoin(coin, "2022-01-10", "2022-09-07") //max interval  2022-03-04 2022-07-28
+	analyserService.AnalyseCoin(coin, "2022-01-10", "2022-10-10") //max interval  2022-03-04 2022-07-28
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
