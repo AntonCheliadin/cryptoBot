@@ -219,14 +219,10 @@ func (s *TrendMeterStrategyTradingService) calculateIndicators(coin *domains.Coi
 	//if > 10% start
 	currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
 	currentEMA := s.ExponentialMovingAverageService.CalculateCurrentEMA(coin, viper.GetString("strategy.trendMeter.interval"), viper.GetInt("strategy.trendMeter.emaSlowLength"))
-	currentEmaInt := int64(currentEMA.Float() * 100)
-	changedFromEmaInPercent := util.CalculateChangeInPercentsAbs(currentEmaInt, currentPrice)
+	currentEmaInCents := int64(currentEMA.Float() * 100)
+	changedFromEmaInPercent := util.CalculateChangeInPercentsAbs(currentEmaInCents, currentPrice)
 	if changedFromEmaInPercent > 10 {
-		zap.S().Infof("DO NOT OPEN ORDER - FAR FROM EMA - changedFromEmaInPercent=%v", currentEmaInt)
-		return
-	}
-	if changedFromEmaInPercent < 2.5 {
-		zap.S().Infof("DO NOT OPEN ORDER - CLOSE TO EMA - changedFromEmaInPercent=%v", currentEmaInt)
+		zap.S().Infof("DO NOT OPEN ORDER - FAR FROM EMA - changedFromEmaInPercent=%v", currentEmaInCents)
 		return
 	}
 	//if > 10% end
