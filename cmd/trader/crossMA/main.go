@@ -48,7 +48,7 @@ func main() {
 		}
 	}()
 
-	zap.S().Info("Trading bot is starting...\n")
+	zap.S().Info("Trading bot is starting...")
 
 	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT"), 10, 64)
 	postgresDb, err := postgres.NewPostgresDb(&postgres.Config{
@@ -96,7 +96,7 @@ func main() {
 
 	srv := new(cryptoBot.Server)
 	go func() {
-		zap.S().Info("Server is doing to be up right now!\n")
+		zap.S().Info("Server is doing to be up right now!")
 		if err := srv.Run(viper.GetString("server.port"), router); err != nil {
 			panic(fmt.Sprintf("Error when starting the http server: %s", err.Error()))
 		}
@@ -131,5 +131,5 @@ func initMigrations(db *sqlx.DB) {
 	if err != nil {
 		zap.S().Errorf("Error during applying migrations! %s", err.Error())
 	}
-	zap.S().Infof("Applied %d migrations!\n", n)
+	zap.S().Infof("Applied %d migrations!", n)
 }

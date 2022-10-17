@@ -70,7 +70,24 @@ func RoundToMinutesWithInterval(moment time.Time, interval string) time.Time {
 
 	d := (60 * time.Second)
 	roundTime := moment.Truncate(d)
-	roundTime.Add(time.Minute * time.Duration(moment.Minute()%intervalInt) * -1)
+	if roundTime.Minute()%intervalInt != 0 {
+		roundTime = roundTime.Add(time.Minute * time.Duration(moment.Minute()%intervalInt) * -1)
+	}
 
 	return roundTime
+}
+
+func InTimeSpanInclusive(start, end, check time.Time) bool {
+	if start.Before(end) {
+		return !check.Before(start) && !check.After(end)
+	}
+	if start.Equal(end) {
+		return check.Equal(start)
+	}
+	return !start.After(check) || !end.Before(check)
+}
+func IsTheSameDay(date1, date2 time.Time) bool {
+	y1, m1, d1 := date1.Date()
+	y2, m2, d2 := date2.Date()
+	return y1 == y2 && m1 == m2 && d1 == d2
 }

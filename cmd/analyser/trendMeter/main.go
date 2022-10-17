@@ -41,7 +41,7 @@ func main() {
 		}
 	}()
 
-	zap.S().Info("Trading bot is starting...\n")
+	zap.S().Info("Trading bot is starting...")
 
 	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT"), 10, 64)
 	postgresDb, err := postgres.NewPostgresDb(&postgres.Config{
@@ -96,9 +96,9 @@ func main() {
 	)
 	analyserService := analyser.NewTrendMeterStratagyAnalyserService(tradingService)
 
-	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
+	coin, _ := repos.Coin.FindBySymbol("BTCUSDT")
 
-	analyserService.AnalyseCoin(coin, "2022-01-10", "2022-10-10") //max interval  2022-03-04 2022-07-28
+	analyserService.AnalyseCoin(coin, "2020-04-01", "2022-10-14")
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
@@ -122,5 +122,5 @@ func initMigrations(db *sqlx.DB) {
 	if err != nil {
 		zap.S().Errorf("Error during applying migrations! %s", err.Error())
 	}
-	zap.S().Infof("Applied %d migrations!\n", n)
+	zap.S().Infof("Applied %d migrations!", n)
 }

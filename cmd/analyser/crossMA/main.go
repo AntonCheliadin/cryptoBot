@@ -40,7 +40,7 @@ func main() {
 		}
 	}()
 
-	zap.S().Info("Trading bot is starting...\n")
+	zap.S().Info("Trading bot is starting...")
 
 	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT"), 10, 64)
 	postgresDb, err := postgres.NewPostgresDb(&postgres.Config{
@@ -115,5 +115,5 @@ func initMigrations(db *sqlx.DB) {
 	if err != nil {
 		zap.S().Errorf("Error during applying migrations! %s", err.Error())
 	}
-	zap.S().Infof("Applied %d migrations!\n", n)
+	zap.S().Infof("Applied %d migrations!", n)
 }

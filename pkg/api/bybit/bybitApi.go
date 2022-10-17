@@ -105,16 +105,12 @@ func (api *BybitApi) getSignedApiRequest(uri string, queryParams map[string]inte
 	sign := api.getSignature(queryParams)
 	url := uri + "?" + util.ConvertMapParamsToString(queryParams) + "&sign=" + sign
 
-	zap.S().Infof("getSignedApiRequest = %s", url)
-
 	return api.signedApiRequest(http.MethodGet, url, nil)
 }
 
 func (api *BybitApi) postSignedApiRequest(uri string, queryParams map[string]interface{}) ([]byte, error) {
 	queryParams["sign"] = api.getSignature(queryParams)
 	jsonString, _ := json.Marshal(queryParams)
-
-	zap.S().Infof("postSignedApiRequest = %s  json= %v", uri, string(jsonString))
 
 	return api.signedApiRequest(http.MethodPost, uri, bytes.NewBuffer(jsonString))
 }
@@ -142,7 +138,6 @@ func (api *BybitApi) signedApiRequest(method, uri string, requestBody io.Reader)
 		zap.S().Errorf("API error: %s", err)
 		return nil, err
 	}
-	zap.S().Infof("API response: %s", string(body))
 	return body, nil
 }
 
@@ -282,6 +277,8 @@ func (api *BybitApi) futuresOrderByMarket(queryParams map[string]interface{}) (*
 		return nil, err
 	}
 
+	zap.S().Infof("API response: %s", string(body))
+
 	dto := order.FuturesOrderResponseDto{}
 	errUnmarshal := json.Unmarshal(body, &dto)
 	if errUnmarshal != nil {
@@ -323,6 +320,9 @@ func (api *BybitApi) IsFuturesPositionOpened(coin *domains.Coin, openedOrder *do
 	for _, positionDto := range positionDto.Result {
 		if "Buy" == positionDto.Side && openedOrder.FuturesType == futureType.LONG ||
 			"Sell" == positionDto.Side && openedOrder.FuturesType == futureType.SHORT {
+			if positionDto.Size > 0 {
+				zap.S().Infof("Position side=%s unrealizedPNL=%vUSDT", positionDto.Side, positionDto.UnrealisedPnl)
+			}
 			return positionDto.Size > 0
 		}
 	}

@@ -36,7 +36,7 @@ func main() {
 		}
 	}()
 
-	zap.S().Info("Trading bot is starting...\n")
+	zap.S().Info("Trading bot is starting...")
 
 	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT"), 10, 64)
 	postgresDb, err := postgres.NewPostgresDb(&postgres.Config{
@@ -70,9 +70,9 @@ func main() {
 	// "2022-02-25", "2022-10-10", "1"
 
 	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-10-09")
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-10-11")
+	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-10-14")
 
-	if err := fetcherService.FetchKlinesForPeriod(coin, timeFrom, timeTo, "1"); err != nil {
+	if err := fetcherService.FetchKlinesForPeriod(coin, timeFrom, timeTo, "15"); err != nil {
 		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
 	}
 
@@ -98,5 +98,5 @@ func initMigrations(db *sqlx.DB) {
 	if err != nil {
 		zap.S().Errorf("Error during applying migrations! %s", err.Error())
 	}
-	zap.S().Infof("Applied %d migrations!\n", n)
+	zap.S().Infof("Applied %d migrations!", n)
 }
