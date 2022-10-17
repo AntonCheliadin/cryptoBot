@@ -16,7 +16,7 @@ type PositionDto struct {
 	UserId              int     `json:"user_id"`
 	Symbol              string  `json:"symbol"`
 	Side                string  `json:"side"`
-	Size                int     `json:"size"`
+	Size                float64 `json:"size"`
 	PositionValue       float64 `json:"position_value"`
 	EntryPrice          float64 `json:"entry_price"`
 	LiqPrice            float64 `json:"liq_price"`
@@ -28,11 +28,11 @@ type PositionDto struct {
 	OccClosingFee       float64 `json:"occ_closing_fee"`
 	RealisedPnl         float64 `json:"realised_pnl"`
 	CumRealisedPnl      float64 `json:"cum_realised_pnl"`
-	FreeQty             int     `json:"free_qty"`
+	FreeQty             float64 `json:"free_qty"`
 	TpSlMode            string  `json:"tp_sl_mode"`
 	UnrealisedPnl       float64 `json:"unrealised_pnl"`
 	DeleverageIndicator int     `json:"deleverage_indicator"`
-	RiskId              int     `json:"risk_id"`
+	RiskId              float64 `json:"risk_id"`
 	StopLoss            float64 `json:"stop_loss"`
 	TakeProfit          float64 `json:"take_profit"`
 	TrailingStop        int     `json:"trailing_stop"`

@@ -45,7 +45,6 @@ func (r *PriceChange) SavePriceChange(domain *domains.PriceChange) error {
 			return err
 		}
 		domain.Id = priceChangeId
-		zap.S().Debugf("Domain was saved on proxy side: %s", domain.String())
 		return tx.Commit()
 	}
 

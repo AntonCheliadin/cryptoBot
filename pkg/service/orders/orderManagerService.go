@@ -265,5 +265,14 @@ func (s *OrderManagerService) CreateCloseTransactionOnOrderClosedByExchange(coin
 		return nil
 	}
 
-	return s.createCloseTransactionByOrderResponseDto(coin, openedTransaction, closeTradeRecord)
+	closeTransaction := s.createCloseTransactionByOrderResponseDto(coin, openedTransaction, closeTradeRecord)
+
+	if errT := s.transactionRepo.SaveTransaction(closeTransaction); errT != nil {
+		zap.S().Errorf("Error during SaveTransaction: %s", errT.Error())
+		return nil
+	}
+
+	openedTransaction.RelatedTransactionId = sql.NullInt64{Int64: closeTransaction.Id, Valid: true}
+	_ = s.transactionRepo.SaveTransaction(openedTransaction)
+	return closeTransaction
 }

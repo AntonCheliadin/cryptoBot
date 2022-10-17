@@ -117,7 +117,6 @@ func (r *Kline) SaveKline(domain *domains.Kline) error {
 			return err
 		}
 		domain.Id = id
-		zap.S().Debugf("Domain was saved on proxy side: %s", domain.String())
 		return tx.Commit()
 	}
 
@@ -138,6 +137,5 @@ func (r *Kline) SaveKline(domain *domains.Kline) error {
 		return fmt.Errorf("Unexpected updated rows count: %d", count)
 	}
 
-	zap.S().Infof("Domain was updated on proxy side: %s", domain.String())
 	return tx.Commit()
 }

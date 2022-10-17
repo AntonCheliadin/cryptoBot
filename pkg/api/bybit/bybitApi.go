@@ -321,7 +321,8 @@ func (api *BybitApi) IsFuturesPositionOpened(coin *domains.Coin, openedOrder *do
 	}
 
 	for _, positionDto := range positionDto.Result {
-		if strings.EqualFold(positionDto.Side, futureType.GetString(openedOrder.FuturesType)) {
+		if "Buy" == positionDto.Side && openedOrder.FuturesType == futureType.LONG ||
+			"Sell" == positionDto.Side && openedOrder.FuturesType == futureType.SHORT {
 			return positionDto.Size > 0
 		}
 	}

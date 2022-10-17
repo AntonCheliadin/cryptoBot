@@ -35,7 +35,6 @@ func (s *KlinesFetcherService) FetchKlinesForPeriod(coin *domains.Coin, timeFrom
 			zap.S().Errorf("Error on fetch klines: %s", err)
 			return err
 		}
-		zap.S().Infof("Fetched %v klines from %v", len(klinesDto.GetKlines()), timeIter)
 
 		s.saveKlines(coin, klinesDto)
 
