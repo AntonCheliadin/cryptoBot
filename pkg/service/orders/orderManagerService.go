@@ -180,6 +180,13 @@ func (s *OrderManagerService) createCloseTransactionByOrderResponseDto(coin *dom
 
 	profitInUsd := sellCost - buyCost - orderDto.CalculateCommissionInUsd() - openedTransaction.Commission
 
+	var createdAt time.Time
+	if orderDto.GetCreatedAt() != nil {
+		createdAt = *orderDto.GetCreatedAt()
+	} else {
+		createdAt = s.Clock.NowTime()
+	}
+
 	transaction := domains.Transaction{
 		TradingStrategy:      s.tradingStrategy,
 		FuturesType:          openedTransaction.FuturesType,
@@ -192,7 +199,7 @@ func (s *OrderManagerService) createCloseTransactionByOrderResponseDto(coin *dom
 		RelatedTransactionId: sql.NullInt64{Int64: openedTransaction.Id, Valid: true},
 		Profit:               sql.NullInt64{Int64: profitInUsd, Valid: true},
 		PercentProfit:        sql.NullFloat64{Float64: float64(profitInUsd) / float64(openedTransaction.TotalCost) * 100, Valid: true},
-		CreatedAt:            s.Clock.NowTime(),
+		CreatedAt:            createdAt,
 	}
 	return &transaction
 }
