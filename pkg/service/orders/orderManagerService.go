@@ -11,6 +11,7 @@ import (
 	"cryptoBot/pkg/util"
 	"database/sql"
 	"go.uber.org/zap"
+	"math"
 	"time"
 )
 
@@ -187,6 +188,8 @@ func (s *OrderManagerService) createCloseTransactionByOrderResponseDto(coin *dom
 		createdAt = s.Clock.NowTime()
 	}
 
+	percentProfit := float64(profitInUsd) / float64(openedTransaction.TotalCost) * 100
+
 	transaction := domains.Transaction{
 		TradingStrategy:      s.tradingStrategy,
 		FuturesType:          openedTransaction.FuturesType,
@@ -198,7 +201,7 @@ func (s *OrderManagerService) createCloseTransactionByOrderResponseDto(coin *dom
 		Commission:           orderDto.CalculateCommissionInUsd(),
 		RelatedTransactionId: sql.NullInt64{Int64: openedTransaction.Id, Valid: true},
 		Profit:               sql.NullInt64{Int64: profitInUsd, Valid: true},
-		PercentProfit:        sql.NullFloat64{Float64: float64(profitInUsd) / float64(openedTransaction.TotalCost) * 100, Valid: true},
+		PercentProfit:        sql.NullFloat64{Float64: math.Round(percentProfit*100) / 100, Valid: true},
 		CreatedAt:            createdAt,
 	}
 	return &transaction
