@@ -2,9 +2,11 @@ package exchange
 
 import (
 	"cryptoBot/pkg/api"
+	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/constants/bybit"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/repository"
+	"errors"
 	"go.uber.org/zap"
 	"time"
 )
@@ -34,6 +36,11 @@ func (s *KlinesFetcherService) FetchKlinesForPeriod(coin *domains.Coin, timeFrom
 		if err != nil {
 			zap.S().Errorf("Error on fetch klines: %s", err)
 			return err
+		}
+		if len(klinesDto.GetKlines()) == 0 {
+			zap.S().Errorf("Empty response on fetch klines requestTime=%v %v",
+				timeIter.Format(constants.DATE_TIME_FORMAT), klinesDto.String())
+			return errors.New("Empty response on fetch klines.")
 		}
 
 		s.saveKlines(coin, klinesDto)

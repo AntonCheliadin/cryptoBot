@@ -36,6 +36,7 @@ type OrderResponseDto interface {
 
 type KlinesDto interface {
 	GetKlines() []KlineDto
+	String() string
 }
 
 type KlineDto interface {
