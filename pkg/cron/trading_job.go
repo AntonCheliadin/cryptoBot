@@ -25,7 +25,6 @@ func (j *tradingJob) initTradingJob() {
 }
 
 func (j *tradingJob) execute() {
-	zap.S().Info("Cron job is started")
 	coin, err := j.coinRepository.FindBySymbol(viper.GetString("trading.defaultCoin"))
 
 	if err != nil {
@@ -34,5 +33,4 @@ func (j *tradingJob) execute() {
 	}
 
 	j.tradingService.BotAction(coin)
-	zap.S().Info("Cron job is finished")
 }

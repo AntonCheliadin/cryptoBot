@@ -1,16 +1,13 @@
 package main
 
 import (
-	"cryptoBot/pkg/api/bybit/mock"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
-	"cryptoBot/pkg/service/exchange"
+	"cryptoBot/pkg/service/parser"
 	"fmt"
-	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
-	migrate "github.com/rubenv/sql-migrate"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"os"
@@ -59,21 +56,16 @@ func main() {
 		}
 	})
 
-	initMigrations(postgresDb)
-
 	repos := repository.NewRepositories(postgresDb)
-	mockExchangeApi := mock.NewBybitApiMock()
-	fetcherService := exchange.NewKlinesFetcherService(mockExchangeApi, repos.Kline)
+	parserService := parser.NewBybitArchiveParseService(repos.Kline)
 
-	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
-	// "2022-01-01", "2022-10-10", "15"
-	// "2022-02-25", "2022-10-10", "1"
+	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
 
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-10-09")
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-10-14")
+	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-09-02")
+	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-10-21")
 
-	if err := fetcherService.FetchKlinesForPeriod(coin, timeFrom, timeTo, "15"); err != nil {
-		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
+	if err := parserService.Parse(coin, timeFrom, timeTo, 15); err != nil {
+		zap.S().Errorf("Error during parse %s", err.Error())
 	}
 
 	if err := postgresDb.Close(); err != nil {
@@ -87,16 +79,4 @@ func initConfig() error {
 	viper.AddConfigPath("configs")
 	viper.SetConfigName("config")
 	return viper.ReadInConfig()
-}
-
-func initMigrations(db *sqlx.DB) {
-	migrations := &migrate.FileMigrationSource{
-		Dir: "./migrations",
-	}
-
-	n, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
-	if err != nil {
-		zap.S().Errorf("Error during applying migrations! %s", err.Error())
-	}
-	zap.S().Infof("Applied %d migrations!", n)
 }

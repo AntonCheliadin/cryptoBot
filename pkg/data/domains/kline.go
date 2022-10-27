@@ -22,7 +22,7 @@ type Kline struct {
 
 func (d *Kline) String() string {
 	return fmt.Sprintf("Kline {id: %v, coin: %v, openTime: %v, interval: %v, open: %v, high: %v, low: %v, close: %v}",
-		d.Id, d.CoinId, d.CoinId, d.OpenTime, d.Interval, d.Open, d.High, d.Low, d.Close)
+		d.Id, d.CoinId, d.OpenTime, d.Interval, d.Open, d.High, d.Low, d.Close)
 }
 
 func (d *Kline) GetIntervalInMinutes() int64 {

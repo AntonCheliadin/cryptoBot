@@ -1,4 +1,4 @@
-package bybit
+package order
 
 import (
 	"cryptoBot/pkg/util"
@@ -59,4 +59,8 @@ func (d *ActiveOrderDto) CalculateCommissionInUsd() int64 {
 
 func (d *ActiveOrderDto) GetAmount() float64 {
 	return d.CumExecQty
+}
+
+func (d *ActiveOrderDto) GetCreatedAt() *time.Time {
+	return &d.CreatedTime
 }

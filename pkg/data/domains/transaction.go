@@ -2,6 +2,7 @@ package domains
 
 import (
 	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/constants/futureType"
 	"database/sql"
 	"fmt"
 	"time"
@@ -42,7 +43,7 @@ type Transaction struct {
 
 	TradingStrategy constants.TradingStrategy `db:"trading_strategy"`
 
-	FuturesType constants.FuturesType `db:"futures_type"`
+	FuturesType futureType.FuturesType `db:"futures_type"`
 }
 
 func (t *Transaction) String() string {

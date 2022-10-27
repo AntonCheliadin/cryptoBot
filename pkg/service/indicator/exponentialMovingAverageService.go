@@ -6,6 +6,7 @@ import (
 	"cryptoBot/pkg/service/indicator/techanLib"
 	"github.com/sdcoffey/big"
 	"github.com/sdcoffey/techan"
+	"time"
 )
 
 var exponentialMovingAverageServiceImpl *ExponentialMovingAverageService
@@ -15,17 +16,25 @@ func NewExponentialMovingAverageService(techanConvertorService *techanLib.Techan
 		panic("Unexpected try to create second service instance")
 	}
 	exponentialMovingAverageServiceImpl = &ExponentialMovingAverageService{
-		techanConvertorService: techanConvertorService,
+		TechanConvertorService: techanConvertorService,
 	}
 	return exponentialMovingAverageServiceImpl
 }
 
 type ExponentialMovingAverageService struct {
-	techanConvertorService *techanLib.TechanConvertorService
+	TechanConvertorService *techanLib.TechanConvertorService
 }
 
-func (s *ExponentialMovingAverageService) CalculateEMA(coin *domains.Coin, candleDuration string, length int) big.Decimal {
-	series := s.techanConvertorService.BuildTimeSeriesByKlines(coin, candleDuration, int64(length))
+func (s *ExponentialMovingAverageService) CalculateCurrentEMA(coin *domains.Coin, candleDuration string, length int) big.Decimal {
+	series := s.TechanConvertorService.BuildTimeSeriesByKlines(coin, candleDuration, int64(length))
+
+	emaIndicator := techan.NewEMAIndicator(techan.NewClosePriceIndicator(series), length)
+
+	return emaIndicator.Calculate(len(series.Candles) - 1)
+}
+
+func (s *ExponentialMovingAverageService) CalculateEmaAtMoment(coin *domains.Coin, candleDuration string, length int, moment time.Time) big.Decimal {
+	series := s.TechanConvertorService.BuildTimeSeriesByKlinesAtMoment(coin, candleDuration, int64(length), moment)
 
 	emaIndicator := techan.NewEMAIndicator(techan.NewClosePriceIndicator(series), length)
 
@@ -34,7 +43,7 @@ func (s *ExponentialMovingAverageService) CalculateEMA(coin *domains.Coin, candl
 
 func (s *ExponentialMovingAverageService) IsFastEmaAbove(coin *domains.Coin, candleDuration string,
 	fastLength int, fastType indicator.MovingAveragesType, slowLength int, slowType indicator.MovingAveragesType) bool {
-	series := s.techanConvertorService.BuildTimeSeriesByKlines(coin, candleDuration, int64(slowLength))
+	series := s.TechanConvertorService.BuildTimeSeriesByKlines(coin, candleDuration, int64(slowLength*2))
 	closePriceIndicator := techan.NewClosePriceIndicator(series)
 
 	fastIndicator := s.buildIndicator(closePriceIndicator, fastLength, fastType)

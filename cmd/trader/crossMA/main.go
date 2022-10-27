@@ -14,6 +14,7 @@ import (
 	"cryptoBot/pkg/service/exchange"
 	"cryptoBot/pkg/service/indicator"
 	"cryptoBot/pkg/service/indicator/techanLib"
+	"cryptoBot/pkg/service/orders"
 	"cryptoBot/pkg/service/telegram"
 	"cryptoBot/pkg/service/trading"
 	"fmt"
@@ -47,7 +48,7 @@ func main() {
 		}
 	}()
 
-	zap.S().Info("Trading bot is starting...\n")
+	zap.S().Info("Trading bot is starting...")
 
 	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT"), 10, 64)
 	postgresDb, err := postgres.NewPostgresDb(&postgres.Config{
@@ -80,7 +81,7 @@ func main() {
 	techanConvertorService := techanLib.NewTechanConvertorService(date.GetClock(), repos.Kline)
 	stdDevService := indicator.NewStandardDeviationService(date.GetClock(), repos.Kline, techanConvertorService)
 	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, exchangeApi, date.GetClock(), repos.Kline)
-	priceChangeTrackingService := trading.NewPriceChangeTrackingService(repos.PriceChange)
+	priceChangeTrackingService := orders.NewPriceChangeTrackingService(repos.PriceChange)
 	fetcherService := exchange.NewKlinesFetcherService(exchangeApi, repos.Kline)
 
 	maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, exchangeApi, date.GetClock(), exchangeDataService, repos.Kline, priceChangeTrackingService, maService, stdDevService, fetcherService)
@@ -95,7 +96,7 @@ func main() {
 
 	srv := new(cryptoBot.Server)
 	go func() {
-		zap.S().Info("Server is doing to be up right now!\n")
+		zap.S().Info("Server is doing to be up right now!")
 		if err := srv.Run(viper.GetString("server.port"), router); err != nil {
 			panic(fmt.Sprintf("Error when starting the http server: %s", err.Error()))
 		}
@@ -130,5 +131,5 @@ func initMigrations(db *sqlx.DB) {
 	if err != nil {
 		zap.S().Errorf("Error during applying migrations! %s", err.Error())
 	}
-	zap.S().Infof("Applied %d migrations!\n", n)
+	zap.S().Infof("Applied %d migrations!", n)
 }

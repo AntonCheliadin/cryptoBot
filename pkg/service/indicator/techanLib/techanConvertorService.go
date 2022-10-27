@@ -30,9 +30,13 @@ type TechanConvertorService struct {
 }
 
 func (s *TechanConvertorService) BuildTimeSeriesByKlines(coin *domains.Coin, candleDuration string, length int64) *techan.TimeSeries {
+	return s.BuildTimeSeriesByKlinesAtMoment(coin, candleDuration, length, s.Clock.NowTime())
+}
+
+func (s *TechanConvertorService) BuildTimeSeriesByKlinesAtMoment(coin *domains.Coin, candleDuration string, length int64, moment time.Time) *techan.TimeSeries {
 	series := techan.NewTimeSeries()
 
-	klines, err := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coin.Id, candleDuration, s.Clock.NowTime(), length)
+	klines, err := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coin.Id, candleDuration, moment, length)
 	if err != nil {
 		zap.S().Errorf("Error on FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit: %s", err)
 		return nil

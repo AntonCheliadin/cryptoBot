@@ -6,7 +6,13 @@ import (
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
+	"cryptoBot/pkg/service/analyser"
+	"cryptoBot/pkg/service/date"
 	"cryptoBot/pkg/service/exchange"
+	"cryptoBot/pkg/service/indicator"
+	"cryptoBot/pkg/service/indicator/techanLib"
+	"cryptoBot/pkg/service/orders"
+	"cryptoBot/pkg/service/trading"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
@@ -15,7 +21,6 @@ import (
 	"go.uber.org/zap"
 	"os"
 	"strconv"
-	"time"
 )
 
 func main() {
@@ -62,19 +67,38 @@ func main() {
 	initMigrations(postgresDb)
 
 	repos := repository.NewRepositories(postgresDb)
+
 	mockExchangeApi := mock.NewBybitApiMock()
-	fetcherService := exchange.NewKlinesFetcherService(mockExchangeApi, repos.Kline)
 
-	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
-	// "2022-01-01", "2022-10-10", "15"
-	// "2022-02-25", "2022-10-10", "1"
+	clockMock := date.GetClock()
 
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-10-09")
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-10-14")
+	seriesConvertorService := techanLib.NewTechanConvertorService(clockMock, repos.Kline)
+	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, mockExchangeApi, clockMock, repos.Kline)
+	priceChangeTrackingService := orders.NewPriceChangeTrackingService(repos.PriceChange)
 
-	if err := fetcherService.FetchKlinesForPeriod(coin, timeFrom, timeTo, "15"); err != nil {
-		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
-	}
+	orderManagerService := orders.NewOrderManagerService(repos.Transaction, mockExchangeApi, clockMock, exchangeDataService, repos.Kline, constants.TREND_METER, priceChangeTrackingService,
+		orders.NewProfitLossFinderService(clockMock, repos.Kline),
+		viper.GetInt64("strategy.trendMeter.futures.leverage"),
+		0, 0, 0, 0)
+
+	tradingService := trading.NewTrendMeterStrategyTradingService(
+		repos.Transaction,
+		clockMock,
+		exchangeDataService,
+		repos.Kline,
+		indicator.NewStandardDeviationService(clockMock, repos.Kline, seriesConvertorService),
+		exchange.NewKlinesFetcherService(mockExchangeApi, repos.Kline),
+		indicator.NewMACDService(seriesConvertorService),
+		indicator.NewRelativeStrengthIndexService(seriesConvertorService),
+		indicator.NewExponentialMovingAverageService(seriesConvertorService),
+		orderManagerService,
+		priceChangeTrackingService,
+	)
+	analyserService := analyser.NewTrendMeterStratagyAnalyserService(tradingService)
+
+	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
+
+	analyserService.AnalyseCoin(coin, "2020-11-01", "2022-10-21")
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())

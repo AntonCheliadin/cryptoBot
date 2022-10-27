@@ -5,11 +5,13 @@ import (
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/constants/bybit"
+	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/service/date"
 	"cryptoBot/pkg/service/exchange"
 	"cryptoBot/pkg/service/indicator"
+	"cryptoBot/pkg/service/orders"
 	"cryptoBot/pkg/util"
 	"database/sql"
 	"github.com/spf13/viper"
@@ -21,7 +23,7 @@ var movingAverageStrategyTradingServiceImpl *MovingAverageStrategyTradingService
 
 func NewMAStrategyTradingService(transactionRepo repository.Transaction, priceChangeRepo repository.PriceChange,
 	exchangeApi api.ExchangeApi, clock date.Clock, exchangeDataService *exchange.DataService, klineRepo repository.Kline,
-	priceChangeTrackingService *PriceChangeTrackingService, movingAverageService *indicator.MovingAverageService,
+	priceChangeTrackingService *orders.PriceChangeTrackingService, movingAverageService *indicator.MovingAverageService,
 	standardDeviationService *indicator.StandardDeviationService, klinesFetcherService *exchange.KlinesFetcherService) *MovingAverageStrategyTradingService {
 	if movingAverageStrategyTradingServiceImpl != nil {
 		panic("Unexpected try to create second service instance")
@@ -48,7 +50,7 @@ type MovingAverageStrategyTradingService struct {
 	exchangeApi                api.ExchangeApi
 	Clock                      date.Clock
 	ExchangeDataService        *exchange.DataService
-	PriceChangeTrackingService *PriceChangeTrackingService
+	PriceChangeTrackingService *orders.PriceChangeTrackingService
 	MovingAverageService       *indicator.MovingAverageService
 	StandardDeviationService   *indicator.StandardDeviationService
 	KlinesFetcherService       *exchange.KlinesFetcherService
@@ -127,15 +129,16 @@ func (s *MovingAverageStrategyTradingService) calculateMovingAverage(coin *domai
 	if s.isCrossingUp(shortAvgs, mediumAvgs) {
 		zap.S().Infof("At %v MA isCrossingUp shortAvgs=[%v] mediumAvgs=[%v]", s.Clock.NowTime(), shortAvgs, mediumAvgs)
 
-		if openedOrder != nil && openedOrder.FuturesType == constants.SHORT {
+		if openedOrder != nil && openedOrder.FuturesType == futureType.SHORT {
 			zap.S().Infof("Close SHORT and open LONG")
 			s.closeOrder(openedOrder, coin)
 		}
-		if openedOrder == nil || openedOrder.FuturesType == constants.SHORT {
+		if openedOrder == nil || openedOrder.FuturesType == futureType.SHORT {
 			if currentPrice > shortAvgs[len(shortAvgs)-1] { // if current price above from MA
 				//if s.isTrendUp(coin) {
-				if s.StandardDeviationService.IsVolatilityOscillatorSignal(coin, viper.GetString("strategy.ma.interval")) {
-					s.openOrder(coin, constants.LONG)
+				volatilitySignal, futuresType := s.StandardDeviationService.IsVolatilityOscillatorSignal(coin, viper.GetString("strategy.ma.interval"))
+				if volatilitySignal && futuresType == futureType.LONG {
+					s.openOrder(coin, futureType.LONG)
 				}
 			}
 		}
@@ -145,15 +148,16 @@ func (s *MovingAverageStrategyTradingService) calculateMovingAverage(coin *domai
 	if s.isCrossingDown(shortAvgs, mediumAvgs) {
 		zap.S().Infof("At %v MA isCrossingDown shortAvgs=[%v] mediumAvgs=[%v]", s.Clock.NowTime(), shortAvgs, mediumAvgs)
 
-		if openedOrder != nil && openedOrder.FuturesType == constants.LONG {
+		if openedOrder != nil && openedOrder.FuturesType == futureType.LONG {
 			zap.S().Infof("Close LONG and open SHORT")
 			s.closeOrder(openedOrder, coin)
 		}
-		if openedOrder == nil || openedOrder.FuturesType == constants.LONG {
+		if openedOrder == nil || openedOrder.FuturesType == futureType.LONG {
 			if currentPrice < shortAvgs[len(shortAvgs)-1] { // if current price under from MA
 				//if s.isTrendDown(coin) {
-				if s.StandardDeviationService.IsVolatilityOscillatorSignal(coin, viper.GetString("strategy.ma.interval")) {
-					s.openOrder(coin, constants.SHORT)
+				volatilitySignal, futuresType := s.StandardDeviationService.IsVolatilityOscillatorSignal(coin, viper.GetString("strategy.ma.interval"))
+				if volatilitySignal && futuresType == futureType.SHORT {
+					s.openOrder(coin, futureType.SHORT)
 				}
 			}
 		}
@@ -190,7 +194,7 @@ func (s *MovingAverageStrategyTradingService) closeOrderIfProfitEnough(coin *dom
 	}
 }
 
-func (s *MovingAverageStrategyTradingService) openOrder(coin *domains.Coin, futuresType constants.FuturesType) {
+func (s *MovingAverageStrategyTradingService) openOrder(coin *domains.Coin, futuresType futureType.FuturesType) {
 	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
 	if err != nil {
 		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
@@ -198,7 +202,8 @@ func (s *MovingAverageStrategyTradingService) openOrder(coin *domains.Coin, futu
 	}
 
 	amountTransaction := util.CalculateAmountByPriceAndCostWithCents(currentPrice, s.getCostOfOrder())
-	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType, viper.GetFloat64("strategy.ma.percentStopLoss"))
+	stopLossPrice := util.CalculatePriceForStopLoss(currentPrice, viper.GetFloat64("strategy.ma.percentStopLoss"), futuresType)
+	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType, stopLossPrice)
 	if err2 != nil {
 		zap.S().Errorf("Error during OpenFuturesOrder: %s", err2.Error())
 		return
@@ -243,7 +248,7 @@ func (s *MovingAverageStrategyTradingService) shouldCloseWithProfit(lastTransact
 		return false
 	}
 
-	if lastTransaction.FuturesType == constants.LONG {
+	if lastTransaction.FuturesType == futureType.LONG {
 		orderProfitInPercent := util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 		if orderProfitInPercent >= viper.GetFloat64("strategy.ma.percentProfit") {
 			zap.S().Infof("At %v close LONG with profit price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, orderProfitInPercent)
@@ -251,7 +256,7 @@ func (s *MovingAverageStrategyTradingService) shouldCloseWithProfit(lastTransact
 		}
 	}
 
-	if lastTransaction.FuturesType == constants.SHORT {
+	if lastTransaction.FuturesType == futureType.SHORT {
 		orderProfitInPercent := -1 * util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 		if orderProfitInPercent >= viper.GetFloat64("strategy.ma.percentProfit") {
 			zap.S().Infof("At %v close SHORT with profit price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, orderProfitInPercent)
@@ -269,9 +274,9 @@ func (s *MovingAverageStrategyTradingService) isCloseToBreakeven(lastTransaction
 		return false
 	}
 
-	priceChange := s.PriceChangeTrackingService.getChangePrice(lastTransaction.Id, currentPrice)
+	priceChange := s.PriceChangeTrackingService.GetChangePrice(lastTransaction.Id, currentPrice)
 
-	if lastTransaction.FuturesType == constants.LONG {
+	if lastTransaction.FuturesType == futureType.LONG {
 		maxProfitInPercent := util.CalculateChangeInPercents(lastTransaction.Price, priceChange.HighPrice)
 		currentProfitInPercent := util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 
@@ -281,7 +286,7 @@ func (s *MovingAverageStrategyTradingService) isCloseToBreakeven(lastTransaction
 		}
 	}
 
-	if lastTransaction.FuturesType == constants.SHORT {
+	if lastTransaction.FuturesType == futureType.SHORT {
 		maxProfitInPercent := -1 * util.CalculateChangeInPercents(lastTransaction.Price, priceChange.LowPrice)
 		currentProfitInPercent := -1 * util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 
@@ -303,14 +308,14 @@ func (s *MovingAverageStrategyTradingService) isCurrentPriceIntersectMA(lastTran
 
 	movingAvgs := s.MovingAverageService.CalculateAvg(coin, viper.GetInt("strategy.ma.length.medium"), 2)
 
-	if lastTransaction.FuturesType == constants.LONG {
+	if lastTransaction.FuturesType == futureType.LONG {
 		if currentPrice < movingAvgs[len(movingAvgs)-1] {
 			zap.S().Infof("At %v close LONG  below MA price=%v  movingAvgs=%v \n", s.Clock.NowTime(), currentPrice, movingAvgs)
 			return true
 		}
 	}
 
-	if lastTransaction.FuturesType == constants.SHORT {
+	if lastTransaction.FuturesType == futureType.SHORT {
 		if currentPrice > movingAvgs[len(movingAvgs)-1] {
 			zap.S().Infof("At %v close SHORT above MA price=%v  movingAvgs=%v \n", s.Clock.NowTime(), currentPrice, movingAvgs)
 			return true
@@ -328,7 +333,7 @@ func (s *MovingAverageStrategyTradingService) isCrossingDown(shortAvgs []int64, 
 	return shortAvgs[0] > mediumAvgs[0] && shortAvgs[1] <= mediumAvgs[1]
 }
 
-func (s *MovingAverageStrategyTradingService) createOpenTransactionByOrderResponseDto(coin *domains.Coin, futuresType constants.FuturesType,
+func (s *MovingAverageStrategyTradingService) createOpenTransactionByOrderResponseDto(coin *domains.Coin, futuresType futureType.FuturesType,
 	orderDto api.OrderResponseDto) domains.Transaction {
 	transaction := domains.Transaction{
 		TradingStrategy: constants.MOVING_AVARAGE,
@@ -341,7 +346,7 @@ func (s *MovingAverageStrategyTradingService) createOpenTransactionByOrderRespon
 		CreatedAt:       s.Clock.NowTime(),
 	}
 
-	if futuresType == constants.LONG {
+	if futuresType == futureType.LONG {
 		transaction.TransactionType = constants.BUY
 	} else {
 		transaction.TransactionType = constants.SELL
@@ -356,7 +361,7 @@ func (s *MovingAverageStrategyTradingService) createCloseTransactionByOrderRespo
 	var sellCost int64
 	var transactionType constants.TransactionType
 
-	if openedTransaction.FuturesType == constants.LONG {
+	if openedTransaction.FuturesType == futureType.LONG {
 		buyCost = openedTransaction.TotalCost
 		sellCost = orderDto.CalculateTotalCost()
 		transactionType = constants.SELL
@@ -392,7 +397,7 @@ func (s *MovingAverageStrategyTradingService) shouldCloseByStopLoss(lastTransact
 		return false
 	}
 
-	if lastTransaction.FuturesType == constants.LONG {
+	if lastTransaction.FuturesType == futureType.LONG {
 		orderProfitInPercent := util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 		if orderProfitInPercent <= viper.GetFloat64("strategy.ma.percentStopLoss") {
 			zap.S().Infof("at %v close order by stop loss price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, orderProfitInPercent)
@@ -400,7 +405,7 @@ func (s *MovingAverageStrategyTradingService) shouldCloseByStopLoss(lastTransact
 		}
 	}
 
-	if lastTransaction.FuturesType == constants.SHORT {
+	if lastTransaction.FuturesType == futureType.SHORT {
 		orderProfitInPercent := -1 * util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 		if orderProfitInPercent <= viper.GetFloat64("strategy.ma.percentStopLoss") {
 			zap.S().Infof("at %v close order by stop loss price=%v currentProfitInPercent=%v", s.Clock.NowTime(), currentPrice, orderProfitInPercent)
@@ -442,9 +447,9 @@ func (s *MovingAverageStrategyTradingService) isProfitByTrolling(lastTransaction
 		return false
 	}
 
-	priceChange := s.PriceChangeTrackingService.getChangePrice(lastTransaction.Id, currentPrice)
+	priceChange := s.PriceChangeTrackingService.GetChangePrice(lastTransaction.Id, currentPrice)
 
-	if lastTransaction.FuturesType == constants.LONG {
+	if lastTransaction.FuturesType == futureType.LONG {
 		// close order if price on percentProfit lower from high
 		priceChangeInPercent := util.CalculateChangeInPercents(priceChange.HighPrice, currentPrice)
 		if priceChangeInPercent < -1*viper.GetFloat64("strategy.ma.percentTrollingProfit") {
@@ -453,7 +458,7 @@ func (s *MovingAverageStrategyTradingService) isProfitByTrolling(lastTransaction
 			return true
 		}
 	}
-	if lastTransaction.FuturesType == constants.SHORT {
+	if lastTransaction.FuturesType == futureType.SHORT {
 		// close order if price on percentProfit higher from low
 		priceChangeInPercent := util.CalculateChangeInPercents(priceChange.LowPrice, currentPrice)
 		if priceChangeInPercent > viper.GetFloat64("strategy.ma.percentTrollingProfit") {

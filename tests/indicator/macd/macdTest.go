@@ -31,7 +31,7 @@ func main() {
 		}
 	}()
 
-	zap.S().Info("Trading bot is starting...\n")
+	zap.S().Info("Trading bot is starting...")
 
 	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT"), 10, 64)
 	postgresDb, err := postgres.NewPostgresDb(&postgres.Config{
@@ -72,6 +72,6 @@ func testMACD(repos *repository.Repository) {
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 
-	macdResult := macdIndicatorService.CalculateMACD(coin, "15", 8, 21, 5)
+	macdResult := macdIndicatorService.CalculateCurrentMACD(coin, "15", 8, 21, 5)
 	zap.S().Infof("MACD=%v at %v", macdResult, timeMock)
 }

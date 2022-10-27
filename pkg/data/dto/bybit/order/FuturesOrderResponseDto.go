@@ -1,4 +1,4 @@
-package bybit
+package order
 
 import (
 	"time"
@@ -54,4 +54,8 @@ func (d *FuturesOrderResponseDto) CalculateCommissionInUsd() int64 {
 
 func (d *FuturesOrderResponseDto) GetAmount() float64 {
 	return d.Result.Qty
+}
+
+func (d *FuturesOrderResponseDto) GetCreatedAt() *time.Time {
+	return &d.Result.CreatedAt
 }

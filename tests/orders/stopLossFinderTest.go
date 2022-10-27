@@ -1,7 +1,7 @@
 package main
 
 import (
-	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/service/orders"
 	"fmt"
 	"github.com/spf13/viper"
@@ -27,8 +27,8 @@ func main() {
 		expectedResultLong := data[i+3]
 		expectedResultShort := data[i+4]
 
-		stopLossPriceLong := serviceMock.GetStopLossInConfigRange(currentPrice, minLow, maxHigh, constants.LONG)
-		stopLossPriceShort := serviceMock.GetStopLossInConfigRange(currentPrice, minLow, maxHigh, constants.SHORT)
+		stopLossPriceLong := serviceMock.GetStopLossInConfigRange(currentPrice, minLow, maxHigh, futureType.LONG)
+		stopLossPriceShort := serviceMock.GetStopLossInConfigRange(currentPrice, minLow, maxHigh, futureType.SHORT)
 		fmt.Printf("%v -- expected: %v; actual: %v \n", expectedResultLong == stopLossPriceLong, expectedResultLong, stopLossPriceLong)
 		fmt.Printf("%v -- expected: %v; actual: %v \n\n", expectedResultShort == stopLossPriceShort, expectedResultShort, stopLossPriceShort)
 	}

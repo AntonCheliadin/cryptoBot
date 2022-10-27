@@ -5,7 +5,7 @@ import (
 )
 
 func CalculateChangeInPercentsAbs(prev, current int64) float64 {
-	return math.Abs((float64(current) - float64(prev)) / float64(prev) * 100)
+	return math.Abs(CalculateChangeInPercents(prev, current))
 }
 
 func CalculateChangeInPercents(prev, current int64) float64 {
@@ -18,6 +18,13 @@ func CalculatePercentOf(source float64, percent float64) float64 {
 
 func Sum(array []int64) int64 {
 	result := int64(0)
+	for _, v := range array {
+		result += v
+	}
+	return result
+}
+func SumFloat64(array []float64) float64 {
+	result := float64(0)
 	for _, v := range array {
 		result += v
 	}
@@ -38,4 +45,18 @@ func Min(x, y int64) int64 {
 		return y
 	}
 	return x
+}
+
+func StandardDeviation(array []float64) float64 {
+	var sd float64
+
+	sum := SumFloat64(array)
+	avg := sum / float64(len(array))
+
+	for j := 0; j < len(array); j++ {
+		sd += math.Pow(array[j]-avg, 2)
+	}
+
+	// The use of Sqrt math function func Sqrt(x float64) float64
+	return math.Sqrt(sd / float64(len(array)))
 }

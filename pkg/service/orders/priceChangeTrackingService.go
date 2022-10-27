@@ -1,4 +1,4 @@
-package trading
+package orders
 
 import (
 	"cryptoBot/pkg/data/domains"
@@ -21,7 +21,7 @@ type PriceChangeTrackingService struct {
 	priceChangeRepo repository.PriceChange
 }
 
-func (s *PriceChangeTrackingService) getChangePrice(transactionId int64, currentPrice int64) *domains.PriceChange {
+func (s *PriceChangeTrackingService) GetChangePrice(transactionId int64, currentPrice int64) *domains.PriceChange {
 	priceChange, _ := s.priceChangeRepo.FindByTransactionId(transactionId)
 	if priceChange != nil {
 		s.saveNewPriceIfNeeded(priceChange, currentPrice)

@@ -30,6 +30,10 @@ type Transaction interface {
 	FindOpenedTransaction(tradingStrategy constants.TradingStrategy) (*domains.Transaction, error)
 }
 
+type ConditionalOrder interface {
+	FindByTransaction(transaction *domains.Transaction) (*domains.ConditionalOrder, error)
+}
+
 type PriceChange interface {
 	FindByTransactionId(transactionId int64) (*domains.PriceChange, error)
 	SavePriceChange(priceChange *domains.PriceChange) error
@@ -37,6 +41,7 @@ type PriceChange interface {
 
 type Kline interface {
 	FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coinId int64, interval string, closeTime time.Time, limit int64) ([]*domains.Kline, error)
+	FindAllByCoinIdAndIntervalAndCloseTimeInRange(coinId int64, interval string, openTime time.Time, closeTime time.Time) ([]*domains.Kline, error)
 	SaveKline(domain *domains.Kline) error
 	FindOpenedAtMoment(coinId int64, momentTime time.Time, interval string) (*domains.Kline, error)
 	FindClosedAtMoment(coinId int64, momentTime time.Time, interval string) (*domains.Kline, error)
@@ -44,17 +49,19 @@ type Kline interface {
 }
 
 type Repository struct {
-	Coin        Coin
-	Transaction Transaction
-	PriceChange PriceChange
-	Kline       Kline
+	Coin             Coin
+	Transaction      Transaction
+	PriceChange      PriceChange
+	Kline            Kline
+	ConditionalOrder ConditionalOrder
 }
 
 func NewRepositories(postgresDb *sqlx.DB) *Repository {
 	return &Repository{
-		Coin:        postgres.NewCoin(postgresDb),
-		Transaction: postgres.NewTransaction(postgresDb),
-		PriceChange: postgres.NewPriceChange(postgresDb),
-		Kline:       postgres.NewKline(postgresDb),
+		Coin:             postgres.NewCoin(postgresDb),
+		Transaction:      postgres.NewTransaction(postgresDb),
+		PriceChange:      postgres.NewPriceChange(postgresDb),
+		Kline:            postgres.NewKline(postgresDb),
+		ConditionalOrder: postgres.NewConditionalOrder(postgresDb),
 	}
 }

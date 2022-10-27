@@ -3,6 +3,7 @@ package bybit
 import (
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/util"
+	"fmt"
 	"go.uber.org/zap"
 	"strconv"
 	"time"
@@ -15,6 +16,11 @@ type KlinesDto struct {
 	ExtInfo string     `json:"ext_info"`
 	Result  []KlineDto `json:"result"`
 	TimeNow string     `json:"time_now"`
+}
+
+func (d *KlinesDto) String() string {
+	return fmt.Sprintf("KlinesDto {RetCode: %v, RetMsg: %v, ExtCode: %v, ExtInfo: %v, TimeNow: %v, ResultSize: %v}",
+		d.RetCode, d.RetMsg, d.ExtCode, d.ExtInfo, d.TimeNow, len(d.Result))
 }
 
 func (dto *KlinesDto) GetKlines() []api.KlineDto {

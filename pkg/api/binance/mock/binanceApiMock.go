@@ -3,7 +3,7 @@ package mock
 import (
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/api/mock"
-	"cryptoBot/pkg/constants"
+	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/data/domains"
 	"errors"
 	"fmt"
@@ -21,7 +21,7 @@ func (api *BinanceApiMock) GetKlines(coin *domains.Coin, interval string, limit 
 	return nil, errors.New("Not implemented for Binance API")
 }
 
-func (api *BinanceApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType constants.FuturesType, stopLossInPercent float64) (api.OrderResponseDto, error) {
+func (api *BinanceApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }
 func (api *BinanceApiMock) CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price int64) (api.OrderResponseDto, error) {
@@ -38,6 +38,21 @@ func (api *BinanceApiMock) GetWalletBalance() (api.WalletBalanceDto, error) {
 
 func (api *BinanceApiMock) SetFuturesLeverage(coin *domains.Coin, leverage int) error {
 	return nil
+}
+
+func (api *BinanceApiMock) IsFuturesPositionOpened(coin *domains.Coin, openedOrder *domains.Transaction) bool {
+	return true
+}
+func (api *BinanceApiMock) GetCloseTradeRecord(coin *domains.Coin, openTransaction *domains.Transaction) (api.OrderResponseDto, error) {
+	return nil, nil
+}
+
+func (api *BinanceApiMock) GetLastFuturesOrder(coin *domains.Coin, clientOrderId string) (api.OrderResponseDto, error) {
+	return nil, nil
+}
+
+func (api *BinanceApiMock) GetActiveFuturesConditionalOrder(coin *domains.Coin, conditionalOrder *domains.ConditionalOrder) (api.OrderResponseDto, error) {
+	return nil, nil
 }
 
 var countOfNotSoldTransactions = 0
@@ -85,4 +100,8 @@ func (d *orderResponseMockDto) CalculateCommissionInUsd() int64 {
 
 func (d *orderResponseMockDto) GetAmount() float64 {
 	return d.amount
+}
+
+func (d *orderResponseMockDto) GetCreatedAt() *time.Time {
+	return nil
 }

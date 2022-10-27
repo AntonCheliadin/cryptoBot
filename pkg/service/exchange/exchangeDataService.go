@@ -6,6 +6,8 @@ import (
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/service/date"
 	"cryptoBot/pkg/util"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 var exchangeDataServiceImpl *DataService
@@ -34,9 +36,24 @@ type DataService struct {
 }
 
 func (s *DataService) GetCurrentPrice(coin *domains.Coin) (int64, error) {
-	kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), "15")
-	if kline != nil {
+	if s.Clock.NowTime().Minute()%viper.GetInt("strategy.trendMeter.interval") == 0 {
+		strategyInterval := viper.GetString("strategy.trendMeter.interval")
+		if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), strategyInterval); kline != nil {
+			return kline.Open, nil
+		}
+	}
+
+	if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), "1"); kline != nil {
 		return kline.Open, nil
 	}
-	return s.exchangeApi.GetCurrentCoinPrice(coin)
+
+	currentCoinPrice, err := s.exchangeApi.GetCurrentCoinPrice(coin)
+	if err != nil {
+		zap.S().Errorf("Error during GetCurrentCoinPrice at %s (rounded to %s) - %s", s.Clock.NowTime(), util.RoundToMinutes(s.Clock.NowTime()), err.Error())
+	}
+	return currentCoinPrice, err
+}
+
+func (s *DataService) IsPositionOpened(coin *domains.Coin, openedOrder *domains.Transaction) bool {
+	return s.exchangeApi.IsFuturesPositionOpened(coin, openedOrder)
 }

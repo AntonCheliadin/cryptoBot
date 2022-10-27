@@ -32,7 +32,7 @@ func main() {
 		}
 	}()
 
-	zap.S().Info("Trading bot is starting...\n")
+	zap.S().Info("Trading bot is starting...")
 
 	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT"), 10, 64)
 	postgresDb, err := postgres.NewPostgresDb(&postgres.Config{
@@ -78,8 +78,8 @@ func testEMA(repos *repository.Repository) {
 	for ; timeIterator.Before(timeMax); timeIterator = timeIterator.Add(time.Minute * 15) {
 		seriesConvertorService.Clock = date.GetClockMock(timeIterator)
 
-		//emaResult5 := maIndicatorService.CalculateEMA(coin, "15", 5)
-		//emaResult11 := maIndicatorService.CalculateEMA(coin, "15", 11)
+		//emaResult5 := maIndicatorService.CalculateCurrentEMA(coin, "15", 5)
+		//emaResult11 := maIndicatorService.CalculateCurrentEMA(coin, "15", 11)
 		//zap.S().Infof("emaResult5=%v <%v> emaResult11=%v at %v", emaResult5, emaResult5.GTE(emaResult11), emaResult11, timeIterator)
 
 		signal1 := maIndicatorService.IsFastEmaAbove(coin, "15", 5, constantIndicator.EMA, 11, constantIndicator.EMA)
