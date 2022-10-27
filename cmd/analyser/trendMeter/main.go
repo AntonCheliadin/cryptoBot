@@ -79,7 +79,7 @@ func main() {
 	orderManagerService := orders.NewOrderManagerService(repos.Transaction, mockExchangeApi, clockMock, exchangeDataService, repos.Kline, constants.TREND_METER, priceChangeTrackingService,
 		orders.NewProfitLossFinderService(clockMock, repos.Kline),
 		viper.GetInt64("strategy.trendMeter.futures.leverage"),
-		1.2, 0.2, 0.0, 0.0)
+		0, 0, 0, 0)
 
 	tradingService := trading.NewTrendMeterStrategyTradingService(
 		repos.Transaction,
@@ -96,9 +96,9 @@ func main() {
 	)
 	analyserService := analyser.NewTrendMeterStratagyAnalyserService(tradingService)
 
-	coin, _ := repos.Coin.FindBySymbol("BTCUSDT")
+	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
 
-	analyserService.AnalyseCoin(coin, "2020-04-01", "2022-10-14")
+	analyserService.AnalyseCoin(coin, "2020-11-01", "2022-10-21")
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())

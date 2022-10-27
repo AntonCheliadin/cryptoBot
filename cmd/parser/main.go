@@ -59,10 +59,10 @@ func main() {
 	repos := repository.NewRepositories(postgresDb)
 	parserService := parser.NewBybitArchiveParseService(repos.Kline)
 
-	coin, _ := repos.Coin.FindBySymbol("BTCUSDT")
+	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
 
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2020-03-25")
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-10-14")
+	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-09-02")
+	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-10-21")
 
 	if err := parserService.Parse(coin, timeFrom, timeTo, 15); err != nil {
 		zap.S().Errorf("Error during parse %s", err.Error())

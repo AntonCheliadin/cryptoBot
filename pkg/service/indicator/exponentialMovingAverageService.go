@@ -43,7 +43,7 @@ func (s *ExponentialMovingAverageService) CalculateEmaAtMoment(coin *domains.Coi
 
 func (s *ExponentialMovingAverageService) IsFastEmaAbove(coin *domains.Coin, candleDuration string,
 	fastLength int, fastType indicator.MovingAveragesType, slowLength int, slowType indicator.MovingAveragesType) bool {
-	series := s.TechanConvertorService.BuildTimeSeriesByKlines(coin, candleDuration, int64(slowLength))
+	series := s.TechanConvertorService.BuildTimeSeriesByKlines(coin, candleDuration, int64(slowLength*2))
 	closePriceIndicator := techan.NewClosePriceIndicator(series)
 
 	fastIndicator := s.buildIndicator(closePriceIndicator, fastLength, fastType)

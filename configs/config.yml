@@ -34,7 +34,7 @@ strategy:
     futures:
       leverage: 1
     takeProfit:
-      min: 6.0
+      min: 0.1
     emaFastLength: 50
     emaSlowLength: 200
     trendMeter1:
@@ -76,6 +76,6 @@ api:
 orders:
   dynamicStopLoss:
     deviationPercent: 0.25
-    minPercent: 1.0
-    maxPercent: 1.0
+    minPercent: 10.0
+    maxPercent: 10.0
     klinesLimit: 2

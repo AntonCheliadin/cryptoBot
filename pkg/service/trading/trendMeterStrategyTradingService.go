@@ -174,7 +174,8 @@ func (s *TrendMeterStrategyTradingService) isTakeProfitSignal(coin *domains.Coin
 		viper.GetInt("strategy.trendMeter.trendMeter1.macd.slowLength"),
 		viper.GetInt("strategy.trendMeter.trendMeter1.macd.signalLength"))
 
-	return macdResult.Mul(futureType.GetFuturesSignDecimal(openedOrder.FuturesType)).GTE(big.ZERO)
+	signDecimal := futureType.GetFuturesSignDecimal(openedOrder.FuturesType)
+	return macdResult.Mul(signDecimal).LT(big.ZERO)
 }
 
 func (s *TrendMeterStrategyTradingService) calculateIndicators(coin *domains.Coin) {
@@ -216,16 +217,16 @@ func (s *TrendMeterStrategyTradingService) calculateIndicators(coin *domains.Coi
 	trendMeterSignalLong := (macdSignal || rsi13Signal || rsi5Signal) && macdFuturesType == futureType.LONG && rs13FuturesType == futureType.LONG && rs5FuturesType == futureType.LONG
 	trendMeterSignalShort := (macdSignal || rsi13Signal || rsi5Signal) && macdFuturesType == futureType.SHORT && rs13FuturesType == futureType.SHORT && rs5FuturesType == futureType.SHORT
 
-	//if > 10% start
-	currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
-	currentEMA := s.ExponentialMovingAverageService.CalculateCurrentEMA(coin, viper.GetString("strategy.trendMeter.interval"), viper.GetInt("strategy.trendMeter.emaSlowLength"))
-	currentEmaInCents := int64(currentEMA.Float() * 100)
-	changedFromEmaInPercent := util.CalculateChangeInPercentsAbs(currentEmaInCents, currentPrice)
-	if changedFromEmaInPercent > 10 {
-		zap.S().Infof("DO NOT OPEN ORDER - FAR FROM EMA - changedFromEmaInPercent=%v", currentEmaInCents)
-		return
-	}
-	//if > 10% end
+	////if > 10% start
+	//currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
+	//currentEMA := s.ExponentialMovingAverageService.CalculateCurrentEMA(coin, viper.GetString("strategy.trendMeter.interval"), viper.GetInt("strategy.trendMeter.emaSlowLength"))
+	//currentEmaInCents := int64(currentEMA.Float() * 100)
+	//changedFromEmaInPercent := util.CalculateChangeInPercentsAbs(currentEmaInCents, currentPrice)
+	//if changedFromEmaInPercent > 12 {
+	//	zap.S().Infof("DO NOT OPEN ORDER - FAR FROM EMA - changedFromEmaInPercent=%v", currentEmaInCents)
+	//	return
+	//}
+	////if > 10% end
 
 	if trendMeterSignalLong && trendBar1 && trendBar2 && emaFastAbove && volatilityOscillatorSignal && volatilityFuturesType == futureType.LONG {
 		s.OrderManagerService.OpenOrderWithCalculateStopLoss(coin, futureType.LONG, viper.GetString("strategy.trendMeter.interval"))
