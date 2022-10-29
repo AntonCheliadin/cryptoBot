@@ -93,14 +93,23 @@ func (s *OrderManagerService) OpenOrderWithCalculateStopLoss(coin *domains.Coin,
 	s.OpenOrderWithFixedStopLoss(coin, futuresType, stopLossPrice)
 }
 
+func (s *OrderManagerService) OpenOrderWithCost(coin *domains.Coin, futuresType futureType.FuturesType, costInCents int64) {
+	s.OpenOrderWithCostAndFixedStopLoss(coin, futuresType, 0, costInCents)
+}
+
 func (s *OrderManagerService) OpenOrderWithFixedStopLoss(coin *domains.Coin, futuresType futureType.FuturesType, stopLossPriceInCents int64) {
+	s.OpenOrderWithCostAndFixedStopLoss(coin, futuresType, stopLossPriceInCents, s.getCostOfOrder())
+}
+
+func (s *OrderManagerService) OpenOrderWithCostAndFixedStopLoss(coin *domains.Coin, futuresType futureType.FuturesType,
+	stopLossPriceInCents int64, costInCents int64) {
 	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
 	if err != nil {
 		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
 		return
 	}
 
-	amountTransaction := util.CalculateAmountByPriceAndCostWithCents(currentPrice, s.getCostOfOrder())
+	amountTransaction := util.CalculateAmountByPriceAndCostWithCents(currentPrice, costInCents)
 	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType, stopLossPriceInCents)
 	if err2 != nil {
 		zap.S().Errorf("Error during OpenFuturesOrder: %s", err2.Error())
@@ -114,6 +123,12 @@ func (s *OrderManagerService) OpenOrderWithFixedStopLoss(coin *domains.Coin, fut
 	}
 
 	zap.S().Infof("at %v Order opened  with price %v and type [%v] (0-L, 1-S)", s.Clock.NowTime(), currentPrice, futuresType)
+}
+
+func (s *OrderManagerService) CloseCombinedOrder(openTransaction []*domains.Transaction, coin *domains.Coin, price int64) {
+	for _, transaction := range openTransaction {
+		s.CloseOrder(transaction, coin, price)
+	}
 }
 
 func (s *OrderManagerService) CloseOrder(openTransaction *domains.Transaction, coin *domains.Coin, price int64) {

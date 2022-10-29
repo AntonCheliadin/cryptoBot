@@ -239,7 +239,9 @@ func (api *BybitApi) buildOpenFuturesParams(coin *domains.Coin, amount float64, 
 
 	requestParams := api.buildFuturesParams(coin, amount, side, positionIdx)
 
-	requestParams["stop_loss"] = util.GetDollarsByCents(stopLossPriceInCents)
+	if stopLossPriceInCents > 0 {
+		requestParams["stop_loss"] = util.GetDollarsByCents(stopLossPriceInCents)
+	}
 
 	return requestParams
 }

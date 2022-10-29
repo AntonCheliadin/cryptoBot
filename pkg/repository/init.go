@@ -28,6 +28,7 @@ type Transaction interface {
 	CalculateSumOfTransactionsByDateAndType(date time.Time, transType constants.TransactionType, tradingStrategy constants.TradingStrategy) (int64, error)
 
 	FindOpenedTransaction(tradingStrategy constants.TradingStrategy) (*domains.Transaction, error)
+	FindAllOpenedTransactions(tradingStrategy constants.TradingStrategy) ([]*domains.Transaction, error)
 }
 
 type ConditionalOrder interface {

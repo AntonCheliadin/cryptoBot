@@ -30,7 +30,6 @@ func (r *Transaction) find(query string, args ...interface{}) (*domains.Transact
 	return &transaction, nil
 }
 
-//language=SQL
 func (r *Transaction) FindOpenedTransaction(tradingStrategy constants.TradingStrategy) (*domains.Transaction, error) {
 	var transaction domains.Transaction
 	if err := r.db.Get(&transaction, "SELECT * FROM transaction_table WHERE related_transaction_id is null AND trading_strategy=$1 order by created_at desc limit 1", tradingStrategy); err != nil {
@@ -40,6 +39,26 @@ func (r *Transaction) FindOpenedTransaction(tradingStrategy constants.TradingStr
 		return nil, err
 	}
 	return &transaction, nil
+}
+
+func (r *Transaction) FindAllOpenedTransactions(tradingStrategy constants.TradingStrategy) ([]*domains.Transaction, error) {
+	var klines []domains.Transaction
+	err := r.db.Select(&klines, "SELECT * FROM transaction_table WHERE related_transaction_id is null AND trading_strategy=$1 order by created_at desc",
+		tradingStrategy)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error during select domain: %s", err.Error())
+	}
+
+	return r.listRelationsToListRelationsPointers(klines), nil
+}
+
+func (r *Transaction) listRelationsToListRelationsPointers(domainList []domains.Transaction) []*domains.Transaction {
+	result := make([]*domains.Transaction, 0, len(domainList))
+	for i := len(domainList) - 1; i >= 0; i-- {
+		result = append(result, &domainList[i])
+	}
+	return result
 }
 
 func (r *Transaction) FindLastByCoinId(coinId int64, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error) {
