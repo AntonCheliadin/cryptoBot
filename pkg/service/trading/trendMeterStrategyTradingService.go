@@ -85,11 +85,12 @@ func (s *TrendMeterStrategyTradingService) BotAction(coin *domains.Coin) {
 
 	s.BotActionCheckIfOrderClosedByExchange(coin)
 
-	s.BotActionCloseOrderIfNeeded(coin)
-
 	if s.Clock.NowTime().Minute()%viper.GetInt("strategy.trendMeter.interval") != 0 {
 		return
 	}
+
+	s.BotActionBuyMoreIfNeeded(coin)
+	s.BotActionCloseOrderIfNeeded(coin)
 
 	s.BotActionOpenOrderIfNeeded(coin)
 }
