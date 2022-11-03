@@ -145,11 +145,35 @@ func (s *TrendMeterStrategyTradingService) BotActionBuyMoreIfNeeded(coin *domain
 	firstTransaction := openedOrders[0]
 	profitInPercent := util.CalculateProfitInPercent(firstTransaction.Price, currentPrice, futureType.LONG)
 
-	if profitInPercent < float64(-5*openedTransactionsCount) {
-		lastTransaction := openedOrders[openedTransactionsCount-1]
-
-		s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, int64(float64(lastTransaction.TotalCost)*1.1))
+	if profitInPercent > -10 {
+		return
 	}
+
+	costInUSDT := int64(0)
+
+	if openedTransactionsCount == 9 && profitInPercent < -90 {
+		costInUSDT = int64(3000)
+	} else if openedTransactionsCount == 8 && profitInPercent < -80 {
+		costInUSDT = int64(2800)
+	} else if openedTransactionsCount == 7 && profitInPercent < -70 {
+		costInUSDT = int64(2400)
+	} else if openedTransactionsCount == 6 && profitInPercent < -60 {
+		costInUSDT = int64(2000)
+	} else if openedTransactionsCount == 5 && profitInPercent < -50 {
+		costInUSDT = int64(1000)
+	} else if openedTransactionsCount == 4 && profitInPercent < -40 {
+		costInUSDT = int64(500)
+	} else if openedTransactionsCount == 3 && profitInPercent < -30 {
+		costInUSDT = int64(1000)
+	} else if openedTransactionsCount == 2 && profitInPercent < -20 {
+		costInUSDT = int64(300)
+	} else if openedTransactionsCount == 1 && profitInPercent < -10 {
+		costInUSDT = int64(200)
+	} else {
+		return
+	}
+
+	s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, costInUSDT*100)
 }
 
 func (s *TrendMeterStrategyTradingService) BotActionCloseOrderIfNeeded(coin *domains.Coin) {
@@ -189,7 +213,9 @@ func (s *TrendMeterStrategyTradingService) isTakeProfitSignalForCombinedOrder(co
 
 	profitInPercent := util.CalculateProfitInPercent(avgPrice, currentPrice, futureType.LONG)
 
-	return profitInPercent > 1.0
+	openedOrders, _ := s.TransactionRepo.FindAllOpenedTransactions(constants.TREND_METER)
+
+	return profitInPercent > float64(len(openedOrders)-1)
 }
 
 func (s *TrendMeterStrategyTradingService) calculateAveragePrice(openedTransactions []*domains.Transaction) int64 {
@@ -282,7 +308,7 @@ func (s *TrendMeterStrategyTradingService) calculateIndicators(coin *domains.Coi
 	////if > 10% end
 
 	if trendMeterSignalLong && trendBar1 && trendBar2 && emaFastAbove && volatilityOscillatorSignal && volatilityFuturesType == futureType.LONG {
-		s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, 10000)
+		s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, viper.GetInt64("strategy.trendMeter.initialCostInCents"))
 	}
 }
 

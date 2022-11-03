@@ -155,7 +155,7 @@ func (s *OrderManagerService) createOpenTransactionByOrderResponseDto(coin *doma
 	if orderDto.GetCreatedAt() != nil {
 		createdAt = *orderDto.GetCreatedAt()
 	} else {
-		createdAt = s.Clock.NowTime()
+		createdAt = s.Clock.NowTime().Add(time.Millisecond)
 	}
 
 	transaction := domains.Transaction{
