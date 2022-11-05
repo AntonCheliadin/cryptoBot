@@ -33,6 +33,7 @@ func NewTrendMeterStrategyTradingService(
 	exponentialMovingAverageService *indicator.ExponentialMovingAverageService,
 	orderManagerService *orders.OrderManagerService,
 	priceChangeTrackingService *orders.PriceChangeTrackingService,
+	tradingType constants.TradingType,
 ) *TrendMeterStrategyTradingService {
 	if trendMeterStrategyTradingServiceImpl != nil {
 		panic("Unexpected try to create second service instance")
@@ -49,6 +50,7 @@ func NewTrendMeterStrategyTradingService(
 		ExponentialMovingAverageService: exponentialMovingAverageService,
 		OrderManagerService:             orderManagerService,
 		PriceChangeTrackingService:      priceChangeTrackingService,
+		tradingType:                     tradingType,
 	}
 	return trendMeterStrategyTradingServiceImpl
 }
@@ -65,12 +67,15 @@ type TrendMeterStrategyTradingService struct {
 	ExponentialMovingAverageService *indicator.ExponentialMovingAverageService
 	OrderManagerService             *orders.OrderManagerService
 	PriceChangeTrackingService      *orders.PriceChangeTrackingService
+	tradingType                     constants.TradingType
 }
 
 func (s *TrendMeterStrategyTradingService) InitializeTrading(coin *domains.Coin) error {
-	err := s.OrderManagerService.SetFuturesLeverage(coin, viper.GetInt("strategy.trendMeter.futures.leverage"))
-	if err != nil {
-		return err
+	if s.tradingType == constants.FUTURES {
+		err := s.OrderManagerService.SetFuturesLeverage(coin, viper.GetInt("strategy.trendMeter.futures.leverage"))
+		if err != nil {
+			return err
+		}
 	}
 
 	s.fetchActualKlines(coin, viper.GetInt("strategy.trendMeter.interval"))
@@ -174,7 +179,7 @@ func (s *TrendMeterStrategyTradingService) BotActionBuyMoreIfNeeded(coin *domain
 		return
 	}
 
-	s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, costInUSDT*100)
+	s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, costInUSDT*100, s.tradingType)
 }
 
 func (s *TrendMeterStrategyTradingService) BotActionCloseOrderIfNeeded(coin *domains.Coin) {
@@ -183,12 +188,12 @@ func (s *TrendMeterStrategyTradingService) BotActionCloseOrderIfNeeded(coin *dom
 		openedOrder := openedOrders[0]
 		if s.isTakeProfitSignal(coin, openedOrder) {
 			currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
-			s.OrderManagerService.CloseOrder(openedOrder, coin, currentPrice)
+			s.OrderManagerService.CloseOrder(openedOrder, coin, currentPrice, s.tradingType)
 		}
 	} else if len(openedOrders) > 1 {
 		if s.isTakeProfitSignalForCombinedOrder(coin, openedOrders) {
 			currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
-			s.OrderManagerService.CloseCombinedOrder(openedOrders, coin, currentPrice)
+			s.OrderManagerService.CloseCombinedOrder(openedOrders, coin, currentPrice, s.tradingType)
 		}
 	}
 }
@@ -309,7 +314,7 @@ func (s *TrendMeterStrategyTradingService) calculateIndicators(coin *domains.Coi
 	////if > 10% end
 
 	if trendMeterSignalLong && trendBar1 && trendBar2 && emaFastAbove && volatilityOscillatorSignal && volatilityFuturesType == futureType.LONG {
-		s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, viper.GetInt64("strategy.trendMeter.initialCostInCents"))
+		s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, viper.GetInt64("strategy.trendMeter.initialCostInCents"), s.tradingType)
 	}
 }
 

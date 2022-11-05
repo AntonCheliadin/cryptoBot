@@ -100,7 +100,7 @@ func main() {
 		viper.GetInt64("strategy.trendMeter.futures.leverage"),
 		0.0, 0.0, 0.0, 0.0)
 
-	tradingService := trading.NewTrendMeterStrategyTradingService(repos.Transaction, date.GetClock(), exchangeDataService, repos.Kline, stdDevService, fetcherService, macdService, rsiService, emaService, orderManagerService, priceChangeTrackingService)
+	tradingService := trading.NewTrendMeterStrategyTradingService(repos.Transaction, date.GetClock(), exchangeDataService, repos.Kline, stdDevService, fetcherService, macdService, rsiService, emaService, orderManagerService, priceChangeTrackingService, constants.SPOT)
 
 	telegramService := telegram.NewTelegramService(repos.Transaction, repos.Coin, exchangeApi)
 

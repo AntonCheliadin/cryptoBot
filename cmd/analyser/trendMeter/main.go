@@ -93,6 +93,7 @@ func main() {
 		indicator.NewExponentialMovingAverageService(seriesConvertorService),
 		orderManagerService,
 		priceChangeTrackingService,
+		constants.SPOT,
 	)
 	analyserService := analyser.NewTrendMeterStratagyAnalyserService(tradingService)
 
