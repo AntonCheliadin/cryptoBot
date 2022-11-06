@@ -48,15 +48,11 @@ type Transaction struct {
 }
 
 func (t *Transaction) String() string {
-	return fmt.Sprintf("Transaction {id: %v, type: %v, coin: %v, amount: %v, price: %v}", t.Id, t.TransactionType, t.CoinId, t.Amount, util.RoundCentsToUsd(t.Price))
-}
-
-func (t *Transaction) OpenString() string {
-	return fmt.Sprintf("Transaction {amount: %v, price: %v, cost: %v}",
+	desc := fmt.Sprintf("Transaction {amount: %v, price: %v, cost: %v",
 		t.Amount, util.RoundCentsToUsd(t.Price), util.RoundCentsToUsd(t.TotalCost))
-}
 
-func (t *Transaction) CloseString() string {
-	return fmt.Sprintf("Transaction {amount: %v, price: %v, cost: %v, profit: %v}",
-		t.Amount, util.RoundCentsToUsd(t.Price), util.RoundCentsToUsd(t.TotalCost), util.RoundCentsToUsd(t.Profit.Int64))
+	if t.Profit.Valid {
+		desc += fmt.Sprintf(", profit: %v", util.RoundCentsToUsd(t.Profit.Int64))
+	}
+	return desc + "}"
 }
