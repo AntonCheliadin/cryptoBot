@@ -3,6 +3,7 @@ package domains
 import (
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/constants/futureType"
+	"cryptoBot/pkg/util"
 	"database/sql"
 	"fmt"
 	"time"
@@ -47,15 +48,15 @@ type Transaction struct {
 }
 
 func (t *Transaction) String() string {
-	return fmt.Sprintf("Transaction {id: %v, type: %v, coin: %v, amount: %v, price: %v}", t.Id, t.TransactionType, t.CoinId, t.Amount, t.Price)
+	return fmt.Sprintf("Transaction {id: %v, type: %v, coin: %v, amount: %v, price: %v}", t.Id, t.TransactionType, t.CoinId, t.Amount, util.RoundCentsToUsd(t.Price))
 }
 
 func (t *Transaction) OpenString() string {
 	return fmt.Sprintf("Transaction {amount: %v, price: %v, cost: %v}",
-		t.Amount, t.Price, t.TotalCost)
+		t.Amount, util.RoundCentsToUsd(t.Price), util.RoundCentsToUsd(t.TotalCost))
 }
 
 func (t *Transaction) CloseString() string {
 	return fmt.Sprintf("Transaction {amount: %v, price: %v, cost: %v, profit: %v}",
-		t.Amount, t.Price, t.TotalCost, t.Profit)
+		t.Amount, util.RoundCentsToUsd(t.Price), util.RoundCentsToUsd(t.TotalCost), util.RoundCentsToUsd(t.Profit.Int64))
 }
