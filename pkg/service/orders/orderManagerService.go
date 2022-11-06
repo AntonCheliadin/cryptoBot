@@ -11,6 +11,7 @@ import (
 	"cryptoBot/pkg/service/exchange"
 	"cryptoBot/pkg/util"
 	"database/sql"
+	"fmt"
 	"go.uber.org/zap"
 	"math"
 	"time"
@@ -119,6 +120,7 @@ func (s *OrderManagerService) openOrderWithCostAndFixedStopLoss(coin *domains.Co
 	}
 	if err != nil {
 		zap.S().Errorf("Error during OpenFuturesOrder: %s", err.Error())
+		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Error during OpenFuturesOrder: %s", err.Error()))
 		return
 	}
 
@@ -148,6 +150,7 @@ func (s *OrderManagerService) CloseOrder(openTransaction *domains.Transaction, c
 	}
 	if err != nil {
 		zap.S().Errorf("Error during CloseFuturesOrder: %s", err.Error())
+		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Error during CloseFuturesOrder: %s", err.Error()))
 		return
 	}
 

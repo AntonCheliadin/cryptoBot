@@ -1,6 +1,7 @@
 package trading
 
 import (
+	telegramApi "cryptoBot/pkg/api/telegram"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/constants/bybit"
 	"cryptoBot/pkg/constants/futureType"
@@ -221,7 +222,11 @@ func (s *TrendMeterStrategyTradingService) isTakeProfitSignalForCombinedOrder(co
 
 	openedOrders, _ := s.TransactionRepo.FindAllOpenedTransactions(constants.TREND_METER)
 
-	return profitInPercent > float64(len(openedOrders)-1)
+	isProfitSignal := profitInPercent > float64(len(openedOrders)-1)
+	if isProfitSignal {
+		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Close combined order with profit in percent: %s ", profitInPercent))
+	}
+	return isProfitSignal
 }
 
 func (s *TrendMeterStrategyTradingService) calculateAveragePrice(openedTransactions []*domains.Transaction) int64 {
