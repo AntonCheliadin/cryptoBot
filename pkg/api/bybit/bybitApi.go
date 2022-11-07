@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"io"
 	"io/ioutil"
@@ -73,18 +72,18 @@ func (api *BybitApi) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
 	return priceDto.PriceInCents()
 }
 
-func (api *BybitApi) BuyCoinByMarket(coin *domains.Coin, amount float64, price int64) (api.OrderResponseDto, error) {
-	queryParams := api.buildParams(coin, amount, "Buy")
+func (api *BybitApi) BuyCoinByMarket(coin *domains.Coin, amount float64, priceInCents int64) (api.OrderResponseDto, error) {
+	queryParams := api.buildParams(coin, amount, priceInCents, "Buy")
 	return api.orderCoinByMarket(queryParams)
 }
 
-func (api *BybitApi) SellCoinByMarket(coin *domains.Coin, amount float64, price int64) (api.OrderResponseDto, error) {
-	queryParams := api.buildParams(coin, amount, "Sell")
+func (api *BybitApi) SellCoinByMarket(coin *domains.Coin, amount float64, priceInCents int64) (api.OrderResponseDto, error) {
+	queryParams := api.buildParams(coin, amount, priceInCents, "Sell")
 	return api.orderCoinByMarket(queryParams)
 }
 
-func (api *BybitApi) orderCoinByMarket(queryParams string) (api.OrderResponseDto, error) {
-	body, err := api.postSignedApiRequest("/spot/v1/order?", map[string]interface{}{} /*queryParams*/)
+func (api *BybitApi) orderCoinByMarket(queryParams map[string]interface{}) (api.OrderResponseDto, error) {
+	body, err := api.postSignedApiRequest("/spot/v1/order", queryParams)
 	if err != nil {
 		return nil, err
 	}
@@ -96,9 +95,13 @@ func (api *BybitApi) orderCoinByMarket(queryParams string) (api.OrderResponseDto
 		return nil, errUnmarshal
 	}
 
+	if dto.RetCode != 0 {
+		return nil, errors.New(dto.RetMsg)
+	}
+
 	time.Sleep(30 * time.Second)
 
-	return api.getOrderDetails(dto)
+	return api.getSpotTradeHistory(dto)
 }
 
 func (api *BybitApi) getSignedApiRequest(uri string, queryParams map[string]interface{}) ([]byte, error) {
@@ -141,12 +144,15 @@ func (api *BybitApi) signedApiRequest(method, uri string, requestBody io.Reader)
 	return body, nil
 }
 
-func (api *BybitApi) getOrderDetails(orderResponseDto order.OrderResponseDto) (api.OrderResponseDto, error) {
-	//queryParams := "api_key=" + api.apiKey +
-	//	"&orderId=" + orderResponseDto.Result.OrderId +
-	//	"&timestamp=" + util.MakeTimestamp()
+func (api *BybitApi) getSpotOrderDetails(orderResponseDto order.OrderResponseDto) (api.OrderResponseDto, error) {
+	requestParams := map[string]interface{}{
+		"api_key":   api.apiKey,
+		"order_id":  orderResponseDto.Result.OrderId,
+		"timestamp": util.MakeTimestamp(),
+		"symbol":    orderResponseDto.Result.Symbol,
+	}
 
-	body, err := api.postSignedApiRequest("/spot/v1/history-orders?", map[string]interface{}{})
+	body, err := api.getSignedApiRequest("/spot/v1/history-orders", requestParams)
 	if err != nil {
 		return nil, err
 	}
@@ -161,24 +167,51 @@ func (api *BybitApi) getOrderDetails(orderResponseDto order.OrderResponseDto) (a
 	return &dto, nil
 }
 
-func (api *BybitApi) buildParams(coin *domains.Coin, amount float64, side string) string {
-	return "api_key=" + api.apiKey +
-		"&qty=" + api.buildQty(amount, side) +
-		"&side=" + side +
-		"&symbol=" + coin.Symbol +
-		"&timestamp=" + util.MakeTimestamp() +
-		"&type=MARKET"
+func (api *BybitApi) getSpotTradeHistory(orderResponseDto order.OrderResponseDto) (api.OrderResponseDto, error) {
+	requestParams := map[string]interface{}{
+		"api_key":   api.apiKey,
+		"orderId":   orderResponseDto.Result.OrderId,
+		"timestamp": util.MakeTimestamp(),
+		"symbol":    orderResponseDto.Result.Symbol,
+	}
+
+	body, err := api.getSignedApiRequest("/spot/v1/myTrades", requestParams)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := order.TradeHistoryDto{}
+	errUnmarshal := json.Unmarshal(body, &dto)
+	if errUnmarshal != nil {
+		zap.S().Error("Unmarshal error", errUnmarshal.Error())
+		return nil, errUnmarshal
+	}
+
+	return &dto, nil
+}
+
+func (api *BybitApi) buildParams(coin *domains.Coin, amount float64, priceInCents int64, side string) map[string]interface{} {
+	return map[string]interface{}{
+		"api_key":   api.apiKey,
+		"qty":       api.buildQty(amount, priceInCents, side),
+		"side":      side,
+		"symbol":    coin.Symbol,
+		"timestamp": util.MakeTimestamp(),
+		"type":      "MARKET",
+	}
 }
 
 /**
+https://bybit-exchange.github.io/docs/spot/v1/#t-placeactive
 Order quantity
 for market orders: when side is Buy, this is in the quote currency.
 Otherwise, qty is in the base currency.
 For example, on BTCUSDT a Buy order is in USDT, otherwise it's in BTC. For limit orders, the qty is always in the base currency.
 */
-func (api *BybitApi) buildQty(amount float64, side string) string {
+func (api *BybitApi) buildQty(amount float64, priceInCents int64, side string) string {
 	if side == "Buy" {
-		return viper.GetString("trading.defaultCost")
+		costInUsd := float64(priceInCents / 100)
+		return strings.TrimRight(fmt.Sprintf("%f", amount*costInUsd), "0")
 	} else {
 		return strings.TrimRight(fmt.Sprintf("%f", amount), "0")
 	}
@@ -239,7 +272,9 @@ func (api *BybitApi) buildOpenFuturesParams(coin *domains.Coin, amount float64, 
 
 	requestParams := api.buildFuturesParams(coin, amount, side, positionIdx)
 
-	requestParams["stop_loss"] = util.GetDollarsByCents(stopLossPriceInCents)
+	if stopLossPriceInCents > 0 {
+		requestParams["stop_loss"] = util.GetDollarsByCents(stopLossPriceInCents)
+	}
 
 	return requestParams
 }

@@ -1,6 +1,7 @@
 package trading
 
 import (
+	telegramApi "cryptoBot/pkg/api/telegram"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/constants/bybit"
 	"cryptoBot/pkg/constants/futureType"
@@ -33,6 +34,7 @@ func NewTrendMeterStrategyTradingService(
 	exponentialMovingAverageService *indicator.ExponentialMovingAverageService,
 	orderManagerService *orders.OrderManagerService,
 	priceChangeTrackingService *orders.PriceChangeTrackingService,
+	tradingType constants.TradingType,
 ) *TrendMeterStrategyTradingService {
 	if trendMeterStrategyTradingServiceImpl != nil {
 		panic("Unexpected try to create second service instance")
@@ -49,6 +51,7 @@ func NewTrendMeterStrategyTradingService(
 		ExponentialMovingAverageService: exponentialMovingAverageService,
 		OrderManagerService:             orderManagerService,
 		PriceChangeTrackingService:      priceChangeTrackingService,
+		tradingType:                     tradingType,
 	}
 	return trendMeterStrategyTradingServiceImpl
 }
@@ -65,12 +68,15 @@ type TrendMeterStrategyTradingService struct {
 	ExponentialMovingAverageService *indicator.ExponentialMovingAverageService
 	OrderManagerService             *orders.OrderManagerService
 	PriceChangeTrackingService      *orders.PriceChangeTrackingService
+	tradingType                     constants.TradingType
 }
 
 func (s *TrendMeterStrategyTradingService) InitializeTrading(coin *domains.Coin) error {
-	err := s.OrderManagerService.SetFuturesLeverage(coin, viper.GetInt("strategy.trendMeter.futures.leverage"))
-	if err != nil {
-		return err
+	if s.tradingType == constants.FUTURES {
+		err := s.OrderManagerService.SetFuturesLeverage(coin, viper.GetInt("strategy.trendMeter.futures.leverage"))
+		if err != nil {
+			return err
+		}
 	}
 
 	s.fetchActualKlines(coin, viper.GetInt("strategy.trendMeter.interval"))
@@ -85,11 +91,12 @@ func (s *TrendMeterStrategyTradingService) BotAction(coin *domains.Coin) {
 
 	s.BotActionCheckIfOrderClosedByExchange(coin)
 
-	s.BotActionCloseOrderIfNeeded(coin)
-
 	if s.Clock.NowTime().Minute()%viper.GetInt("strategy.trendMeter.interval") != 0 {
 		return
 	}
+
+	s.BotActionBuyMoreIfNeeded(coin)
+	s.BotActionCloseOrderIfNeeded(coin)
 
 	s.BotActionOpenOrderIfNeeded(coin)
 }
@@ -129,19 +136,65 @@ func (s *TrendMeterStrategyTradingService) BotActionCheckIfOrderClosedByExchange
 
 }
 
-func (s *TrendMeterStrategyTradingService) BotActionCloseOrderIfNeeded(coin *domains.Coin) {
-	openedOrder, _ := s.TransactionRepo.FindOpenedTransaction(constants.TREND_METER)
-	if openedOrder != nil && s.OrderManagerService.ShouldCloseByBreakEven(coin, openedOrder) {
-		currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
-		zap.S().Infof("Close by breakeven at %v with price %v \n", s.Clock.NowTime(), currentPrice)
-		s.OrderManagerService.CloseOrder(openedOrder, coin, currentPrice)
+func (s *TrendMeterStrategyTradingService) BotActionBuyMoreIfNeeded(coin *domains.Coin) {
+	openedOrders, _ := s.TransactionRepo.FindAllOpenedTransactions(constants.TREND_METER)
+	openedTransactionsCount := len(openedOrders)
+	if openedTransactionsCount == 0 {
+		return
 	}
 
-	openedOrder, _ = s.TransactionRepo.FindOpenedTransaction(constants.TREND_METER)
-	if openedOrder != nil {
+	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
+	if err != nil {
+		zap.S().Errorf("Error during GetCurrentPrice %s", err.Error())
+		return
+	}
+
+	firstTransaction := openedOrders[0]
+	profitInPercent := util.CalculateProfitInPercent(firstTransaction.Price, currentPrice, futureType.LONG)
+
+	if profitInPercent > -10 {
+		return
+	}
+
+	costInUSDT := int64(0)
+
+	if openedTransactionsCount == 9 && profitInPercent < -90 {
+		costInUSDT = int64(3000)
+	} else if openedTransactionsCount == 8 && profitInPercent < -80 {
+		costInUSDT = int64(2800)
+	} else if openedTransactionsCount == 7 && profitInPercent < -70 {
+		costInUSDT = int64(2400)
+	} else if openedTransactionsCount == 6 && profitInPercent < -60 {
+		costInUSDT = int64(2000)
+	} else if openedTransactionsCount == 5 && profitInPercent < -50 {
+		costInUSDT = int64(1000)
+	} else if openedTransactionsCount == 4 && profitInPercent < -40 {
+		costInUSDT = int64(500)
+	} else if openedTransactionsCount == 3 && profitInPercent < -30 {
+		costInUSDT = int64(1000)
+	} else if openedTransactionsCount == 2 && profitInPercent < -20 {
+		costInUSDT = int64(300)
+	} else if openedTransactionsCount == 1 && profitInPercent < -10 {
+		costInUSDT = int64(200)
+	} else {
+		return
+	}
+
+	s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, costInUSDT*100, s.tradingType)
+}
+
+func (s *TrendMeterStrategyTradingService) BotActionCloseOrderIfNeeded(coin *domains.Coin) {
+	openedOrders, _ := s.TransactionRepo.FindAllOpenedTransactions(constants.TREND_METER)
+	if len(openedOrders) == 1 {
+		openedOrder := openedOrders[0]
 		if s.isTakeProfitSignal(coin, openedOrder) {
 			currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
-			s.OrderManagerService.CloseOrder(openedOrder, coin, currentPrice)
+			s.OrderManagerService.CloseOrder(openedOrder, coin, currentPrice, s.tradingType)
+		}
+	} else if len(openedOrders) > 1 {
+		if s.isTakeProfitSignalForCombinedOrder(coin, openedOrders) {
+			currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
+			s.OrderManagerService.CloseCombinedOrder(openedOrders, coin, currentPrice, s.tradingType)
 		}
 	}
 }
@@ -154,6 +207,40 @@ func (s *TrendMeterStrategyTradingService) BotActionOpenOrderIfNeeded(coin *doma
 	}
 
 	s.calculateIndicators(coin)
+}
+
+func (s *TrendMeterStrategyTradingService) isTakeProfitSignalForCombinedOrder(coin *domains.Coin, openedTransactions []*domains.Transaction) bool {
+	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
+	if err != nil {
+		zap.S().Errorf("Error during GetCurrentPrice %s", err.Error())
+		return false
+	}
+
+	avgPrice := s.calculateAveragePrice(openedTransactions)
+
+	profitInPercent := util.CalculateProfitInPercent(avgPrice, currentPrice, futureType.LONG)
+
+	openedOrders, _ := s.TransactionRepo.FindAllOpenedTransactions(constants.TREND_METER)
+
+	isProfitSignal := profitInPercent > float64(len(openedOrders)-1)
+	if isProfitSignal {
+		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Close combined order with profit in percent: %s ", profitInPercent))
+	}
+	return isProfitSignal
+}
+
+func (s *TrendMeterStrategyTradingService) calculateAveragePrice(openedTransactions []*domains.Transaction) int64 {
+	totalCost := int64(0)
+	for _, transaction := range openedTransactions {
+		totalCost += transaction.TotalCost
+	}
+
+	totalAmount := float64(0)
+	for _, transaction := range openedTransactions {
+		totalAmount += transaction.Amount
+	}
+
+	return int64(float64(totalCost) / totalAmount)
 }
 
 func (s *TrendMeterStrategyTradingService) isTakeProfitSignal(coin *domains.Coin, openedOrder *domains.Transaction) bool {
@@ -181,6 +268,10 @@ func (s *TrendMeterStrategyTradingService) isTakeProfitSignal(coin *domains.Coin
 func (s *TrendMeterStrategyTradingService) calculateIndicators(coin *domains.Coin) {
 
 	macdSignal, macdFuturesType := s.CalculateMacdSignal(coin)
+
+	if macdFuturesType == futureType.SHORT {
+		return
+	}
 
 	rsi13Signal, rs13FuturesType := s.CalculateRsiSignal(coin, viper.GetInt("strategy.trendMeter.trendMeter2.rsi.length"), viper.GetFloat64("strategy.trendMeter.trendMeter2.rsi.signalPoint"))
 
@@ -215,7 +306,6 @@ func (s *TrendMeterStrategyTradingService) calculateIndicators(coin *domains.Coi
 	volatilityOscillatorSignal, volatilityFuturesType := s.StandardDeviationService.IsVolatilityOscillatorSignal(coin, viper.GetString("strategy.trendMeter.interval"))
 
 	trendMeterSignalLong := (macdSignal || rsi13Signal || rsi5Signal) && macdFuturesType == futureType.LONG && rs13FuturesType == futureType.LONG && rs5FuturesType == futureType.LONG
-	trendMeterSignalShort := (macdSignal || rsi13Signal || rsi5Signal) && macdFuturesType == futureType.SHORT && rs13FuturesType == futureType.SHORT && rs5FuturesType == futureType.SHORT
 
 	////if > 10% start
 	//currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
@@ -229,10 +319,7 @@ func (s *TrendMeterStrategyTradingService) calculateIndicators(coin *domains.Coi
 	////if > 10% end
 
 	if trendMeterSignalLong && trendBar1 && trendBar2 && emaFastAbove && volatilityOscillatorSignal && volatilityFuturesType == futureType.LONG {
-		s.OrderManagerService.OpenOrderWithCalculateStopLoss(coin, futureType.LONG, viper.GetString("strategy.trendMeter.interval"))
-	}
-	if trendMeterSignalShort && !trendBar1 && !trendBar2 && !emaFastAbove && volatilityOscillatorSignal && volatilityFuturesType == futureType.SHORT {
-		s.OrderManagerService.OpenOrderWithCalculateStopLoss(coin, futureType.SHORT, viper.GetString("strategy.trendMeter.interval"))
+		s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, viper.GetInt64("strategy.trendMeter.initialCostInCents"), s.tradingType)
 	}
 }
 

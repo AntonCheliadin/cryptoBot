@@ -2,6 +2,7 @@ package orders
 
 import (
 	"cryptoBot/pkg/api"
+	telegramApi "cryptoBot/pkg/api/telegram"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/data/domains"
@@ -10,6 +11,7 @@ import (
 	"cryptoBot/pkg/service/exchange"
 	"cryptoBot/pkg/util"
 	"database/sql"
+	"fmt"
 	"go.uber.org/zap"
 	"math"
 	"time"
@@ -68,7 +70,7 @@ func (s *OrderManagerService) SetFuturesLeverage(coin *domains.Coin, leverage in
 	return nil
 }
 
-func (s *OrderManagerService) OpenOrderWithPercentStopLoss(coin *domains.Coin, futuresType futureType.FuturesType, stopLossInPercent float64) {
+func (s *OrderManagerService) OpenFuturesOrderWithPercentStopLoss(coin *domains.Coin, futuresType futureType.FuturesType, stopLossInPercent float64) {
 	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
 	if err != nil {
 		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
@@ -77,10 +79,10 @@ func (s *OrderManagerService) OpenOrderWithPercentStopLoss(coin *domains.Coin, f
 
 	stopLossPrice := util.CalculatePriceForStopLoss(currentPrice, stopLossInPercent, futuresType)
 
-	s.OpenOrderWithFixedStopLoss(coin, futuresType, stopLossPrice)
+	s.OpenFuturesOrderWithFixedStopLoss(coin, futuresType, stopLossPrice)
 }
 
-func (s *OrderManagerService) OpenOrderWithCalculateStopLoss(coin *domains.Coin, futuresType futureType.FuturesType, klineLengthInMinutes string) {
+func (s *OrderManagerService) OpenFuturesOrderWithCalculateStopLoss(coin *domains.Coin, futuresType futureType.FuturesType, klineLengthInMinutes string) {
 	zap.S().Infof("OPEN SIGNAL %v", futureType.GetString(futuresType))
 
 	stopLossPrice, err := s.ProfitLossFinderService.FindStopLoss(coin, s.Clock.NowTime(), klineLengthInMinutes, futuresType)
@@ -90,20 +92,35 @@ func (s *OrderManagerService) OpenOrderWithCalculateStopLoss(coin *domains.Coin,
 		return
 	}
 
-	s.OpenOrderWithFixedStopLoss(coin, futuresType, stopLossPrice)
+	s.OpenFuturesOrderWithFixedStopLoss(coin, futuresType, stopLossPrice)
 }
 
-func (s *OrderManagerService) OpenOrderWithFixedStopLoss(coin *domains.Coin, futuresType futureType.FuturesType, stopLossPriceInCents int64) {
+func (s *OrderManagerService) OpenFuturesOrderWithFixedStopLoss(coin *domains.Coin, futuresType futureType.FuturesType, stopLossPriceInCents int64) {
+	s.openOrderWithCostAndFixedStopLoss(coin, futuresType, stopLossPriceInCents, s.getCostOfOrder(), constants.FUTURES)
+}
+
+func (s *OrderManagerService) OpenOrderWithCost(coin *domains.Coin, futuresType futureType.FuturesType, costInCents int64, tradingType constants.TradingType) {
+	s.openOrderWithCostAndFixedStopLoss(coin, futuresType, 0, costInCents, tradingType)
+}
+
+func (s *OrderManagerService) openOrderWithCostAndFixedStopLoss(coin *domains.Coin, futuresType futureType.FuturesType,
+	stopLossPriceInCents int64, costInCents int64, tradingType constants.TradingType) {
 	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
 	if err != nil {
 		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
 		return
 	}
 
-	amountTransaction := util.CalculateAmountByPriceAndCostWithCents(currentPrice, s.getCostOfOrder())
-	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType, stopLossPriceInCents)
-	if err2 != nil {
-		zap.S().Errorf("Error during OpenFuturesOrder: %s", err2.Error())
+	amountTransaction := util.CalculateAmountByPriceAndCostWithCents(currentPrice, costInCents)
+	var orderDto api.OrderResponseDto
+	if tradingType == constants.FUTURES {
+		orderDto, err = s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType, stopLossPriceInCents)
+	} else if tradingType == constants.SPOT {
+		orderDto, err = s.exchangeApi.BuyCoinByMarket(coin, amountTransaction, currentPrice)
+	}
+	if err != nil {
+		zap.S().Errorf("Error during OpenFuturesOrder: %s", err.Error())
+		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Error during OpenFuturesOrder: %s", err.Error()))
 		return
 	}
 
@@ -114,12 +131,26 @@ func (s *OrderManagerService) OpenOrderWithFixedStopLoss(coin *domains.Coin, fut
 	}
 
 	zap.S().Infof("at %v Order opened  with price %v and type [%v] (0-L, 1-S)", s.Clock.NowTime(), currentPrice, futuresType)
+	telegramApi.SendTextToTelegramChat(transaction.String())
 }
 
-func (s *OrderManagerService) CloseOrder(openTransaction *domains.Transaction, coin *domains.Coin, price int64) {
-	orderResponseDto, err := s.exchangeApi.CloseFuturesOrder(coin, openTransaction, price)
+func (s *OrderManagerService) CloseCombinedOrder(openTransaction []*domains.Transaction, coin *domains.Coin, price int64, tradingType constants.TradingType) {
+	for _, transaction := range openTransaction {
+		s.CloseOrder(transaction, coin, price, tradingType)
+	}
+}
+
+func (s *OrderManagerService) CloseOrder(openTransaction *domains.Transaction, coin *domains.Coin, price int64, tradingType constants.TradingType) {
+	var orderResponseDto api.OrderResponseDto
+	var err error
+	if tradingType == constants.SPOT {
+		orderResponseDto, err = s.exchangeApi.SellCoinByMarket(coin, openTransaction.Amount, price)
+	} else if tradingType == constants.FUTURES {
+		orderResponseDto, err = s.exchangeApi.CloseFuturesOrder(coin, openTransaction, price)
+	}
 	if err != nil {
 		zap.S().Errorf("Error during CloseFuturesOrder: %s", err.Error())
+		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Error during CloseFuturesOrder: %s", err.Error()))
 		return
 	}
 
@@ -131,6 +162,7 @@ func (s *OrderManagerService) CloseOrder(openTransaction *domains.Transaction, c
 
 	openTransaction.RelatedTransactionId = sql.NullInt64{Int64: closeTransaction.Id, Valid: true}
 	_ = s.transactionRepo.SaveTransaction(openTransaction)
+	telegramApi.SendTextToTelegramChat(closeTransaction.String())
 }
 
 func (s *OrderManagerService) createOpenTransactionByOrderResponseDto(coin *domains.Coin, futuresType futureType.FuturesType,
@@ -140,7 +172,7 @@ func (s *OrderManagerService) createOpenTransactionByOrderResponseDto(coin *doma
 	if orderDto.GetCreatedAt() != nil {
 		createdAt = *orderDto.GetCreatedAt()
 	} else {
-		createdAt = s.Clock.NowTime()
+		createdAt = s.Clock.NowTime().Add(time.Millisecond)
 	}
 
 	transaction := domains.Transaction{

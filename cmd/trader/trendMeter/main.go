@@ -98,9 +98,9 @@ func main() {
 	orderManagerService := orders.NewOrderManagerService(repos.Transaction, exchangeApi, date.GetClock(), exchangeDataService, repos.Kline, constants.TREND_METER, priceChangeTrackingService,
 		orders.NewProfitLossFinderService(date.GetClock(), repos.Kline),
 		viper.GetInt64("strategy.trendMeter.futures.leverage"),
-		1.2, 0.2, 0.0, 0.0)
+		0.0, 0.0, 0.0, 0.0)
 
-	tradingService := trading.NewTrendMeterStrategyTradingService(repos.Transaction, date.GetClock(), exchangeDataService, repos.Kline, stdDevService, fetcherService, macdService, rsiService, emaService, orderManagerService, priceChangeTrackingService)
+	tradingService := trading.NewTrendMeterStrategyTradingService(repos.Transaction, date.GetClock(), exchangeDataService, repos.Kline, stdDevService, fetcherService, macdService, rsiService, emaService, orderManagerService, priceChangeTrackingService, constants.SPOT)
 
 	telegramService := telegram.NewTelegramService(repos.Transaction, repos.Coin, exchangeApi)
 

@@ -93,12 +93,13 @@ func main() {
 		indicator.NewExponentialMovingAverageService(seriesConvertorService),
 		orderManagerService,
 		priceChangeTrackingService,
+		constants.SPOT,
 	)
 	analyserService := analyser.NewTrendMeterStratagyAnalyserService(tradingService)
 
 	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
 
-	analyserService.AnalyseCoin(coin, "2020-11-01", "2022-10-21")
+	analyserService.AnalyseCoin(coin, "2020-11-01", "2022-10-28")
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())

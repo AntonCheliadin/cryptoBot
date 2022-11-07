@@ -31,6 +31,7 @@ strategy:
       medium: 54
   trendMeter:
     interval: 15
+    initialCostInCents: 200000
     futures:
       leverage: 1
     takeProfit:

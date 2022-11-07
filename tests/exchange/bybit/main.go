@@ -30,10 +30,10 @@ func main() {
 	exchangeApi := bybit.NewBybitApi(os.Getenv("BYBIT_CryptoBotFutures_API_KEY"), os.Getenv("BYBIT_CryptoBotFutures_API_SECRET")).(*bybit.BybitApi)
 
 	coin := &domains.Coin{
-		Symbol: "SOLUSDT",
+		Symbol: "ETHUSDT",
 	}
 
-	//testGetCurrentPrice(exchangeApi, coin)
+	testGetCurrentPrice(exchangeApi, coin)
 
 	//testGetKlines(exchangeApi, coin)
 
@@ -49,9 +49,12 @@ func main() {
 	//testCloseFutures(exchangeApi, coin)
 
 	//testGetPosition(exchangeApi, coin)
-	testGetCloseTradeRecord(exchangeApi, coin)
+	//testGetCloseTradeRecord(exchangeApi, coin)
 	//testGetTradesRecord(exchangeApi, coin)
 	//testGetConditionalOrder(exchangeApi, coin)
+
+	//testBuySpot(exchangeApi, coin)
+	//testSellSpot(exchangeApi, coin)
 
 	//result, err := exchangeApi.GetFuturesActiveOrdersByCoin(coin)
 	//if err != nil {
@@ -184,4 +187,24 @@ func testGetConditionalOrder(exchangeApi *bybit.BybitApi, coin *domains.Coin) {
 		return
 	}
 	zap.S().Infof("response: %v", responseDto)
+}
+
+func testBuySpot(exchangeApi api.ExchangeApi, coin *domains.Coin) api.OrderResponseDto {
+	order, err := exchangeApi.BuyCoinByMarket(coin, 0.03, 1645*100)
+	if err != nil {
+		zap.S().Errorf("API error: %s", err.Error())
+		return nil
+	}
+	zap.S().Infof("testBuySpot response: %s", order)
+	return order
+}
+
+func testSellSpot(exchangeApi api.ExchangeApi, coin *domains.Coin) api.OrderResponseDto {
+	order, err := exchangeApi.SellCoinByMarket(coin, 0.03021, 1645*100)
+	if err != nil {
+		zap.S().Errorf("API error: %s", err.Error())
+		return nil
+	}
+	zap.S().Infof("testSellSpot response: %s", order)
+	return order
 }
