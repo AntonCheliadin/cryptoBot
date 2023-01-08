@@ -1,9 +1,7 @@
 package indicator
 
 import (
-	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/service/date"
-	"go.uber.org/zap"
 )
 
 var sessionsServiceImpl *SessionsService
@@ -33,9 +31,6 @@ func (s *SessionsService) IsSuitableSessionNow() bool {
 
 	isLondonSession := currentHour >= LONDON_SESSION_START && currentHour < LONDON_SESSION_END
 	isNewYorkSession := currentHour >= NEW_YORK_SESSION_START && currentHour < NEW_YORK_SESSION_END
-
-	zap.S().Infof("currentHour=%v fullTime=%v", currentHour, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-	zap.S().Infof("isLondonSession=%v isNewYorkSession=%v", isLondonSession, isNewYorkSession)
 
 	return isLondonSession || isNewYorkSession
 }
