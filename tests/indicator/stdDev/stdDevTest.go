@@ -76,8 +76,8 @@ func main() {
 
 func test(repos *repository.Repository) {
 	timeIterator := time.Now() //time.Parse(constants.DATE_TIME_FORMAT, "2022-09-07 21:47:01")
-	seriesConvertorService := techanLib.NewTechanConvertorService(date.GetClockMock(timeIterator), repos.Kline)
-	indicatorService := indicator.NewStandardDeviationService(date.GetClockMock(timeIterator), repos.Kline, seriesConvertorService)
+	seriesConvertorService := techanLib.NewTechanConvertorService(date.NewClockMock(timeIterator), repos.Kline)
+	indicatorService := indicator.NewStandardDeviationService(date.NewClockMock(timeIterator), repos.Kline, seriesConvertorService)
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 

@@ -1,13 +1,7 @@
-package main
+package bootstrap
 
 import (
-	"cryptoBot/pkg/api/bybit/mock"
-	"cryptoBot/pkg/constants"
-	"cryptoBot/pkg/log"
-	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
-	"cryptoBot/pkg/service/date"
-	"cryptoBot/pkg/service/exchange"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
@@ -16,10 +10,9 @@ import (
 	"go.uber.org/zap"
 	"os"
 	"strconv"
-	"time"
 )
 
-func main() {
+func Run() {
 	if err := godotenv.Load(); err != nil {
 		panic(fmt.Sprintf("Failed load env file: %s", err.Error()))
 	}
@@ -27,18 +20,16 @@ func main() {
 		panic(fmt.Sprintf("Error during reading configs: %s", err.Error()))
 	}
 
-	log.InitLoggerAnalyser()
-
-	var closableClosure []func()
-
-	defer func() {
-		for i := range closableClosure {
-			closableClosure[i]()
-		}
-	}()
-
 	zap.S().Info("Trading bot is starting...")
+}
 
+func initConfig() error {
+	viper.AddConfigPath("configs")
+	viper.SetConfigName("config")
+	return viper.ReadInConfig()
+}
+
+func Database(closableClosure []func()) *sqlx.DB {
 	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT"), 10, 64)
 	postgresDb, err := postgres.NewPostgresDb(&postgres.Config{
 		Host:     os.Getenv("DB_HOST"),
@@ -49,8 +40,7 @@ func main() {
 		SSLMode:  os.Getenv("DB_SSLMODE"),
 	})
 	if err != nil {
-		zap.S().Fatalf("FAILED to init db %s", err.Error())
-		return
+		panic(fmt.Sprintf("FAILED to init db: %s", err.Error()))
 	}
 
 	closableClosure = append(closableClosure, func() {
@@ -62,32 +52,7 @@ func main() {
 
 	initMigrations(postgresDb)
 
-	repos := repository.NewRepositories(postgresDb)
-	mockExchangeApi := mock.NewBybitApiMock()
-	fetcherService := exchange.NewKlinesFetcherService(mockExchangeApi, repos.Kline, date.GetClock())
-
-	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
-	// "2022-01-01", "2022-10-10", "15"
-	// "2022-02-25", "2022-10-10", "1"
-
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-11-19")
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-11-21")
-
-	if err := fetcherService.FetchKlinesForPeriod(coin, timeFrom, timeTo, "1"); err != nil {
-		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
-	}
-
-	if err := postgresDb.Close(); err != nil {
-		zap.S().Errorf("error occured on db connection close: %s", err.Error())
-	}
-
-	os.Exit(0)
-}
-
-func initConfig() error {
-	viper.AddConfigPath("configs")
-	viper.SetConfigName("config")
-	return viper.ReadInConfig()
+	return postgresDb
 }
 
 func initMigrations(db *sqlx.DB) {

@@ -42,7 +42,7 @@ func (s *MovingAverageResistanceStratagyAnalyserService) AnalyseCoin(coin *domai
 	timeIterator = timeIterator.Add(time.Second * 2).Add(time.Hour)
 
 	for ; timeIterator.Before(timeMax); timeIterator = timeIterator.Add(time.Minute * 1) {
-		clockMock := date.GetClockMock(timeIterator)
+		clockMock := date.NewClockMock(timeIterator)
 		s.tradingService.Clock = clockMock
 		s.tradingService.ExchangeDataService.Clock = clockMock
 		s.tradingService.MovingAverageService.Clock = clockMock

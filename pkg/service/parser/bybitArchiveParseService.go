@@ -194,7 +194,8 @@ func (s *BybitArchiveParseService) parseData(coin *domains.Coin, day time.Time, 
 			if kline != nil {
 				s.klineRepo.SaveKline(kline)
 			}
-			kline = s.findOrCreateKline(coin, klineOpenTime, tickTime, intervalInMinutes, priceInCents)
+			s.findOrCreatePrevKline(coin, klineOpenTime, intervalInMinutes, priceInCents)
+			kline = s.findOrCreateKline(coin, klineOpenTime, intervalInMinutes, priceInCents)
 		}
 	}
 
@@ -204,7 +205,13 @@ func (s *BybitArchiveParseService) parseData(coin *domains.Coin, day time.Time, 
 	return nil
 }
 
-func (s *BybitArchiveParseService) findOrCreateKline(coin *domains.Coin, klineOpenTime, tickTime time.Time, intervalInMinutes int, priceInCents int64) *domains.Kline {
+func (s *BybitArchiveParseService) findOrCreatePrevKline(coin *domains.Coin, klineOpenTime time.Time, intervalInMinutes int, priceInCents int64) *domains.Kline {
+	prevKlineOpenTime := klineOpenTime.Add(time.Minute * time.Duration(-intervalInMinutes))
+
+	return s.findOrCreateKline(coin, prevKlineOpenTime, intervalInMinutes, priceInCents)
+}
+
+func (s *BybitArchiveParseService) findOrCreateKline(coin *domains.Coin, klineOpenTime time.Time, intervalInMinutes int, priceInCents int64) *domains.Kline {
 	kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, klineOpenTime, strconv.Itoa(intervalInMinutes))
 	if kline != nil {
 		return kline

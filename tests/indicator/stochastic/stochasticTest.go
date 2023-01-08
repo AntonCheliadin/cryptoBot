@@ -5,9 +5,11 @@ import (
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
-	"cryptoBot/pkg/service/parser"
+	"cryptoBot/pkg/service/date"
+	"cryptoBot/pkg/service/indicator/techanLib"
 	"fmt"
 	"github.com/joho/godotenv"
+	"github.com/sdcoffey/techan"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"os"
@@ -15,11 +17,17 @@ import (
 	"time"
 )
 
+func initLocalConfig() error {
+	viper.AddConfigPath("configs")
+	viper.SetConfigName("config")
+	return viper.ReadInConfig()
+}
+
 func main() {
 	if err := godotenv.Load(); err != nil {
 		panic(fmt.Sprintf("Failed load env file: %s", err.Error()))
 	}
-	if err := initConfig(); err != nil {
+	if err := initLocalConfig(); err != nil {
 		panic(fmt.Sprintf("Error during reading configs: %s", err.Error()))
 	}
 
@@ -57,16 +65,8 @@ func main() {
 	})
 
 	repos := repository.NewRepositories(postgresDb)
-	parserService := parser.NewBybitArchiveParseService(repos.Kline)
 
-	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
-
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2023-01-04")
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2023-01-07")
-
-	if err := parserService.Parse(coin, timeFrom, timeTo, 1); err != nil {
-		zap.S().Errorf("Error during parse %s", err.Error())
-	}
+	test(repos)
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
@@ -75,8 +75,30 @@ func main() {
 	os.Exit(0)
 }
 
-func initConfig() error {
-	viper.AddConfigPath("configs")
-	viper.SetConfigName("config")
-	return viper.ReadInConfig()
+func test(repos *repository.Repository) {
+	nowTime, _ := time.Parse(constants.DATE_TIME_FORMAT, "2022-11-20 09:00:01")
+	seriesConvertorService := techanLib.NewTechanConvertorService(date.NewClockMock(nowTime), repos.Kline)
+
+	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
+
+	klineSize := int(100)
+	smoothK := 5
+	periodK := int64(5)
+	periodD := int64(5)
+
+	series := seriesConvertorService.BuildTimeSeriesByKlinesAtMoment(coin, "1", int64(klineSize), nowTime)
+
+	k := techan.NewFastStochasticIndicator(series, int(periodK))
+
+	smoothKIndicator := techan.NewSimpleMovingAverage(k, smoothK)
+
+	d := techan.NewSlowStochasticIndicator(smoothKIndicator, int(periodD))
+
+	for i := 0; i < klineSize; i++ {
+		zap.S().Infof("k=%v smoothK=%v  d=%v   kline[%v]",
+			k.Calculate(i).FormattedString(0),
+			smoothKIndicator.Calculate(i).FormattedString(0),
+			d.Calculate(i).FormattedString(0),
+			series.Candles[i].Period)
+	}
 }

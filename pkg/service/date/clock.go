@@ -6,6 +6,7 @@ import (
 
 type Clock interface {
 	NowTime() time.Time
+	SetTime(nowTime time.Time)
 }
 
 var clockRealImpl Clock
@@ -25,4 +26,8 @@ type ClockReal struct {
 
 func (c *ClockReal) NowTime() time.Time {
 	return time.Now()
+}
+
+func (c *ClockReal) SetTime(nowTime time.Time) {
+	panic("SetTime is not allowed for ClockReal")
 }

@@ -82,7 +82,7 @@ func main() {
 	stdDevService := indicator.NewStandardDeviationService(date.GetClock(), repos.Kline, techanConvertorService)
 	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, exchangeApi, date.GetClock(), repos.Kline)
 	priceChangeTrackingService := orders.NewPriceChangeTrackingService(repos.PriceChange)
-	fetcherService := exchange.NewKlinesFetcherService(exchangeApi, repos.Kline)
+	fetcherService := exchange.NewKlinesFetcherService(exchangeApi, repos.Kline, date.GetClock())
 
 	maTradingService := trading.NewMAStrategyTradingService(repos.Transaction, repos.PriceChange, exchangeApi, date.GetClock(), exchangeDataService, repos.Kline, priceChangeTrackingService, maService, stdDevService, fetcherService)
 

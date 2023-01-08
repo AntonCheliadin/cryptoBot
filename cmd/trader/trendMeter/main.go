@@ -89,7 +89,7 @@ func main() {
 	techanConvertorService := techanLib.NewTechanConvertorService(date.GetClock(), repos.Kline)
 	stdDevService := indicator.NewStandardDeviationService(date.GetClock(), repos.Kline, techanConvertorService)
 	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, exchangeApi, date.GetClock(), repos.Kline)
-	fetcherService := exchange.NewKlinesFetcherService(exchangeApi, repos.Kline)
+	fetcherService := exchange.NewKlinesFetcherService(exchangeApi, repos.Kline, date.GetClock())
 
 	macdService := indicator.NewMACDService(techanConvertorService)
 	rsiService := indicator.NewRelativeStrengthIndexService(techanConvertorService)
@@ -130,12 +130,6 @@ func main() {
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
 	}
-}
-
-func initConfig() error {
-	viper.AddConfigPath("configs")
-	viper.SetConfigName("config")
-	return viper.ReadInConfig()
 }
 
 func initMigrations(db *sqlx.DB) {

@@ -70,13 +70,13 @@ func testEMA(repos *repository.Repository) {
 	timeIterator, _ := time.Parse(constants.DATE_TIME_FORMAT, "2022-08-28 03:00:01")
 	timeMax, _ := time.Parse(constants.DATE_TIME_FORMAT, "2022-08-28 11:15:01")
 
-	seriesConvertorService := techanLib.NewTechanConvertorService(date.GetClockMock(timeIterator), repos.Kline)
+	seriesConvertorService := techanLib.NewTechanConvertorService(date.NewClockMock(timeIterator), repos.Kline)
 	maIndicatorService := indicator.NewExponentialMovingAverageService(seriesConvertorService)
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
 
 	for ; timeIterator.Before(timeMax); timeIterator = timeIterator.Add(time.Minute * 15) {
-		seriesConvertorService.Clock = date.GetClockMock(timeIterator)
+		seriesConvertorService.Clock = date.NewClockMock(timeIterator)
 
 		//emaResult5 := maIndicatorService.CalculateCurrentEMA(coin, "15", 5)
 		//emaResult11 := maIndicatorService.CalculateCurrentEMA(coin, "15", 11)
