@@ -24,7 +24,7 @@ type Runner struct {
 	tradingService trading.TradingService
 }
 
-func (runner *Runner) AnalyseCoin(coin *domains.Coin, from string, to string, interval int64) {
+func (runner *Runner) AnalyseCoin(coin *domains.Coin, from string, to string, interval int) {
 	timeMax, _ := time.Parse(constants.DATE_FORMAT, to)
 	timeIterator, _ := time.Parse(constants.DATE_FORMAT, from)
 	timeIterator = timeIterator.Add(time.Second * 2)

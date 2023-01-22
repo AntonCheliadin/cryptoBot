@@ -32,6 +32,7 @@ func NewSessionsScalperStrategyTradingService(
 	smaTubeService *indicator.SmaTubeService,
 	localExtremumTrendService *indicator.LocalExtremumTrendService,
 	sessionsService *indicator.SessionsService,
+	klineInterval int,
 ) *SessionsScalperStrategyTradingService {
 	if sessionsScalperStrategyTradingService != nil {
 		panic("Unexpected try to create second service instance")
@@ -48,7 +49,7 @@ func NewSessionsScalperStrategyTradingService(
 		SmaTubeService:            smaTubeService,
 		LocalExtremumTrendService: localExtremumTrendService,
 		SessionsService:           sessionsService,
-		klineInterval:             1,
+		klineInterval:             klineInterval,
 		periodK:                   5,
 		smoothK:                   5,
 		periodD:                   5,
@@ -118,11 +119,7 @@ func (s *SessionsScalperStrategyTradingService) BotAction(coin *domains.Coin) {
 	stochasticSignal, stochasticFuturesTypeSignal := s.StochasticService.CalculateStochasticSignal(coin, strconv.Itoa(s.klineInterval), s.periodK, s.smoothK, s.periodD)
 	crossFastSmaByTrendSignal, crossFastSmaFuturesTypeSignal := s.SmaTubeService.CrossTheFastSmaByTrendSignal(series, fastSMA, slowSMA)
 
-	zap.S().Infof("stochasticSignal [%v] stochasticFuturesTypeSignal %s   [%v]", stochasticSignal, futureType.GetString(stochasticFuturesTypeSignal), s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-	zap.S().Infof("crossFastSmaByTrendSignal [%v] crossFastSmaFuturesTypeSignal %s  [%v]", crossFastSmaByTrendSignal, futureType.GetString(crossFastSmaFuturesTypeSignal), s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-
 	isFastSmaBelow := fastSMA.Calculate(klinesToFetchSize - 1).LT(slowSMA.Calculate(klinesToFetchSize - 1))
-	zap.S().Infof("isFastSmaBelow [%v]   [%v]", isFastSmaBelow, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 
 	if stochasticSignal && crossFastSmaByTrendSignal && stochasticFuturesTypeSignal == crossFastSmaFuturesTypeSignal ||
 		s.waitingCrossingFastSMA && crossFastSmaByTrendSignal {
@@ -135,6 +132,10 @@ func (s *SessionsScalperStrategyTradingService) BotAction(coin *domains.Coin) {
 			zap.S().Infof("Skip open order because Local extremum is not in up trend [%v]   [%v]", isFastSmaBelow, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 			return
 		}
+
+		zap.S().Infof("stochasticSignal [%v] stochasticFuturesTypeSignal %s   [%v]", stochasticSignal, futureType.GetString(stochasticFuturesTypeSignal), s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+		zap.S().Infof("crossFastSmaByTrendSignal [%v] crossFastSmaFuturesTypeSignal %s  [%v]", crossFastSmaByTrendSignal, futureType.GetString(crossFastSmaFuturesTypeSignal), s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+		zap.S().Infof("isFastSmaBelow [%v]   [%v]", isFastSmaBelow, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 
 		s.openOrder(coin, crossFastSmaFuturesTypeSignal)
 

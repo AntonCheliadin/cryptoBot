@@ -8,6 +8,7 @@ import (
 	"cryptoBot/pkg/service/date"
 	"github.com/sdcoffey/techan"
 	"go.uber.org/zap"
+	"strconv"
 	"time"
 )
 
@@ -101,7 +102,8 @@ func (s *LocalExtremumTrendService) findNearestLowExtremum(coin *domains.Coin, k
 	var lowExtremumKline *domains.Kline
 	minExtremumWindow := 5
 
-	for extremumWindowCounter := 0; extremumWindowCounter < minExtremumWindow; timeIter = timeIter.Add(time.Minute * -1) {
+	klinesIntervalInt, _ := strconv.Atoi(klinesInterval)
+	for extremumWindowCounter := 0; extremumWindowCounter < minExtremumWindow; timeIter = timeIter.Add(time.Minute * time.Duration(klinesIntervalInt) * -1) {
 		kline, _ := s.klineRepo.FindClosedAtMoment(coin.Id, timeIter, klinesInterval)
 
 		if lowExtremumKline == nil || kline.Low < lowExtremumKline.Low {
