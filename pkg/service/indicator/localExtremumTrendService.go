@@ -71,10 +71,10 @@ func (s *LocalExtremumTrendService) IsTrendDown(coin *domains.Coin, klinesInterv
 func (s *LocalExtremumTrendService) CalculateStopLoss(coin *domains.Coin, klinesInterval string, futuresType futureType.FuturesType) int64 {
 	if futuresType == futureType.SHORT {
 		highExtremumKline := s.findNearestHighExtremum(coin, klinesInterval, s.Clock.NowTime())
-		return highExtremumKline.High + int64(float64(highExtremumKline.High)*0.003) // +0.3%
+		return highExtremumKline.High + int64(float64(highExtremumKline.High)*0.0003) // +0.03%
 	} else {
 		lowExtremumKline := s.findNearestLowExtremum(coin, klinesInterval, s.Clock.NowTime())
-		return lowExtremumKline.Low - int64(float64(lowExtremumKline.Low)*0.003) // -0.3%
+		return lowExtremumKline.Low - int64(float64(lowExtremumKline.Low)*0.0003) // -0.03%
 	}
 }
 

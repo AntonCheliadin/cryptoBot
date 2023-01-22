@@ -18,6 +18,8 @@ type Kline struct {
 	High  int64
 	Low   int64
 	Close int64
+
+	Volume float64
 }
 
 func (d *Kline) String() string {

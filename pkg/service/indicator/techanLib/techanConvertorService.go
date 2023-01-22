@@ -52,6 +52,7 @@ func (s *TechanConvertorService) BuildTimeSeriesByKlinesAtMoment(coin *domains.C
 		candle.ClosePrice = big.NewDecimal(float64(kline.Close) / 100)
 		candle.MaxPrice = big.NewDecimal(float64(kline.High) / 100)
 		candle.MinPrice = big.NewDecimal(float64(kline.Low) / 100)
+		candle.Volume = big.NewDecimal(kline.Volume)
 
 		series.AddCandle(candle)
 	}
