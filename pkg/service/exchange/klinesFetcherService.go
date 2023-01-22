@@ -6,20 +6,23 @@ import (
 	"cryptoBot/pkg/constants/bybit"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/repository"
+	"cryptoBot/pkg/service/date"
 	"errors"
+	"fmt"
 	"go.uber.org/zap"
 	"time"
 )
 
 var klinesFetcherServiceImpl *KlinesFetcherService
 
-func NewKlinesFetcherService(exchangeApi api.ExchangeApi, klineRepo repository.Kline) *KlinesFetcherService {
+func NewKlinesFetcherService(exchangeApi api.ExchangeApi, klineRepo repository.Kline, clock date.Clock) *KlinesFetcherService {
 	if klinesFetcherServiceImpl != nil {
 		panic("Unexpected try to create second service instance")
 	}
 	klinesFetcherServiceImpl = &KlinesFetcherService{
 		klineRepo:   klineRepo,
 		exchangeApi: exchangeApi,
+		Clock:       clock,
 	}
 	return klinesFetcherServiceImpl
 }
@@ -27,6 +30,30 @@ func NewKlinesFetcherService(exchangeApi api.ExchangeApi, klineRepo repository.K
 type KlinesFetcherService struct {
 	klineRepo   repository.Kline
 	exchangeApi api.ExchangeApi
+	Clock       date.Clock
+}
+
+func (s *KlinesFetcherService) FetchActualKlines(coin *domains.Coin, intervalInMinutes int) {
+	lastKline, err := s.klineRepo.FindLast(coin.Id, fmt.Sprint(intervalInMinutes))
+	if err != nil {
+		zap.S().Errorf("Error FindLast %s", err.Error())
+		return
+	}
+	var fetchKlinesFrom time.Time
+	if lastKline == nil {
+		fetchKlinesFrom = s.Clock.NowTime().Add(time.Minute * time.Duration(intervalInMinutes) * (bybit.BYBIT_MAX_LIMIT) * (-1))
+	} else {
+		fetchKlinesFrom = lastKline.OpenTime
+		if s.Clock.NowTime().Before(lastKline.CloseTime) {
+			return
+		}
+	}
+
+	if err := s.FetchKlinesForPeriod(coin, fetchKlinesFrom, s.Clock.NowTime(), fmt.Sprint(intervalInMinutes)); err != nil {
+		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
+		return
+	}
+	return
 }
 
 func (s *KlinesFetcherService) FetchKlinesForPeriod(coin *domains.Coin, timeFrom time.Time, timeTo time.Time, interval string) error {

@@ -1,6 +1,8 @@
 package telegram
 
 import (
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -9,6 +11,10 @@ import (
 )
 
 func SendTextToTelegramChat(text string) {
+	if !viper.GetBool("telegram.enabled") {
+		zap.S().Infof("Telegram: %s", text)
+		return
+	}
 	var TELEGRAM_API = "https://api.telegram.org/bot" + os.Getenv("TELEGRAM_BOT_API_KEY") + "/sendMessage"
 	var CHAT_ID = os.Getenv("TELEGRAM_BOT_CHAT_ID")
 

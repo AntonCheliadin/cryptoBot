@@ -30,7 +30,7 @@ func (s *TrendMeterStratagyAnalyserService) AnalyseCoin(coin *domains.Coin, from
 	timeIterator = timeIterator.Add(time.Second * 2).Add(time.Hour)
 
 	for ; timeIterator.Before(timeMax); timeIterator = timeIterator.Add(time.Minute * 15) {
-		clockMock := date.GetClockMock(timeIterator)
+		clockMock := date.NewClockMock(timeIterator)
 
 		s.tradingService.Clock = clockMock
 		s.tradingService.StandardDeviationService.TechanConvertorService.Clock = clockMock
@@ -38,6 +38,7 @@ func (s *TrendMeterStratagyAnalyserService) AnalyseCoin(coin *domains.Coin, from
 		s.tradingService.StandardDeviationService.Clock = clockMock
 		s.tradingService.OrderManagerService.ProfitLossFinderService.Clock = clockMock
 		s.tradingService.OrderManagerService.Clock = clockMock
+		s.tradingService.KlinesFetcherService.Clock = clockMock
 
 		s.tradingService.BotActionBuyMoreIfNeeded(coin)
 		s.tradingService.BotActionCloseOrderIfNeeded(coin)

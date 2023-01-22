@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cryptoBot/cmd/bootstrap"
 	"cryptoBot/pkg/api/bybit/mock"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/log"
@@ -16,7 +17,6 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
-	migrate "github.com/rubenv/sql-migrate"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"os"
@@ -41,30 +41,7 @@ func main() {
 		}
 	}()
 
-	zap.S().Info("Trading bot is starting...")
-
-	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT"), 10, 64)
-	postgresDb, err := postgres.NewPostgresDb(&postgres.Config{
-		Host:     os.Getenv("DB_HOST"),
-		Port:     int(postgresDbPort),
-		Username: os.Getenv("DB_USERNAME"),
-		Password: os.Getenv("DB_PASSWORD"),
-		DBName:   os.Getenv("DB_ANALYSER_NAME"),
-		SSLMode:  os.Getenv("DB_SSLMODE"),
-	})
-	if err != nil {
-		zap.S().Fatalf("FAILED to init db %s", err.Error())
-		return
-	}
-
-	closableClosure = append(closableClosure, func() {
-		err := postgresDb.Close()
-		if err != nil {
-			zap.S().Errorf("Error during closing postgres connection: %s", err.Error())
-		}
-	})
-
-	initMigrations(postgresDb)
+	postgresDb := bootstrap.Database(closableClosure)
 
 	repos := repository.NewRepositories(postgresDb)
 
@@ -87,7 +64,7 @@ func main() {
 		exchangeDataService,
 		repos.Kline,
 		indicator.NewStandardDeviationService(clockMock, repos.Kline, seriesConvertorService),
-		exchange.NewKlinesFetcherService(mockExchangeApi, repos.Kline),
+		exchange.NewKlinesFetcherService(mockExchangeApi, repos.Kline, clockMock),
 		indicator.NewMACDService(seriesConvertorService),
 		indicator.NewRelativeStrengthIndexService(seriesConvertorService),
 		indicator.NewExponentialMovingAverageService(seriesConvertorService),
@@ -99,7 +76,7 @@ func main() {
 
 	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
 
-	analyserService.AnalyseCoin(coin, "2020-11-01", "2022-10-28")
+	analyserService.AnalyseCoin(coin, "2021-10-28", "2022-10-28")
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
@@ -108,20 +85,46 @@ func main() {
 	os.Exit(0)
 }
 
+func aaaa(closableClosure []func()) (error, *sqlx.DB, bool) {
+	zap.S().Info("Trading bot is starting...")
+
+	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT"), 10, 64)
+	postgresDb, err := postgres.NewPostgresDb(&postgres.Config{
+		Host:     os.Getenv("DB_HOST"),
+		Port:     int(postgresDbPort),
+		Username: os.Getenv("DB_USERNAME"),
+		Password: os.Getenv("DB_PASSWORD"),
+		DBName:   os.Getenv("DB_ANALYSER_NAME"),
+		SSLMode:  os.Getenv("DB_SSLMODE"),
+	})
+	if err != nil {
+		zap.S().Fatalf("FAILED to init db %s", err.Error())
+		return nil, nil, true
+	}
+
+	closableClosure = append(closableClosure, func() {
+		err := postgresDb.Close()
+		if err != nil {
+			zap.S().Errorf("Error during closing postgres connection: %s", err.Error())
+		}
+	})
+	return nil, postgresDb, false
+}
+
 func initConfig() error {
 	viper.AddConfigPath("configs")
 	viper.SetConfigName("config")
 	return viper.ReadInConfig()
 }
 
-func initMigrations(db *sqlx.DB) {
-	migrations := &migrate.FileMigrationSource{
-		Dir: "./migrations",
-	}
-
-	n, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
-	if err != nil {
-		zap.S().Errorf("Error during applying migrations! %s", err.Error())
-	}
-	zap.S().Infof("Applied %d migrations!", n)
-}
+//func initMigrations(db *sqlx.DB) {
+//	migrations := &migrate.FileMigrationSource{
+//		Dir: "./migrations",
+//	}
+//
+//	n, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
+//	if err != nil {
+//		zap.S().Errorf("Error during applying migrations! %s", err.Error())
+//	}
+//	zap.S().Infof("Applied %d migrations!", n)
+//}

@@ -3,6 +3,7 @@ package util
 import (
 	"cryptoBot/pkg/constants/futureType"
 	"fmt"
+	"go.uber.org/zap"
 	"math"
 	"strconv"
 )
@@ -22,13 +23,6 @@ func RoundCentsToUsd(moneyInCents int64) string {
 
 func GetDollarsByCents(moneyInCents int64) float64 {
 	return float64(moneyInCents) / 100
-}
-
-/* AlmostEquals(50_000, 50_010) == true */
-func AlmostEquals(money1 int64, money2 int64) bool {
-	changedInPercents := CalculateChangeInPercentsAbs(money2, money1)
-
-	return changedInPercents < 0.02
 }
 
 func CalculateAmountByPriceAndCost(currentPriceWithCents int64, costWithoutCents int64) float64 {
@@ -56,13 +50,39 @@ func CalculateAmountByPriceAndCostWithCents(currentPriceWithCents int64, costWit
 func CalculatePriceForStopLoss(priceInCents int64, stopLossPercent float64, futuresType futureType.FuturesType) int64 {
 	percentOfPriceValue := int64(CalculatePercentOf(float64(priceInCents), stopLossPercent))
 
+	result := int64(0)
+
 	if futuresType == futureType.LONG {
-		return priceInCents + percentOfPriceValue
+		result = priceInCents - percentOfPriceValue
 	} else {
-		return priceInCents - percentOfPriceValue
+		result = priceInCents + percentOfPriceValue
 	}
+
+	zap.S().Infof("CalculatePriceForStopLoss price[%v] percent[%v] futuresType[%v] result[%v]", priceInCents, stopLossPercent, futuresType, result)
+	return result
+}
+
+func CalculatePriceForTakeProfit(priceInCents int64, takeProfitPercent float64, futuresType futureType.FuturesType) int64 {
+	percentOfPriceValue := int64(CalculatePercentOf(float64(priceInCents), takeProfitPercent))
+
+	result := int64(0)
+
+	if futuresType == futureType.LONG {
+		result = priceInCents + percentOfPriceValue
+	} else {
+		result = priceInCents - percentOfPriceValue
+	}
+	zap.S().Infof("CalculatePriceForTakeProfit price[%v] percent[%v] futuresType[%v] result[%v]", priceInCents, takeProfitPercent, futureType.GetString(futuresType), result)
+	return result
 }
 
 func CalculateProfitInPercent(prevPrice int64, currentPrice int64, futuresType futureType.FuturesType) float64 {
 	return CalculateChangeInPercents(prevPrice, currentPrice) * futureType.GetFuturesSignFloat64(futuresType)
+}
+
+func CalculateProfitByRation(openPrice int64, stopLossPrice int64, futuresType futureType.FuturesType, profitRatio float64) int64 {
+	stopLossInPercent := CalculateChangeInPercentsAbs(openPrice, stopLossPrice)
+	takeProfitInPercent := stopLossInPercent * profitRatio
+
+	return CalculatePriceForTakeProfit(openPrice, takeProfitInPercent, futuresType)
 }

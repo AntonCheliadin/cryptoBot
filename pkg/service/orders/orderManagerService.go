@@ -96,15 +96,26 @@ func (s *OrderManagerService) OpenFuturesOrderWithCalculateStopLoss(coin *domain
 }
 
 func (s *OrderManagerService) OpenFuturesOrderWithFixedStopLoss(coin *domains.Coin, futuresType futureType.FuturesType, stopLossPriceInCents int64) {
-	s.openOrderWithCostAndFixedStopLoss(coin, futuresType, stopLossPriceInCents, s.getCostOfOrder(), constants.FUTURES)
+	s.openOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, stopLossPriceInCents, 0, s.getCostOfOrder(), constants.FUTURES)
+}
+
+func (s *OrderManagerService) OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin *domains.Coin, futuresType futureType.FuturesType, costInCents int64, stopLossPriceInCents int64, profitPriceInCents int64) {
+	zap.S().Infof("stopLossPriceInCents %s   \t\t[%v]", stopLossPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+	zap.S().Infof("profitPriceInCents %s   \t\t[%v]", profitPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+
+	s.openOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, stopLossPriceInCents, profitPriceInCents, costInCents, constants.FUTURES)
+}
+
+func (s *OrderManagerService) OpenFuturesOrderWithCostAndFixedStopLoss(coin *domains.Coin, futuresType futureType.FuturesType, costInCents int64, stopLossPriceInCents int64) {
+	s.openOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, stopLossPriceInCents, 0, costInCents, constants.FUTURES)
 }
 
 func (s *OrderManagerService) OpenOrderWithCost(coin *domains.Coin, futuresType futureType.FuturesType, costInCents int64, tradingType constants.TradingType) {
-	s.openOrderWithCostAndFixedStopLoss(coin, futuresType, 0, costInCents, tradingType)
+	s.openOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, 0, 0, costInCents, tradingType)
 }
 
-func (s *OrderManagerService) openOrderWithCostAndFixedStopLoss(coin *domains.Coin, futuresType futureType.FuturesType,
-	stopLossPriceInCents int64, costInCents int64, tradingType constants.TradingType) {
+func (s *OrderManagerService) openOrderWithCostAndFixedStopLossAndTakeProfit(coin *domains.Coin, futuresType futureType.FuturesType,
+	stopLossPriceInCents int64, takeProfitPriceInCents int64, costInCents int64, tradingType constants.TradingType) {
 	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
 	if err != nil {
 		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
@@ -124,7 +135,7 @@ func (s *OrderManagerService) openOrderWithCostAndFixedStopLoss(coin *domains.Co
 		return
 	}
 
-	transaction := s.createOpenTransactionByOrderResponseDto(coin, futuresType, orderDto)
+	transaction := s.createOpenTransactionByOrderResponseDto(coin, futuresType, orderDto, stopLossPriceInCents, takeProfitPriceInCents)
 	if err3 := s.transactionRepo.SaveTransaction(&transaction); err3 != nil {
 		zap.S().Errorf("Error during SaveTransaction: %s", err3.Error())
 		return
@@ -166,7 +177,7 @@ func (s *OrderManagerService) CloseOrder(openTransaction *domains.Transaction, c
 }
 
 func (s *OrderManagerService) createOpenTransactionByOrderResponseDto(coin *domains.Coin, futuresType futureType.FuturesType,
-	orderDto api.OrderResponseDto) domains.Transaction {
+	orderDto api.OrderResponseDto, stopLossPriceInCents int64, takeProfitPriceInCents int64) domains.Transaction {
 
 	var createdAt time.Time
 	if orderDto.GetCreatedAt() != nil {
@@ -190,6 +201,12 @@ func (s *OrderManagerService) createOpenTransactionByOrderResponseDto(coin *doma
 		transaction.TransactionType = constants.BUY
 	} else {
 		transaction.TransactionType = constants.SELL
+	}
+	if stopLossPriceInCents > 0 {
+		transaction.StopLossPrice = sql.NullInt64{Int64: stopLossPriceInCents, Valid: true}
+	}
+	if takeProfitPriceInCents > 0 {
+		transaction.TakeProfitPrice = sql.NullInt64{Int64: takeProfitPriceInCents, Valid: true}
 	}
 	return transaction
 }
@@ -317,4 +334,76 @@ func (s *OrderManagerService) CreateCloseTransactionOnOrderClosedByExchange(coin
 	_ = s.transactionRepo.SaveTransaction(openedTransaction)
 
 	return closeTransaction
+}
+
+func (s *OrderManagerService) CloseOrderByFixedStopLossOrTakeProfit(coin *domains.Coin, openedOrder *domains.Transaction, klineInterval string) {
+	if s.ShouldCloseByStopLoss(openedOrder, klineInterval) {
+		if isPositionOpened := s.ExchangeDataService.IsPositionOpened(coin, openedOrder); !isPositionOpened && openedOrder != nil {
+			s.CreateCloseTransactionOnOrderClosedByExchange(coin, openedOrder)
+		} else {
+			s.CloseOrder(openedOrder, coin, openedOrder.StopLossPrice.Int64, constants.FUTURES)
+		}
+	}
+
+	if s.ShouldCloseByTakeProfit(openedOrder, klineInterval) {
+		if isPositionOpened := s.ExchangeDataService.IsPositionOpened(coin, openedOrder); !isPositionOpened && openedOrder != nil {
+			s.CreateCloseTransactionOnOrderClosedByExchange(coin, openedOrder)
+		} else {
+			s.CloseOrder(openedOrder, coin, openedOrder.TakeProfitPrice.Int64, constants.FUTURES)
+		}
+	}
+}
+
+func (s *OrderManagerService) ShouldCloseByStopLoss(openedTransaction *domains.Transaction, klineInterval string) bool {
+	if !openedTransaction.StopLossPrice.Valid || openedTransaction.StopLossPrice.Int64 <= 0 {
+		return false
+	}
+
+	klines, _ := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeInRange(openedTransaction.CoinId, klineInterval, openedTransaction.CreatedAt, s.Clock.NowTime())
+
+	stopLossInCents := openedTransaction.StopLossPrice.Int64
+
+	for i, kline := range klines {
+		if i == 0 {
+			continue //the first kline is kline of creation the order
+		}
+		if openedTransaction.FuturesType == futureType.LONG {
+			if kline.Low <= stopLossInCents {
+				return true
+			}
+		} else {
+			if kline.High >= stopLossInCents {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func (s *OrderManagerService) ShouldCloseByTakeProfit(openedTransaction *domains.Transaction, klineInterval string) bool {
+	if !openedTransaction.TakeProfitPrice.Valid || openedTransaction.TakeProfitPrice.Int64 <= 0 {
+		return false
+	}
+
+	klines, _ := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeInRange(openedTransaction.CoinId, klineInterval, openedTransaction.CreatedAt, s.Clock.NowTime())
+
+	takeProfitInCents := openedTransaction.TakeProfitPrice.Int64
+
+	for i, kline := range klines {
+		if i == 0 {
+			continue //the first kline is kline of creation the order
+		}
+		if openedTransaction.FuturesType == futureType.LONG {
+			if kline.High >= takeProfitInCents {
+				return true
+			}
+		} else {
+			if kline.Low <= takeProfitInCents {
+				return true
+			}
+		}
+	}
+
+	return false
 }

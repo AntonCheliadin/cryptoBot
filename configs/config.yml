@@ -57,7 +57,9 @@ strategy:
     trendBar2:
       fastLength: 13
       slowLength: 36
-
+  sessionsScalper:
+    futures:
+      leverage: 1
 
 indicator:
   trend:
@@ -80,3 +82,6 @@ orders:
     minPercent: 10.0
     maxPercent: 10.0
     klinesLimit: 2
+
+telegram:
+  enabled: false

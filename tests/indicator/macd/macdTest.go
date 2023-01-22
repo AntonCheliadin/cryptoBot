@@ -67,7 +67,7 @@ func main() {
 
 func testMACD(repos *repository.Repository) {
 	timeMock, _ := time.Parse(constants.DATE_TIME_FORMAT, "2022-08-28 12:03:01")
-	seriesConvertorService := techanLib.NewTechanConvertorService(date.GetClockMock(timeMock), repos.Kline)
+	seriesConvertorService := techanLib.NewTechanConvertorService(date.NewClockMock(timeMock), repos.Kline)
 	macdIndicatorService := indicator.NewMACDService(seriesConvertorService)
 
 	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")

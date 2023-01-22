@@ -1,14 +1,15 @@
 package main
 
 import (
+	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
 	"cryptoBot/pkg/service/date"
-	"cryptoBot/pkg/service/indicator"
 	"cryptoBot/pkg/service/indicator/techanLib"
 	"fmt"
 	"github.com/joho/godotenv"
+	"github.com/sdcoffey/techan"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"os"
@@ -75,12 +76,29 @@ func main() {
 }
 
 func test(repos *repository.Repository) {
-	timeIterator := time.Now() //time.Parse(constants.DATE_TIME_FORMAT, "2022-09-07 21:47:01")
-	seriesConvertorService := techanLib.NewTechanConvertorService(date.NewClockMock(timeIterator), repos.Kline)
-	indicatorService := indicator.NewStandardDeviationService(date.NewClockMock(timeIterator), repos.Kline, seriesConvertorService)
+	nowTime, _ := time.Parse(constants.DATE_TIME_FORMAT, "2022-11-20 09:00:01")
+	seriesConvertorService := techanLib.NewTechanConvertorService(date.NewClockMock(nowTime), repos.Kline)
 
-	coin, _ := repos.Coin.FindBySymbol("SOLUSDT")
+	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
 
-	value := indicatorService.CalculateCurrentStandardDeviationForPriceChange(coin, "15")
-	zap.S().Infof("value=%v", value)
+	klineSize := int(100)
+	smoothK := 5
+	periodK := int64(5)
+	periodD := int64(5)
+
+	series := seriesConvertorService.BuildTimeSeriesByKlinesAtMoment(coin, "1", int64(klineSize), nowTime)
+
+	k := techan.NewFastStochasticIndicator(series, int(periodK))
+
+	smoothKIndicator := techan.NewSimpleMovingAverage(k, smoothK)
+
+	d := techan.NewSlowStochasticIndicator(smoothKIndicator, int(periodD))
+
+	for i := 0; i < klineSize; i++ {
+		zap.S().Infof("k=%v smoothK=%v  d=%v   kline[%v]",
+			k.Calculate(i).FormattedString(0),
+			smoothKIndicator.Calculate(i).FormattedString(0),
+			d.Calculate(i).FormattedString(0),
+			series.Candles[i].Period)
+	}
 }

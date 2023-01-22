@@ -8,7 +8,7 @@ type ClockMock struct {
 
 var clockMockImpl Clock
 
-func GetClockMock(nowMock time.Time) Clock {
+func NewClockMock(nowMock time.Time) Clock {
 	clockMockImpl = &ClockMock{
 		mockTime: nowMock,
 	}
@@ -18,4 +18,22 @@ func GetClockMock(nowMock time.Time) Clock {
 
 func (c *ClockMock) NowTime() time.Time {
 	return c.mockTime
+}
+
+func (c *ClockMock) SetTime(nowMockTime time.Time) {
+	c.mockTime = nowMockTime
+}
+
+func GetClockMock() Clock {
+	if clockMockImpl != nil {
+		return clockMockImpl
+	}
+
+	clockMockImpl = &ClockMock{}
+
+	return clockMockImpl
+}
+
+func SetMockTime(nowMockTime time.Time) {
+	clockMockImpl.SetTime(nowMockTime)
 }

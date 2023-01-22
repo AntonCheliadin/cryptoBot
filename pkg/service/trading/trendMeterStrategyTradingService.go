@@ -3,7 +3,6 @@ package trading
 import (
 	telegramApi "cryptoBot/pkg/api/telegram"
 	"cryptoBot/pkg/constants"
-	"cryptoBot/pkg/constants/bybit"
 	"cryptoBot/pkg/constants/futureType"
 	constantIndicator "cryptoBot/pkg/constants/indicator"
 	"cryptoBot/pkg/data/domains"
@@ -17,7 +16,6 @@ import (
 	"github.com/sdcoffey/big"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"time"
 )
 
 var trendMeterStrategyTradingServiceImpl *TrendMeterStrategyTradingService
@@ -79,15 +77,15 @@ func (s *TrendMeterStrategyTradingService) InitializeTrading(coin *domains.Coin)
 		}
 	}
 
-	s.fetchActualKlines(coin, viper.GetInt("strategy.trendMeter.interval"))
-	s.fetchActualKlines(coin, 1)
+	s.KlinesFetcherService.FetchActualKlines(coin, viper.GetInt("strategy.trendMeter.interval"))
+	s.KlinesFetcherService.FetchActualKlines(coin, 1)
 
 	return nil
 }
 
 func (s *TrendMeterStrategyTradingService) BotAction(coin *domains.Coin) {
-	s.fetchActualKlines(coin, viper.GetInt("strategy.trendMeter.interval"))
-	s.fetchActualKlines(coin, 1)
+	s.KlinesFetcherService.FetchActualKlines(coin, viper.GetInt("strategy.trendMeter.interval"))
+	s.KlinesFetcherService.FetchActualKlines(coin, 1)
 
 	s.BotActionCheckIfOrderClosedByExchange(coin)
 
@@ -99,29 +97,6 @@ func (s *TrendMeterStrategyTradingService) BotAction(coin *domains.Coin) {
 	s.BotActionCloseOrderIfNeeded(coin)
 
 	s.BotActionOpenOrderIfNeeded(coin)
-}
-
-func (s *TrendMeterStrategyTradingService) fetchActualKlines(coin *domains.Coin, intervalInMinutes int) {
-	lastKline, err := s.KlineRepo.FindLast(coin.Id, fmt.Sprint(intervalInMinutes))
-	if err != nil {
-		zap.S().Errorf("Error FindLast %s", err.Error())
-		return
-	}
-	var fetchKlinesFrom time.Time
-	if lastKline == nil {
-		fetchKlinesFrom = s.Clock.NowTime().Add(time.Minute * time.Duration(intervalInMinutes) * (bybit.BYBIT_MAX_LIMIT) * (-1))
-	} else {
-		fetchKlinesFrom = lastKline.OpenTime
-		if s.Clock.NowTime().Before(lastKline.CloseTime) {
-			return
-		}
-	}
-
-	if err := s.KlinesFetcherService.FetchKlinesForPeriod(coin, fetchKlinesFrom, s.Clock.NowTime(), fmt.Sprint(intervalInMinutes)); err != nil {
-		zap.S().Errorf("Error during fetchKlinesForPeriod %s", err.Error())
-		return
-	}
-	return
 }
 
 func (s *TrendMeterStrategyTradingService) BotActionCheckIfOrderClosedByExchange(coin *domains.Coin) {

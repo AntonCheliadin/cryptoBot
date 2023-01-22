@@ -20,6 +20,10 @@ type Transaction struct {
 
 	Price int64
 
+	StopLossPrice sql.NullInt64 `db:"stop_loss_price"`
+
+	TakeProfitPrice sql.NullInt64 `db:"take_profit_price"`
+
 	/* TotalCost=(amount * price) */
 	TotalCost int64 `db:"total_cost"`
 

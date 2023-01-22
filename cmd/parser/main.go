@@ -61,10 +61,10 @@ func main() {
 
 	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
 
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-04-06")
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-04-07")
+	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-09-25")
+	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2022-12-21")
 
-	if err := parserService.Parse(coin, timeFrom, timeTo, 15); err != nil {
+	if err := parserService.Parse(coin, timeFrom, timeTo, 5); err != nil {
 		zap.S().Errorf("Error during parse %s", err.Error())
 	}
 
