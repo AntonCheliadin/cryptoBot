@@ -107,7 +107,7 @@ func (r *Kline) SaveKline(domain *domains.Kline) error {
 
 	if domain.Id == 0 {
 		id := int64(0)
-		err := tx.QueryRow("INSERT INTO kline (coin_id, open_time, close_time, interval, open, high, low, close, volume) values ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
+		err := tx.QueryRow("INSERT INTO kline (coin_id, open_time, close_time, interval, open, high, low, close, volume) values ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
 			domain.CoinId, domain.OpenTime, domain.CloseTime, domain.Interval, domain.Open, domain.High, domain.Low, domain.Close, domain.Volume,
 		).Scan(&id)
 		if err != nil {
@@ -120,7 +120,7 @@ func (r *Kline) SaveKline(domain *domains.Kline) error {
 		return tx.Commit()
 	}
 
-	resp, err := tx.Exec("UPDATE kline SET close_time = $2, high = $3, low = $4, close = $5, volume = $5 WHERE id = $1",
+	resp, err := tx.Exec("UPDATE kline SET close_time = $2, high = $3, low = $4, close = $5, volume = $6 WHERE id = $1",
 		domain.Id, domain.CloseTime, domain.High, domain.Low, domain.Close, domain.Volume)
 	if err != nil {
 		_ = tx.Rollback()

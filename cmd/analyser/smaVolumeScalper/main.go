@@ -41,12 +41,12 @@ func main() {
 	exchangeDataService := exchange.NewExchangeDataService(repos.Transaction, repos.Coin, mockExchangeApi, clockMock, repos.Kline)
 	priceChangeTrackingService := orders.NewPriceChangeTrackingService(repos.PriceChange)
 
-	orderManagerService := orders.NewOrderManagerService(repos.Transaction, mockExchangeApi, clockMock, exchangeDataService, repos.Kline, constants.SESSION_SCALPER, priceChangeTrackingService,
+	orderManagerService := orders.NewOrderManagerService(repos.Transaction, mockExchangeApi, clockMock, exchangeDataService, repos.Kline, constants.SMA_VOLUME_SCALPER, priceChangeTrackingService,
 		orders.NewProfitLossFinderService(clockMock, repos.Kline),
 		viper.GetInt64("strategy.smaVolumeScalper.futures.leverage"),
 		0, 0, 0, 0)
 
-	klineInterval := 5
+	klineInterval := 1
 
 	tradingService := trading.NewSmaVolumeScalperStrategyTradingService(
 		repos.Transaction,
@@ -59,14 +59,14 @@ func main() {
 		indicator.NewStochasticService(clockMock, repos.Kline, seriesConvertorService),
 		indicator.NewSmaTubeService(clockMock, repos.Kline),
 		indicator.NewLocalExtremumTrendService(clockMock, repos.Kline),
-		indicator.NewRelativeVolumeIndicatorService(seriesConvertorService),
+		indicator.NewRelativeVolumeIndicatorService(),
 		klineInterval,
 	)
 	analyserService := analyser.NewAnalyserRunner(tradingService)
 
-	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
+	coin, _ := repos.Coin.FindBySymbol("BTCUSDT")
 
-	analyserService.AnalyseCoin(coin, "2022-10-01", "2023-01-08", klineInterval)
+	analyserService.AnalyseCoin(coin, "2022-09-02", "2023-02-03", klineInterval)
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())

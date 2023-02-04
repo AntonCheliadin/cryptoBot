@@ -80,7 +80,7 @@ func (s *LocalExtremumTrendService) CalculateStopLoss(coin *domains.Coin, klines
 
 func (s *LocalExtremumTrendService) findNearestHighExtremum(coin *domains.Coin, klinesInterval string, timeIter time.Time) *domains.Kline {
 	var highExtremumKline *domains.Kline
-	minExtremumWindow := 5
+	minExtremumWindow := 2
 
 	for extremumWindowCounter := 0; extremumWindowCounter < minExtremumWindow; timeIter = timeIter.Add(time.Minute * -1) {
 		kline, _ := s.klineRepo.FindClosedAtMoment(coin.Id, timeIter, klinesInterval)
@@ -100,7 +100,7 @@ func (s *LocalExtremumTrendService) findNearestHighExtremum(coin *domains.Coin, 
 
 func (s *LocalExtremumTrendService) findNearestLowExtremum(coin *domains.Coin, klinesInterval string, timeIter time.Time) *domains.Kline {
 	var lowExtremumKline *domains.Kline
-	minExtremumWindow := 5
+	minExtremumWindow := 2
 
 	klinesIntervalInt, _ := strconv.Atoi(klinesInterval)
 	for extremumWindowCounter := 0; extremumWindowCounter < minExtremumWindow; timeIter = timeIter.Add(time.Minute * time.Duration(klinesIntervalInt) * -1) {
