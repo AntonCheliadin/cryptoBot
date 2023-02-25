@@ -1,25 +1,31 @@
 package main
 
 import (
-	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
-	"cryptoBot/pkg/service/parser"
+	"cryptoBot/pkg/service/date"
+	"cryptoBot/pkg/service/indicator"
+	"cryptoBot/pkg/service/snapshot"
 	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"os"
 	"strconv"
-	"time"
 )
+
+func initLocalConfig() error {
+	viper.AddConfigPath("configs")
+	viper.SetConfigName("config")
+	return viper.ReadInConfig()
+}
 
 func main() {
 	if err := godotenv.Load(); err != nil {
 		panic(fmt.Sprintf("Failed load env file: %s", err.Error()))
 	}
-	if err := initConfig(); err != nil {
+	if err := initLocalConfig(); err != nil {
 		panic(fmt.Sprintf("Error during reading configs: %s", err.Error()))
 	}
 
@@ -32,8 +38,6 @@ func main() {
 			closableClosure[i]()
 		}
 	}()
-
-	zap.S().Info("Trading bot is starting...")
 
 	postgresDbPort, _ := strconv.ParseInt(os.Getenv("DB_PORT"), 10, 64)
 	postgresDb, err := postgres.NewPostgresDb(&postgres.Config{
@@ -57,16 +61,8 @@ func main() {
 	})
 
 	repos := repository.NewRepositories(postgresDb)
-	parserService := parser.NewBybitArchiveParseService(repos.Kline)
 
-	coin, _ := repos.Coin.FindBySymbol("BTCUSDT")
-
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-09-01")
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2023-02-03")
-
-	if err := parserService.Parse(coin, timeFrom, timeTo, 15); err != nil {
-		zap.S().Errorf("Error during parse %s", err.Error())
-	}
+	test(repos)
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
@@ -75,8 +71,24 @@ func main() {
 	os.Exit(0)
 }
 
-func initConfig() error {
-	viper.AddConfigPath("configs")
-	viper.SetConfigName("config")
-	return viper.ReadInConfig()
+func test(repos *repository.Repository) {
+	clockMock := date.GetClockMock()
+	snapshotOrderService := snapshot.NewSnapshotOrderService(repos.Transaction, repos.Kline, indicator.NewLocalExtremumTrendService(clockMock, repos.Kline))
+
+	coin, _ := repos.Coin.FindBySymbol("BTCUSDT")
+
+	firstId := int64(81037) //int64(80097)
+	lastId := int64(81056)  //int64(80994)
+
+	for i := firstId; i < lastId; i += 2 {
+		openTransaction, _ := repos.Transaction.FindById(i)
+		closeTransaction, _ := repos.Transaction.FindById(i + 1)
+
+		if openTransaction == nil || closeTransaction == nil {
+			zap.S().Errorf("Transaction is empty")
+			return
+		}
+
+		snapshotOrderService.SnapshotOrder(coin, openTransaction, closeTransaction, "60")
+	}
 }

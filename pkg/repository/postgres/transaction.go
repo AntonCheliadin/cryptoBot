@@ -61,6 +61,17 @@ func (r *Transaction) listRelationsToListRelationsPointers(domainList []domains.
 	return result
 }
 
+func (r *Transaction) FindById(id int64) (*domains.Transaction, error) {
+	var transaction domains.Transaction
+	if err := r.db.Get(&transaction, "SELECT * FROM transaction_table WHERE id=$1", id); err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &transaction, nil
+}
+
 func (r *Transaction) FindLastByCoinId(coinId int64, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error) {
 	var transaction domains.Transaction
 	if err := r.db.Get(&transaction, "SELECT * FROM transaction_table WHERE coin_id=$1 AND trading_strategy=$2 order by created_at desc limit 1", coinId, tradingStrategy); err != nil {

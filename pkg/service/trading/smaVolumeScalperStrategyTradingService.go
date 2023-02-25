@@ -56,7 +56,7 @@ func NewSmaVolumeScalperStrategyTradingService(
 		waitingCrossingFastSMA:         false,
 		fastSmaLength:                  50,
 		slowSmaLength:                  150,
-		takeProfitRatio:                1.5,
+		takeProfitRatio:                3.0,
 		costOfOrderInCents:             100 * 100,
 		tradingStrategy:                constants.SMA_VOLUME_SCALPER,
 		sma21Length:                    41,

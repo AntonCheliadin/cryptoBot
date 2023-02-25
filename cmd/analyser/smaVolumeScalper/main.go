@@ -66,7 +66,7 @@ func main() {
 
 	coin, _ := repos.Coin.FindBySymbol("BTCUSDT")
 
-	analyserService.AnalyseCoin(coin, "2022-09-02", "2023-02-03", klineInterval)
+	analyserService.AnalyseCoin(coin, "2022-09-15", "2023-02-03", klineInterval)
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
