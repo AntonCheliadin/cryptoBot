@@ -1,8 +1,17 @@
 package util
 
 import (
+	"github.com/sdcoffey/big"
 	"math"
 )
+
+func CalculateChangeInPercentsAbsBig(prev, current big.Decimal) float64 {
+	return math.Abs(CalculateChangeInPercentsBig(prev, current))
+}
+
+func CalculateChangeInPercentsBig(prev, current big.Decimal) float64 {
+	return (current.Float() - prev.Float()) / prev.Float() * 100
+}
 
 func CalculateChangeInPercentsAbs(prev, current int64) float64 {
 	return math.Abs(CalculateChangeInPercents(prev, current))

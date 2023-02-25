@@ -340,16 +340,20 @@ func (s *OrderManagerService) CloseOrderByFixedStopLossOrTakeProfit(coin *domain
 	if s.ShouldCloseByStopLoss(openedOrder, klineInterval) {
 		if isPositionOpened := s.ExchangeDataService.IsPositionOpened(coin, openedOrder); !isPositionOpened && openedOrder != nil {
 			s.CreateCloseTransactionOnOrderClosedByExchange(coin, openedOrder)
+			return
 		} else {
 			s.CloseOrder(openedOrder, coin, openedOrder.StopLossPrice.Int64, constants.FUTURES)
+			return
 		}
 	}
 
 	if s.ShouldCloseByTakeProfit(openedOrder, klineInterval) {
 		if isPositionOpened := s.ExchangeDataService.IsPositionOpened(coin, openedOrder); !isPositionOpened && openedOrder != nil {
 			s.CreateCloseTransactionOnOrderClosedByExchange(coin, openedOrder)
+			return
 		} else {
 			s.CloseOrder(openedOrder, coin, openedOrder.TakeProfitPrice.Int64, constants.FUTURES)
+			return
 		}
 	}
 }

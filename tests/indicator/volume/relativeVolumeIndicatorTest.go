@@ -5,7 +5,9 @@ import (
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
-	"cryptoBot/pkg/service/parser"
+	"cryptoBot/pkg/service/date"
+	"cryptoBot/pkg/service/indicator"
+	"cryptoBot/pkg/service/indicator/techanLib"
 	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
@@ -15,11 +17,17 @@ import (
 	"time"
 )
 
+func initLocalConfig() error {
+	viper.AddConfigPath("configs")
+	viper.SetConfigName("config")
+	return viper.ReadInConfig()
+}
+
 func main() {
 	if err := godotenv.Load(); err != nil {
 		panic(fmt.Sprintf("Failed load env file: %s", err.Error()))
 	}
-	if err := initConfig(); err != nil {
+	if err := initLocalConfig(); err != nil {
 		panic(fmt.Sprintf("Error during reading configs: %s", err.Error()))
 	}
 
@@ -57,16 +65,8 @@ func main() {
 	})
 
 	repos := repository.NewRepositories(postgresDb)
-	parserService := parser.NewBybitArchiveParseService(repos.Kline)
 
-	coin, _ := repos.Coin.FindBySymbol("BTCUSDT")
-
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-09-01")
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2023-02-03")
-
-	if err := parserService.Parse(coin, timeFrom, timeTo, 15); err != nil {
-		zap.S().Errorf("Error during parse %s", err.Error())
-	}
+	test(repos)
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
@@ -75,8 +75,23 @@ func main() {
 	os.Exit(0)
 }
 
-func initConfig() error {
-	viper.AddConfigPath("configs")
-	viper.SetConfigName("config")
-	return viper.ReadInConfig()
+func test(repos *repository.Repository) {
+
+	nowTime, _ := time.Parse(constants.DATE_TIME_FORMAT, "2023-02-01 18:48:01")
+	seriesConvertorService := techanLib.NewTechanConvertorService(date.NewClockMock(nowTime), repos.Kline)
+	volRelIndicator := indicator.NewRelativeVolumeIndicatorService()
+
+	for i := 0; i < 73; i++ {
+		nowTime = nowTime.Add(time.Minute * 1)
+		seriesConvertorService.Clock = date.NewClockMock(nowTime)
+
+		coin, _ := repos.Coin.FindBySymbol("BTCUSDT")
+
+		klineSize := int(100)
+		series := seriesConvertorService.BuildTimeSeriesByKlinesAtMoment(coin, "1", int64(klineSize), nowTime)
+
+		zap.S().Infof("value=%v kline[%v]",
+			volRelIndicator.CalculateRelativeVolumeSignalWithFloats(series),
+			series.LastCandle().Period)
+	}
 }

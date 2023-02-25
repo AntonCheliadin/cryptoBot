@@ -31,11 +31,11 @@ type LocalExtremumTrendService struct {
 }
 
 func (s *LocalExtremumTrendService) IsTrendUp(coin *domains.Coin, klinesInterval string) bool {
-	nextLowKline := s.findNearestLowExtremum(coin, klinesInterval, s.Clock.NowTime())
-	nextHighKline := s.findNearestHighExtremum(coin, klinesInterval, nextLowKline.CloseTime)
+	nextLowKline := s.FindNearestLowExtremum(coin, klinesInterval, s.Clock.NowTime())
+	nextHighKline := s.FindNearestHighExtremum(coin, klinesInterval, nextLowKline.CloseTime)
 
-	prevLowKline := s.findNearestLowExtremum(coin, klinesInterval, nextHighKline.CloseTime)
-	prevHighKline := s.findNearestHighExtremum(coin, klinesInterval, prevLowKline.CloseTime)
+	prevLowKline := s.FindNearestLowExtremum(coin, klinesInterval, nextHighKline.CloseTime)
+	prevHighKline := s.FindNearestHighExtremum(coin, klinesInterval, prevLowKline.CloseTime)
 
 	zap.S().Infof("nextLowKline %v at [%v - %v]", nextLowKline.High, nextLowKline.OpenTime.Format(constants.DATE_TIME_FORMAT), nextLowKline.CloseTime.Format(constants.DATE_TIME_FORMAT))
 	zap.S().Infof("nextHighKline %v at [%v - %v]", nextHighKline.High, nextHighKline.OpenTime.Format(constants.DATE_TIME_FORMAT), nextHighKline.CloseTime.Format(constants.DATE_TIME_FORMAT))
@@ -50,11 +50,11 @@ func (s *LocalExtremumTrendService) IsTrendUp(coin *domains.Coin, klinesInterval
 }
 
 func (s *LocalExtremumTrendService) IsTrendDown(coin *domains.Coin, klinesInterval string) bool {
-	nextHighKline := s.findNearestHighExtremum(coin, klinesInterval, s.Clock.NowTime())
-	nextLowKline := s.findNearestLowExtremum(coin, klinesInterval, nextHighKline.CloseTime)
+	nextHighKline := s.FindNearestHighExtremum(coin, klinesInterval, s.Clock.NowTime())
+	nextLowKline := s.FindNearestLowExtremum(coin, klinesInterval, nextHighKline.CloseTime)
 
-	prevHighKline := s.findNearestHighExtremum(coin, klinesInterval, nextLowKline.CloseTime)
-	prevLowKline := s.findNearestLowExtremum(coin, klinesInterval, prevHighKline.CloseTime)
+	prevHighKline := s.FindNearestHighExtremum(coin, klinesInterval, nextLowKline.CloseTime)
+	prevLowKline := s.FindNearestLowExtremum(coin, klinesInterval, prevHighKline.CloseTime)
 
 	zap.S().Infof("nextHighKline %v at [%v - %v]", nextHighKline.High, nextHighKline.OpenTime.Format(constants.DATE_TIME_FORMAT), nextHighKline.CloseTime.Format(constants.DATE_TIME_FORMAT))
 	zap.S().Infof("nextLowKline %v at [%v - %v]", nextLowKline.High, nextLowKline.OpenTime.Format(constants.DATE_TIME_FORMAT), nextLowKline.CloseTime.Format(constants.DATE_TIME_FORMAT))
@@ -70,17 +70,17 @@ func (s *LocalExtremumTrendService) IsTrendDown(coin *domains.Coin, klinesInterv
 
 func (s *LocalExtremumTrendService) CalculateStopLoss(coin *domains.Coin, klinesInterval string, futuresType futureType.FuturesType) int64 {
 	if futuresType == futureType.SHORT {
-		highExtremumKline := s.findNearestHighExtremum(coin, klinesInterval, s.Clock.NowTime())
-		return highExtremumKline.High + int64(float64(highExtremumKline.High)*0.003) // +0.3%
+		highExtremumKline := s.FindNearestHighExtremum(coin, klinesInterval, s.Clock.NowTime())
+		return highExtremumKline.High + int64(float64(highExtremumKline.High)*0.0003) // +0.03%
 	} else {
-		lowExtremumKline := s.findNearestLowExtremum(coin, klinesInterval, s.Clock.NowTime())
-		return lowExtremumKline.Low - int64(float64(lowExtremumKline.Low)*0.003) // -0.3%
+		lowExtremumKline := s.FindNearestLowExtremum(coin, klinesInterval, s.Clock.NowTime())
+		return lowExtremumKline.Low - int64(float64(lowExtremumKline.Low)*0.0003) // -0.03%
 	}
 }
 
-func (s *LocalExtremumTrendService) findNearestHighExtremum(coin *domains.Coin, klinesInterval string, timeIter time.Time) *domains.Kline {
+func (s *LocalExtremumTrendService) FindNearestHighExtremum(coin *domains.Coin, klinesInterval string, timeIter time.Time) *domains.Kline {
 	var highExtremumKline *domains.Kline
-	minExtremumWindow := 5
+	minExtremumWindow := 2
 
 	for extremumWindowCounter := 0; extremumWindowCounter < minExtremumWindow; timeIter = timeIter.Add(time.Minute * -1) {
 		kline, _ := s.klineRepo.FindClosedAtMoment(coin.Id, timeIter, klinesInterval)
@@ -93,14 +93,14 @@ func (s *LocalExtremumTrendService) findNearestHighExtremum(coin *domains.Coin, 
 		}
 	}
 
-	zap.S().Infof("findNearestHighExtremum %v    [%v]", highExtremumKline.High, timeIter.Format(constants.DATE_TIME_FORMAT))
+	zap.S().Infof("FindNearestHighExtremum %v    [%v]", highExtremumKline.High, timeIter.Format(constants.DATE_TIME_FORMAT))
 
 	return highExtremumKline
 }
 
-func (s *LocalExtremumTrendService) findNearestLowExtremum(coin *domains.Coin, klinesInterval string, timeIter time.Time) *domains.Kline {
+func (s *LocalExtremumTrendService) FindNearestLowExtremum(coin *domains.Coin, klinesInterval string, timeIter time.Time) *domains.Kline {
 	var lowExtremumKline *domains.Kline
-	minExtremumWindow := 5
+	minExtremumWindow := 2
 
 	klinesIntervalInt, _ := strconv.Atoi(klinesInterval)
 	for extremumWindowCounter := 0; extremumWindowCounter < minExtremumWindow; timeIter = timeIter.Add(time.Minute * time.Duration(klinesIntervalInt) * -1) {
@@ -114,7 +114,7 @@ func (s *LocalExtremumTrendService) findNearestLowExtremum(coin *domains.Coin, k
 		}
 	}
 
-	zap.S().Infof("findNearestLowExtremum %v    [%v]", lowExtremumKline.Low, timeIter.Format(constants.DATE_TIME_FORMAT))
+	zap.S().Infof("FindNearestLowExtremum %v    [%v]", lowExtremumKline.Low, timeIter.Format(constants.DATE_TIME_FORMAT))
 
 	return lowExtremumKline
 }

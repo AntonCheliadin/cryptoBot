@@ -60,6 +60,9 @@ strategy:
   sessionsScalper:
     futures:
       leverage: 1
+  smaVolumeScalper:
+    futures:
+      leverage: 1
 
 indicator:
   trend:

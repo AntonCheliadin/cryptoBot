@@ -13,6 +13,7 @@ type Coin interface {
 }
 
 type Transaction interface {
+	FindById(id int64) (*domains.Transaction, error)
 	FindLastByCoinId(coinId int64, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error)
 	FindLastByCoinIdAndType(coinId int64, transactionType constants.TransactionType, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error)
 	FindLastBoughtNotSold(coinId int64, tradingStrategy constants.TradingStrategy) (*domains.Transaction, error)
