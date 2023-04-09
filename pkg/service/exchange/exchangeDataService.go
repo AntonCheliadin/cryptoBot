@@ -43,7 +43,7 @@ func (s *DataService) GetCurrentPrice(coin *domains.Coin) (int64, error) {
 		}
 	}
 
-	if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), "1"); kline != nil {
+	if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), "60"); kline != nil {
 		return kline.Open, nil
 	}
 

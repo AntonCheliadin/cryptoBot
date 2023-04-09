@@ -46,7 +46,7 @@ func main() {
 		viper.GetInt64("strategy.smaVolumeScalper.futures.leverage"),
 		0, 0, 0, 0)
 
-	klineInterval := 1
+	klineInterval := 60
 
 	tradingService := trading.NewSmaVolumeScalperStrategyTradingService(
 		repos.Transaction,
@@ -64,9 +64,13 @@ func main() {
 	)
 	analyserService := analyser.NewAnalyserRunner(tradingService)
 
-	coin, _ := repos.Coin.FindBySymbol("BTCUSDT")
+	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
 
-	analyserService.AnalyseCoin(coin, "2022-09-15", "2023-02-03", klineInterval)
+	analyserService.AnalyseCoin(coin, "2020-11-12", "2023-04-08", klineInterval)
+	//BTC from 2020-04-12
+	//ETH from 2020-11-12
+	//ETC from 2021-07-15
+	//ADA from 2021-04-01
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())

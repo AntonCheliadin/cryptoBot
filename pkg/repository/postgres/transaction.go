@@ -124,7 +124,7 @@ func (r *Transaction) CalculateSumOfProfit(tradingStrategy constants.TradingStra
 
 func (r *Transaction) CalculateSumOfProfitByCoin(coinId int64, tradingStrategy constants.TradingStrategy) (int64, error) {
 	var sumOfProfit int64
-	err := r.db.Get(&sumOfProfit, "select sum(profit) from transaction_table where profit is not null AND coin_id=$1 AND trading_strategy=$2", coinId, tradingStrategy)
+	err := r.db.Get(&sumOfProfit, "select sum(profit) from transaction_table where profit is not null AND coin_id=$1 AND trading_strategy=$2 AND fake = false", coinId, tradingStrategy)
 	return sumOfProfit, err
 }
 
@@ -172,8 +172,8 @@ func (r *Transaction) SaveTransaction(trnsctn *domains.Transaction) error {
 
 	if trnsctn.Id == 0 {
 		transactionId := int64(0)
-		err := tx.QueryRow("INSERT INTO transaction_table (coin_id, transaction_type, amount, price, total_cost, created_at, client_order_id, api_error, related_transaction_id, profit, percent_profit, commission, trading_strategy, futures_type, stop_loss_price, take_profit_price) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id",
-			trnsctn.CoinId, trnsctn.TransactionType, trnsctn.Amount, trnsctn.Price, trnsctn.TotalCost, trnsctn.CreatedAt, trnsctn.ClientOrderId, trnsctn.ApiError, trnsctn.RelatedTransactionId, trnsctn.Profit, trnsctn.PercentProfit, trnsctn.Commission, trnsctn.TradingStrategy, trnsctn.FuturesType, trnsctn.StopLossPrice, trnsctn.TakeProfitPrice,
+		err := tx.QueryRow("INSERT INTO transaction_table (coin_id, transaction_type, amount, price, total_cost, created_at, client_order_id, api_error, related_transaction_id, profit, percent_profit, commission, trading_strategy, futures_type, stop_loss_price, take_profit_price, fake) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id",
+			trnsctn.CoinId, trnsctn.TransactionType, trnsctn.Amount, trnsctn.Price, trnsctn.TotalCost, trnsctn.CreatedAt, trnsctn.ClientOrderId, trnsctn.ApiError, trnsctn.RelatedTransactionId, trnsctn.Profit, trnsctn.PercentProfit, trnsctn.Commission, trnsctn.TradingStrategy, trnsctn.FuturesType, trnsctn.StopLossPrice, trnsctn.TakeProfitPrice, trnsctn.IsFake,
 		).Scan(&transactionId)
 		if err != nil {
 			_ = tx.Rollback()

@@ -30,7 +30,7 @@ strategy:
       short: 20
       medium: 54
   trendMeter:
-    interval: 15
+    interval: 60
     initialCostInCents: 200000
     futures:
       leverage: 1
@@ -62,7 +62,7 @@ strategy:
       leverage: 1
   smaVolumeScalper:
     futures:
-      leverage: 1
+      leverage: 4
 
 indicator:
   trend:

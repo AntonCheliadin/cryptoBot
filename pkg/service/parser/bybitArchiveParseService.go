@@ -39,7 +39,7 @@ func (s *BybitArchiveParseService) Parse(coin *domains.Coin, timeFrom time.Time,
 	timeIter := timeFrom
 	for timeIter.Before(timeTo) {
 
-		fileName := fmt.Sprintf("archive/%s%s.csv", coin.Symbol, timeIter.Format(constants.DATE_FORMAT))
+		fileName := fmt.Sprintf("/archive/%s/%s%s.csv", coin.Symbol, coin.Symbol, timeIter.Format(constants.DATE_FORMAT))
 		if _, err := os.Stat(fileName); errors.Is(err, os.ErrNotExist) {
 			zap.S().Infof("File doesn't exist %s", fileName)
 
@@ -62,6 +62,8 @@ func (s *BybitArchiveParseService) Parse(coin *domains.Coin, timeFrom time.Time,
 			return err
 		}
 
+		s.deleteCsv(coin, timeIter)
+
 		timeIter = timeIter.Add(time.Hour * 24)
 	}
 
@@ -83,7 +85,7 @@ func (s *BybitArchiveParseService) download(coin *domains.Coin, day time.Time) e
 	zap.S().Infof("Download %s", fileName)
 
 	// Create blank file
-	file, err := os.Create("archive/" + fileName)
+	file, err := os.Create("archive/" + coin.Symbol + "/" + fileName)
 	if err != nil {
 		return err
 	}
@@ -109,7 +111,7 @@ func (s *BybitArchiveParseService) download(coin *domains.Coin, day time.Time) e
 }
 
 func (s *BybitArchiveParseService) unzip(coin *domains.Coin, day time.Time) error {
-	fileName := fmt.Sprintf("archive/%s%s.csv", coin.Symbol, day.Format(constants.DATE_FORMAT))
+	fileName := fmt.Sprintf("archive/%s/%s%s.csv", coin.Symbol, coin.Symbol, day.Format(constants.DATE_FORMAT))
 	zap.S().Infof("Unzip %s", fileName)
 
 	gzipfile, err := os.Open(fileName + ".gz")
@@ -139,8 +141,18 @@ func (s *BybitArchiveParseService) unzip(coin *domains.Coin, day time.Time) erro
 	return nil
 }
 
+func (s *BybitArchiveParseService) deleteCsv(coin *domains.Coin, day time.Time) {
+	fileName := fmt.Sprintf("archive/%s/%s%s.csv", coin.Symbol, coin.Symbol, day.Format(constants.DATE_FORMAT))
+	zap.S().Infof("Delete %s", fileName)
+
+	e := os.Remove(fileName)
+	if e != nil {
+		zap.S().Errorf("Error on delete file %s", fileName)
+	}
+}
+
 func (s *BybitArchiveParseService) parseFile(coin *domains.Coin, day time.Time) ([][]string, error) {
-	fileName := fmt.Sprintf("archive/%s%s.csv", coin.Symbol, day.Format(constants.DATE_FORMAT))
+	fileName := fmt.Sprintf("archive/%s/%s%s.csv", coin.Symbol, coin.Symbol, day.Format(constants.DATE_FORMAT))
 	zap.S().Infof("Parse %s", fileName)
 	f, err := os.Open(fileName)
 	if err != nil {

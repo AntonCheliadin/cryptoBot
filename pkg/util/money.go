@@ -79,6 +79,9 @@ func CalculatePriceForTakeProfit(priceInCents int64, takeProfitPercent float64, 
 func CalculateProfitInPercent(prevPrice int64, currentPrice int64, futuresType futureType.FuturesType) float64 {
 	return CalculateChangeInPercents(prevPrice, currentPrice) * futureType.GetFuturesSignFloat64(futuresType)
 }
+func CalculateProfitInPercentWithLeverage(prevPrice int64, currentPrice int64, futuresType futureType.FuturesType, leverage int64) float64 {
+	return CalculateChangeInPercents(prevPrice, currentPrice) * futureType.GetFuturesSignFloat64(futuresType) * float64(leverage)
+}
 
 func CalculateProfitByRation(openPrice int64, stopLossPrice int64, futuresType futureType.FuturesType, profitRatio float64) int64 {
 	stopLossInPercent := CalculateChangeInPercentsAbs(openPrice, stopLossPrice)

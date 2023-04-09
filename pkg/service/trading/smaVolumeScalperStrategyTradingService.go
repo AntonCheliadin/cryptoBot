@@ -14,6 +14,7 @@ import (
 	"github.com/sdcoffey/techan"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"math"
 	"strconv"
 )
 
@@ -56,13 +57,13 @@ func NewSmaVolumeScalperStrategyTradingService(
 		waitingCrossingFastSMA:         false,
 		fastSmaLength:                  50,
 		slowSmaLength:                  150,
-		takeProfitRatio:                3.0,
+		takeProfitRatio:                0.35,
 		costOfOrderInCents:             100 * 100,
 		tradingStrategy:                constants.SMA_VOLUME_SCALPER,
-		sma21Length:                    41,
-		sma50Length:                    100,
-		sma100Length:                   200,
-		sma200Length:                   400,
+		sma21Length:                    21,
+		sma50Length:                    50,
+		sma100Length:                   100,
+		sma200Length:                   200,
 
 		BULL_STATUS:       false,
 		BEAR_STATUS:       false,
@@ -121,8 +122,19 @@ func (s *SmaVolumeScalperStrategyTradingService) BotAction(coin *domains.Coin) {
 
 	s.closeOrderIfNeeded(coin)
 	openedOrder, _ := s.TransactionRepo.FindOpenedTransaction(s.tradingStrategy)
+	//if openedOrder != nil {
+	//	return
+	//}
+
+	////TODO test closing with logic below:
 	if openedOrder != nil {
-		return
+		currentProfit, _ := s.OrderManagerService.CalculateCurrentProfitInPercentWithoutLeverage(coin, openedOrder)
+		minProfitInPercent := 0.46
+		if currentProfit > minProfitInPercent {
+			s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(coin, openedOrder)
+		} else {
+			return
+		}
 	}
 
 	klinesToFetchSize := s.sma200Length * 2
@@ -144,13 +156,14 @@ func (s *SmaVolumeScalperStrategyTradingService) BotAction(coin *domains.Coin) {
 	//zap.S().Infof("at %v 21=%v 50=%v 100=%v 200=%v", s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT),
 	//	smmma21Last.FormattedString(0), smma50Last.FormattedString(0), smma100Last.FormattedString(0), smma200Last.FormattedString(0))
 
-	isBullTrend := smmma21Last.GT(smma50Last) && util.CalculateChangeInPercentsAbsBig(smmma21Last, smma50Last) > 0.03 &&
-		smma50Last.GT(smma100Last) && util.CalculateChangeInPercentsAbsBig(smma50Last, smma100Last) > 0.03 &&
-		smma100Last.GT(smma200Last) && util.CalculateChangeInPercentsAbsBig(smma100Last, smma200Last) > 0.03
+	smaDifferenceInPercent := 0.5
+	isBullTrend := smmma21Last.GT(smma50Last) && util.CalculateChangeInPercentsAbsBig(smmma21Last, smma50Last) > smaDifferenceInPercent &&
+		smma50Last.GT(smma100Last) && util.CalculateChangeInPercentsAbsBig(smma50Last, smma100Last) > smaDifferenceInPercent &&
+		smma100Last.GT(smma200Last) && util.CalculateChangeInPercentsAbsBig(smma100Last, smma200Last) > smaDifferenceInPercent
 
-	isBearTrend := smmma21Last.LT(smma50Last) && util.CalculateChangeInPercentsAbsBig(smmma21Last, smma50Last) > 0.03 &&
-		smma50Last.LT(smma100Last) && util.CalculateChangeInPercentsAbsBig(smma50Last, smma100Last) > 0.03 &&
-		smma100Last.LT(smma200Last) && util.CalculateChangeInPercentsAbsBig(smma100Last, smma200Last) > 0.03
+	isBearTrend := smmma21Last.LT(smma50Last) && util.CalculateChangeInPercentsAbsBig(smmma21Last, smma50Last) > smaDifferenceInPercent &&
+		smma50Last.LT(smma100Last) && util.CalculateChangeInPercentsAbsBig(smma50Last, smma100Last) > smaDifferenceInPercent &&
+		smma100Last.LT(smma200Last) && util.CalculateChangeInPercentsAbsBig(smma100Last, smma200Last) > smaDifferenceInPercent
 
 	if !isBearTrend && !isBullTrend {
 		if s.BEAR_TREND_STATUS {
@@ -163,7 +176,9 @@ func (s *SmaVolumeScalperStrategyTradingService) BotAction(coin *domains.Coin) {
 			s.BULL_TREND_STATUS = false
 		}
 
+		//if openedOrder == nil {
 		return
+		//}
 	}
 
 	if !s.BEAR_TREND_STATUS && isBearTrend {
@@ -197,6 +212,18 @@ func (s *SmaVolumeScalperStrategyTradingService) BotAction(coin *domains.Coin) {
 		zap.S().Infof("BULL SIGNAL at %v", s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 	}
 
+	//if openedOrder != nil {
+	//	currentProfit, _ := s.OrderManagerService.CalculateCurrentProfitInPercent(coin, openedOrder)
+	//	minProfitInPercent := 0.25
+	//	if bearSignal && openedOrder.FuturesType == futureType.LONG && currentProfit > minProfitInPercent {
+	//		s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(coin, openedOrder)
+	//	}
+	//	if bullSignal && openedOrder.FuturesType == futureType.SHORT && currentProfit > minProfitInPercent {
+	//		s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(coin, openedOrder)
+	//	}
+	//	return
+	//}
+
 	signalByFloat := s.RelativeVolumeIndicatorService.CalculateRelativeVolumeSignalWithFloats(series)
 
 	zap.S().Infof("volume signal %v at %v", signalByFloat, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
@@ -217,13 +244,48 @@ func (s *SmaVolumeScalperStrategyTradingService) closeOrderIfNeeded(coin *domain
 	if openedOrder != nil {
 		s.OrderManagerService.CloseOrderByFixedStopLossOrTakeProfit(coin, openedOrder, strconv.Itoa(s.klineInterval))
 	}
+
+	openedOrder, _ = s.TransactionRepo.FindOpenedTransaction(s.tradingStrategy)
+	if openedOrder != nil && s.OrderManagerService.ShouldCloseByTrailingTakeProfitWithoutLeverage(coin, openedOrder) {
+		s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(coin, openedOrder)
+	}
 }
 
 func (s *SmaVolumeScalperStrategyTradingService) openOrder(coin *domains.Coin, futuresTypeSignal futureType.FuturesType) {
 	stopLoss := s.LocalExtremumTrendService.CalculateStopLoss(coin, strconv.Itoa(s.klineInterval), futuresTypeSignal)
 
 	currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
-	takeProfit := util.CalculateProfitByRation(currentPrice, stopLoss, futuresTypeSignal, s.takeProfitRatio)
+	//takeProfit := util.CalculateProfitByRation(currentPrice, stopLoss, futuresTypeSignal, s.takeProfitRatio)
 
-	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresTypeSignal, int64(s.costOfOrderInCents), stopLoss, takeProfit)
+	takeProfit := int64(0) //util.CalculatePriceForTakeProfit(currentPrice, 0.86, futuresTypeSignal) //int64(0)
+
+	stopLossInPercent := util.CalculateProfitInPercent(currentPrice, stopLoss, futuresTypeSignal)
+	if math.Abs(stopLossInPercent) > 2.5 {
+		zap.S().Infof("Skip order with stopLoss %v", stopLossInPercent)
+		return
+	}
+
+	isNextOrderFake := s.isNextOrderFake(coin)
+	costOrOrderInCents := s.calculateCurrentWalletValue(coin)
+
+	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfitAndFake(coin, futuresTypeSignal, costOrOrderInCents, stopLoss, takeProfit, isNextOrderFake)
+}
+
+func (s *SmaVolumeScalperStrategyTradingService) isNextOrderFake(coin *domains.Coin) bool {
+	transaction, err := s.TransactionRepo.FindLastByCoinId(coin.Id, s.tradingStrategy)
+	if transaction == nil || err != nil {
+		return false
+	}
+
+	if transaction.Profit.Valid {
+		return transaction.Profit.Int64 < 0
+	}
+
+	return false
+}
+
+func (s *SmaVolumeScalperStrategyTradingService) calculateCurrentWalletValue(coin *domains.Coin) int64 {
+	sumOfProfitByCoin, _ := s.TransactionRepo.CalculateSumOfProfitByCoin(coin.Id, s.tradingStrategy)
+
+	return (int64(s.costOfOrderInCents) + sumOfProfitByCoin) * viper.GetInt64("strategy.smaVolumeScalper.futures.leverage")
 }
