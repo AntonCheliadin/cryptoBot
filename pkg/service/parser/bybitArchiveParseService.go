@@ -39,12 +39,14 @@ func (s *BybitArchiveParseService) Parse(coin *domains.Coin, timeFrom time.Time,
 	timeIter := timeFrom
 	for timeIter.Before(timeTo) {
 
-		fileName := fmt.Sprintf("/archive/%s/%s%s.csv", coin.Symbol, coin.Symbol, timeIter.Format(constants.DATE_FORMAT))
+		fileName := fmt.Sprintf("archive/%s/%s%s.csv", coin.Symbol, coin.Symbol, timeIter.Format(constants.DATE_FORMAT))
+		zipName := fmt.Sprintf("archive/%s/%s%s.csv.gz", coin.Symbol, coin.Symbol, timeIter.Format(constants.DATE_FORMAT))
 		if _, err := os.Stat(fileName); errors.Is(err, os.ErrNotExist) {
-			zap.S().Infof("File doesn't exist %s", fileName)
-
-			if unzipErr := s.download(coin, timeIter); unzipErr != nil {
-				return unzipErr
+			if _, err := os.Stat(zipName); errors.Is(err, os.ErrNotExist) {
+				zap.S().Infof("File doesn't exist %s", zipName)
+				if unzipErr := s.download(coin, timeIter); unzipErr != nil {
+					return unzipErr
+				}
 			}
 
 			if unzipErr := s.unzip(coin, timeIter); unzipErr != nil {

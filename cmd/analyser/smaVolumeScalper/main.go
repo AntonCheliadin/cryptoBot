@@ -66,7 +66,7 @@ func main() {
 
 	coin, _ := repos.Coin.FindBySymbol("ETHUSDT")
 
-	analyserService.AnalyseCoin(coin, "2020-11-12", "2023-04-08", klineInterval)
+	analyserService.AnalyseCoin(coin, "2020-11-12", "2023-04-23", klineInterval)
 	//BTC from 2020-04-12
 	//ETH from 2020-11-12
 	//ETC from 2021-07-15
