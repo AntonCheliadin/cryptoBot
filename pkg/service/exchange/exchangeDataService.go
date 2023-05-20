@@ -35,7 +35,7 @@ type DataService struct {
 	klineRepo       repository.Kline
 }
 
-func (s *DataService) GetCurrentPrice(coin *domains.Coin) (int64, error) {
+func (s *DataService) GetCurrentPrice(coin *domains.Coin) (int64, error) { //todo: refactor getting price to remove dependency on interval
 	if s.Clock.NowTime().Minute()%viper.GetInt("strategy.trendMeter.interval") == 0 {
 		strategyInterval := viper.GetString("strategy.trendMeter.interval")
 		if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), strategyInterval); kline != nil {
@@ -43,7 +43,7 @@ func (s *DataService) GetCurrentPrice(coin *domains.Coin) (int64, error) {
 		}
 	}
 
-	if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), "1"); kline != nil {
+	if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), "60"); kline != nil {
 		return kline.Open, nil
 	}
 
