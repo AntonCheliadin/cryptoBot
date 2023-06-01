@@ -50,12 +50,17 @@ type Kline interface {
 	FindLast(coinId int64, interval string) (*domains.Kline, error)
 }
 
+type SyntheticKline interface {
+	FindAllSyntheticKlinesByCoinIdsAndIntervalAndCloseTimeInRange(coinId1 int64, coinId2 int64, interval string, openTime time.Time, closeTime time.Time) ([]*domains.SyntheticKline, error)
+}
+
 type Repository struct {
 	Coin             Coin
 	Transaction      Transaction
 	PriceChange      PriceChange
 	Kline            Kline
 	ConditionalOrder ConditionalOrder
+	SyntheticKline   SyntheticKline
 }
 
 func NewRepositories(postgresDb *sqlx.DB) *Repository {
@@ -65,5 +70,6 @@ func NewRepositories(postgresDb *sqlx.DB) *Repository {
 		PriceChange:      postgres.NewPriceChange(postgresDb),
 		Kline:            postgres.NewKline(postgresDb),
 		ConditionalOrder: postgres.NewConditionalOrder(postgresDb),
+		SyntheticKline:   postgres.NewSyntheticKline(postgresDb),
 	}
 }
