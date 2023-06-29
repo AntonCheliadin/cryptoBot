@@ -100,15 +100,15 @@ func (s *OrderManagerService) OpenFuturesOrderWithFixedStopLoss(coin *domains.Co
 }
 
 func (s *OrderManagerService) OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin *domains.Coin, futuresType futureType.FuturesType, costInCents int64, stopLossPriceInCents int64, profitPriceInCents int64) {
-	zap.S().Infof("stopLossPriceInCents %s   \t\t[%v]", stopLossPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-	zap.S().Infof("profitPriceInCents %s   \t\t[%v]", profitPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+	zap.S().Infof("stopLossPriceInCents %v  [%v]", stopLossPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+	zap.S().Infof("profitPriceInCents %v  [%v]", profitPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 
 	s.openOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, stopLossPriceInCents, profitPriceInCents, costInCents, constants.FUTURES, false)
 }
 
 func (s *OrderManagerService) OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfitAndFake(coin *domains.Coin, futuresType futureType.FuturesType, costInCents int64, stopLossPriceInCents int64, profitPriceInCents int64, isFake bool) {
-	zap.S().Infof("stopLossPriceInCents %s   \t\t[%v]", stopLossPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-	zap.S().Infof("profitPriceInCents %s   \t\t[%v]", profitPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+	zap.S().Infof("stopLossPriceInCents %s  [%v]", stopLossPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+	zap.S().Infof("profitPriceInCents %s  [%v]", profitPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 
 	s.openOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, stopLossPriceInCents, profitPriceInCents, costInCents, constants.FUTURES, isFake)
 }
@@ -374,26 +374,32 @@ func (s *OrderManagerService) CreateCloseTransactionOnOrderClosedByExchange(coin
 	return closeTransaction
 }
 
-func (s *OrderManagerService) CloseOrderByFixedStopLossOrTakeProfit(coin *domains.Coin, openedOrder *domains.Transaction, klineInterval string) {
+func (s *OrderManagerService) CloseOpenedOrderByStopLossIfNeeded(coin *domains.Coin, klineInterval string) {
+	openedOrder, _ := s.transactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, coin.Id)
+	if openedOrder != nil {
+		s.CloseOrderByFixedStopLossOrTakeProfit(coin, openedOrder, klineInterval)
+	}
+}
+
+func (s *OrderManagerService) CloseOrderByFixedStopLossOrTakeProfit(coin *domains.Coin, openedOrder *domains.Transaction, klineInterval string) bool {
 	if s.ShouldCloseByStopLoss(openedOrder, klineInterval) {
 		if isPositionOpened := s.ExchangeDataService.IsPositionOpened(coin, openedOrder); !isPositionOpened && openedOrder != nil {
 			s.CreateCloseTransactionOnOrderClosedByExchange(coin, openedOrder)
-			return
 		} else {
 			s.CloseOrder(openedOrder, coin, openedOrder.StopLossPrice.Int64, constants.FUTURES)
-			return
 		}
+		return true
 	}
 
 	if s.ShouldCloseByTakeProfit(openedOrder, klineInterval) {
 		if isPositionOpened := s.ExchangeDataService.IsPositionOpened(coin, openedOrder); !isPositionOpened && openedOrder != nil {
 			s.CreateCloseTransactionOnOrderClosedByExchange(coin, openedOrder)
-			return
 		} else {
 			s.CloseOrder(openedOrder, coin, openedOrder.TakeProfitPrice.Int64, constants.FUTURES)
-			return
 		}
+		return true
 	}
+	return false
 }
 
 func (s *OrderManagerService) ShouldCloseByStopLoss(openedTransaction *domains.Transaction, klineInterval string) bool {

@@ -59,20 +59,34 @@ func main() {
 	repos := repository.NewRepositories(postgresDb)
 	parserService := parser.NewBybitArchiveParseService(repos.Kline)
 
-	coin, _ := repos.Coin.FindBySymbol("ETHUSDT") //ETHUSDT
-
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2020-10-21")
-	timeTo, _ := time.Parse(constants.DATE_FORMAT, "2023-04-23")
-
-	if err := parserService.Parse(coin, timeFrom, timeTo, 15); err != nil {
-		zap.S().Errorf("Error during parse %s", err.Error())
-	}
+	downloadCoinHistory(repos, parserService, "MATICUSDT", "2021-06-29", "2023-06-16")
+	//downloadCoinHistory(repos, parserService, "UNIUSDT", "2021-03-18", "2023-06-16")
+	//downloadCoinHistory(repos, parserService, "NEARUSDT", "2021-10-11", "2023-06-16")
+	//downloadCoinHistory(repos, parserService, "IMXUSDT", "2021-11-24", "2023-06-16")
+	//downloadCoinHistory(repos, parserService, "FLOWUSDT", "2021-11-26", "2023-06-16")
+	//downloadCoinHistory(repos, parserService, "FILUSDT", "2021-06-29", "2023-06-16")
+	//downloadCoinHistory(repos, parserService, "DYDXUSDT", "2021-10-11", "2023-06-16")
+	//downloadCoinHistory(repos, parserService, "DASHUSDT", "2021-10-12", "2023-06-16")
+	//downloadCoinHistory(repos, parserService, "ALGOUSDT", "2021-09-23", "2023-06-16")
+	//downloadCoinHistory(repos, parserService, "ZECUSDT", "2021-11-24", "2023-06-16")
+	//downloadCoinHistory(repos, parserService, "SOLUSDT", "2023-01-21", "2023-06-16")
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
 	}
 
 	os.Exit(0)
+}
+
+func downloadCoinHistory(repos *repository.Repository, parserService *parser.BybitArchiveParseService, symbol string, from string, to string) {
+	coin, _ := repos.Coin.FindBySymbol(symbol)
+
+	timeFrom, _ := time.Parse(constants.DATE_FORMAT, from)
+	timeTo, _ := time.Parse(constants.DATE_FORMAT, to)
+
+	if err := parserService.Parse(coin, timeFrom, timeTo, 60); err != nil {
+		zap.S().Errorf("Error during parse %s", err.Error())
+	}
 }
 
 func initConfig() error {

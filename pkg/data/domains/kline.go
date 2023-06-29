@@ -6,6 +6,14 @@ import (
 	"time"
 )
 
+type IKline interface {
+	GetOpenTime() time.Time
+	GetCloseTime() time.Time
+	GetInterval() string
+	GetOpen() int64
+	GetClose() int64
+}
+
 type Kline struct {
 	Id     int64
 	CoinId int64 `db:"coin_id"`
@@ -35,4 +43,20 @@ func (d *Kline) GetIntervalInMinutes() int64 {
 
 func (d *Kline) GetPriceChange() int64 {
 	return d.Close - d.Open
+}
+
+func (d *Kline) GetOpenTime() time.Time {
+	return d.OpenTime
+}
+func (d *Kline) GetCloseTime() time.Time {
+	return d.CloseTime
+}
+func (d *Kline) GetInterval() string {
+	return d.Interval
+}
+func (d *Kline) GetOpen() int64 {
+	return d.Open
+}
+func (d *Kline) GetClose() int64 {
+	return d.Close
 }

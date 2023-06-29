@@ -38,3 +38,20 @@ func (d *SyntheticKline) GetIntervalInMinutes() int64 {
 func (d *SyntheticKline) GetPriceChange() float64 {
 	return d.SyntheticClose - d.SyntheticOpen
 }
+func (d *SyntheticKline) GetOpenTime() time.Time {
+	return d.OpenTime
+}
+func (d *SyntheticKline) GetCloseTime() time.Time {
+	return d.CloseTime
+}
+func (d *SyntheticKline) GetInterval() string {
+	return d.Interval
+}
+
+// GetOpen Price doesn't matter for synthetic klines, just relation of two prices
+func (d *SyntheticKline) GetOpen() int64 {
+	return int64(d.SyntheticOpen * 10000 * 10000)
+}
+func (d *SyntheticKline) GetClose() int64 {
+	return int64(d.SyntheticClose * 10000 * 10000)
+}

@@ -16,9 +16,6 @@ import (
 var klinesFetcherServiceImpl *KlinesFetcherService
 
 func NewKlinesFetcherService(exchangeApi api.ExchangeApi, klineRepo repository.Kline, clock date.Clock) *KlinesFetcherService {
-	if klinesFetcherServiceImpl != nil {
-		panic("Unexpected try to create second service instance")
-	}
 	klinesFetcherServiceImpl = &KlinesFetcherService{
 		klineRepo:   klineRepo,
 		exchangeApi: exchangeApi,

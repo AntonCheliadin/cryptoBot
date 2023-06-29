@@ -36,6 +36,10 @@ func NewTelegramService(transactionRepo repository.Transaction, coinRepo reposit
 	return telegramServiceImpl
 }
 
+type ITelegramService interface {
+	HandleMessage(update *telegram.Update)
+}
+
 type TelegramService struct {
 	transactionRepo repository.Transaction
 	coinRepo        repository.Coin

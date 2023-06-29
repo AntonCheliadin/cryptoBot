@@ -36,6 +36,8 @@ type BybitArchiveParseService struct {
 }
 
 func (s *BybitArchiveParseService) Parse(coin *domains.Coin, timeFrom time.Time, timeTo time.Time, intervalInMinutes int) error {
+	s.makeDir(coin)
+
 	timeIter := timeFrom
 	for timeIter.Before(timeTo) {
 
@@ -110,6 +112,16 @@ func (s *BybitArchiveParseService) download(coin *domains.Coin, day time.Time) e
 
 	zap.S().Infof("Downloaded a file %s with size %d", fileName, size)
 	return nil
+}
+
+func (s *BybitArchiveParseService) makeDir(coin *domains.Coin) {
+	dirPath := "archive/" + coin.Symbol
+	if _, err := os.Stat(dirPath); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(dirPath, os.ModePerm)
+		if err != nil {
+			zap.S().Error(err)
+		}
+	}
 }
 
 func (s *BybitArchiveParseService) unzip(coin *domains.Coin, day time.Time) error {

@@ -63,6 +63,20 @@ strategy:
   smaVolumeScalper:
     futures:
       leverage: 4
+  pairArbitrage:
+    coins:
+      - 'ADAUSDT'
+      - 'BNBUSDT'
+      - 'DYDXUSDT'
+      - 'IMXUSDT'
+      - 'XRPUSDT'
+      - 'LTCUSDT'
+      - 'MATICUSDT'
+      - 'UNIUSDT'
+      - 'FILUSDT'
+      - 'FLOWUSDT'
+      - 'ALGOUSDT'
+      - 'DASHUSDT'
 
 indicator:
   trend:

@@ -1,20 +1,17 @@
 package cron
 
 import (
-	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/service/trading"
 	"github.com/jasonlvhit/gocron"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
 type tradingJob struct {
 	tradingService trading.TradingService
-	coinRepository repository.Coin
 }
 
-func newTradingJob(tradingService trading.TradingService, coinRepository repository.Coin) *tradingJob {
-	return &tradingJob{tradingService: tradingService, coinRepository: coinRepository}
+func newTradingJob(tradingService trading.TradingService) *tradingJob {
+	return &tradingJob{tradingService: tradingService}
 }
 
 func (j *tradingJob) initTradingJob() {
@@ -25,12 +22,6 @@ func (j *tradingJob) initTradingJob() {
 }
 
 func (j *tradingJob) execute() {
-	coin, err := j.coinRepository.FindBySymbol(viper.GetString("trading.defaultCoin"))
-
-	if err != nil {
-		zap.S().Errorf("Error during search coin %s", err.Error())
-		return
-	}
-
-	j.tradingService.BotAction(coin)
+	j.tradingService.BeforeExecute()
+	j.tradingService.Execute()
 }

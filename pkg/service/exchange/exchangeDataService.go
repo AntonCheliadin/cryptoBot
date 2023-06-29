@@ -8,6 +8,7 @@ import (
 	"cryptoBot/pkg/util"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"strconv"
 )
 
 var exchangeDataServiceImpl *DataService
@@ -35,10 +36,17 @@ type DataService struct {
 	klineRepo       repository.Kline
 }
 
-func (s *DataService) GetCurrentPrice(coin *domains.Coin) (int64, error) { //todo: refactor getting price to remove dependency on interval
-	if s.Clock.NowTime().Minute()%viper.GetInt("strategy.trendMeter.interval") == 0 {
-		strategyInterval := viper.GetString("strategy.trendMeter.interval")
-		if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), strategyInterval); kline != nil {
+//Deprecated: use GetCurrentPriceWithInterval instead
+func (s *DataService) GetCurrentPrice(coin *domains.Coin) (int64, error) {
+	interval := viper.GetInt("strategy.trendMeter.interval")
+
+	return s.GetCurrentPriceWithInterval(coin, interval)
+}
+
+func (s *DataService) GetCurrentPriceWithInterval(coin *domains.Coin, interval int) (int64, error) {
+	if s.Clock.NowTime().Minute()%interval == 0 {
+		strategyIntervalString := strconv.Itoa(interval)
+		if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), strategyIntervalString); kline != nil {
 			return kline.Open, nil
 		}
 	}
