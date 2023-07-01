@@ -4,6 +4,7 @@ import (
 	"cryptoBot/pkg/data/domains"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
 	"strconv"
 	"time"
 )
@@ -40,6 +41,22 @@ func (r *SyntheticKline) FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTi
 	}
 
 	return listRelationsToListRelationsPointersForSyntheticKline(klines), nil
+}
+
+func (r *SyntheticKline) RefreshView() error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("REFRESH MATERIALIZED VIEW synthetic_kline;")
+	if err != nil {
+		_ = tx.Rollback()
+		zap.S().Errorf("Error: %s", err.Error())
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func listRelationsToListRelationsPointersForSyntheticKline(domainList []domains.SyntheticKline) []domains.IKline {

@@ -102,6 +102,7 @@ func (s *PairArbitrageStrategyTradingService) BeforeExecute() {
 
 	s.KlinesFetcherService.FetchActualKlines(s.coin1, s.klineInterval)
 	s.KlinesFetcherService.FetchActualKlines(s.coin2, s.klineInterval)
+	s.SyntheticKlineRepo.RefreshView()
 }
 
 func (s *PairArbitrageStrategyTradingService) Execute() {

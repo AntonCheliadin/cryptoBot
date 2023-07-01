@@ -59,6 +59,7 @@ type Kline interface {
 type SyntheticKline interface {
 	FindAllByCoinIdsAndIntervalAndCloseTimeInRange(coinId1 int64, coinId2 int64, interval string, openTime time.Time, closeTime time.Time) ([]domains.IKline, error)
 	FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coinId1 int64, coinId2 int64, interval string, closeTime time.Time, limit int) ([]domains.IKline, error)
+	RefreshView() error
 }
 
 type Repository struct {
