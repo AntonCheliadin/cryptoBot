@@ -67,14 +67,19 @@ strategy:
     coins:
       - 'ADAUSDT'
       - 'BNBUSDT'
+
       - 'DYDXUSDT'
       - 'IMXUSDT'
+
       - 'XRPUSDT'
       - 'LTCUSDT'
+
       - 'MATICUSDT'
       - 'UNIUSDT'
+
       - 'FILUSDT'
       - 'FLOWUSDT'
+
       - 'ALGOUSDT'
       - 'DASHUSDT'
 

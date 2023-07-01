@@ -44,41 +44,41 @@ func main() {
 
 	klineInterval := 60
 
-	var arguments = make([][]string, 0, 10)
+	var arguments = make([][]string, 0, 40)
 
-	arguments = append(arguments, []string{"XRPUSDT", "LTCUSDT", "2021-06-02", "2023-06-09"})
-	//arguments = append(arguments, []string{"XMRUSDT", "LTCUSDT", "2022-02-02", "2023-06-08"})
-	arguments = append(arguments, []string{"BNBUSDT", "ADAUSDT", "2021-07-02", "2023-05-30"})
-	//arguments = append(arguments, []string{"ATOMUSDT", "BNBUSDT", "2021-10-23", "2023-06-09"})
-	//arguments = append(arguments, []string{"AVAXUSDT", "DOTUSDT", "2021-09-18", "2023-06-13"})
+	arguments = append(arguments, []string{"XRPUSDT", "LTCUSDT", "2021-06-10", "2023-06-09"})
+	arguments = append(arguments, []string{"XMRUSDT", "LTCUSDT", "2022-02-10", "2023-06-08"})
+	arguments = append(arguments, []string{"BNBUSDT", "ADAUSDT", "2021-07-12", "2023-05-30"})
+	arguments = append(arguments, []string{"ATOMUSDT", "BNBUSDT", "2021-11-01", "2023-06-09"})
+	arguments = append(arguments, []string{"AVAXUSDT", "DOTUSDT", "2021-09-25", "2023-06-13"})
 
-	//arguments = append(arguments, []string{"SOLUSDT", "UNIUSDT", "2021-07-01", "2023-06-14"})   //650 -201%
-	//arguments = append(arguments, []string{"SOLUSDT", "NEARUSDT", "2021-10-15", "2023-06-14"})  //651 -81%
-	//arguments = append(arguments, []string{"DASHUSDT", "IMXUSDT", "2021-12-01", "2023-06-14"})  //660 total profit 107%
-	//arguments = append(arguments, []string{"ZECUSDT", "NEARUSDT", "2021-12-01", "2023-06-14"})  //661 -39%
-	arguments = append(arguments, []string{"ALGOUSDT", "NEARUSDT", "2021-10-15", "2023-06-14"}) //662 total profit 282%
-	arguments = append(arguments, []string{"DASHUSDT", "ALGOUSDT", "2021-10-13", "2023-06-14"}) //680 225%
-	//arguments = append(arguments, []string{"ZECUSDT", "FILUSDT", "2021-12-01", "2023-06-14"})   //682 5%
-	arguments = append(arguments, []string{"IMXUSDT", "DYDXUSDT", "2021-12-01", "2023-06-14"})  //673 185%
-	arguments = append(arguments, []string{"UNIUSDT", "MATICUSDT", "2021-07-01", "2023-06-14"}) //671 119%
-	arguments = append(arguments, []string{"FLOWUSDT", "FILUSDT", "2021-12-01", "2023-06-14"})  //672  64%
+	arguments = append(arguments, []string{"SOLUSDT", "UNIUSDT", "2021-07-10", "2023-06-14"})
+	arguments = append(arguments, []string{"SOLUSDT", "NEARUSDT", "2021-10-25", "2023-06-14"})
+	arguments = append(arguments, []string{"DASHUSDT", "IMXUSDT", "2021-12-10", "2023-06-14"})
+	arguments = append(arguments, []string{"ZECUSDT", "NEARUSDT", "2021-12-10", "2023-06-14"})
+	arguments = append(arguments, []string{"ALGOUSDT", "NEARUSDT", "2021-10-25", "2023-06-14"})
+	arguments = append(arguments, []string{"DASHUSDT", "ALGOUSDT", "2021-10-25", "2023-06-14"})
+	arguments = append(arguments, []string{"ZECUSDT", "FILUSDT", "2021-12-10", "2023-06-14"})
+	arguments = append(arguments, []string{"IMXUSDT", "DYDXUSDT", "2021-12-10", "2023-06-14"})
+	arguments = append(arguments, []string{"UNIUSDT", "MATICUSDT", "2021-07-10", "2023-06-14"})
+	arguments = append(arguments, []string{"FLOWUSDT", "FILUSDT", "2021-12-10", "2023-06-14"})
 
-	arguments = append(arguments, []string{"BTCUSDT", "ADAUSDT", "2022-02-01", "2023-01-06"})
-	arguments = append(arguments, []string{"BTCUSDT", "ETHUSDT", "2022-02-03", "2023-05-31"})
+	arguments = append(arguments, []string{"BTCUSDT", "ADAUSDT", "2022-02-10", "2023-01-06"})
+	arguments = append(arguments, []string{"BTCUSDT", "ETHUSDT", "2022-02-10", "2023-05-31"})
 
-	arguments = append(arguments, []string{"ZECUSDT", "XMRUSDT", "2022-02-01", "2023-05-31"})
-	arguments = append(arguments, []string{"AVAXUSDT", "SOLUSDT", "2021-10-01", "2023-05-31"})
-	arguments = append(arguments, []string{"NEARUSDT", "DOTUSDT", "2021-10-15", "2023-05-31"})
-	//arguments = append(arguments, []string{"NEARUSDT", "ATOMUSDT", "2021-10-15", "2023-05-31"})
-	arguments = append(arguments, []string{"AVAXUSDT", "ATOMUSDT", "2021-10-15", "2023-05-31"})
-	//arguments = append(arguments, []string{"BNBUSDT", "SOLUSDT", "2021-07-01", "2023-05-31"})
-	arguments = append(arguments, []string{"BTCUSDT", "XMRUSDT", "2022-02-01", "2023-05-31"})
+	arguments = append(arguments, []string{"ZECUSDT", "XMRUSDT", "2022-02-10", "2023-05-31"})
+	arguments = append(arguments, []string{"AVAXUSDT", "SOLUSDT", "2021-10-10", "2023-05-31"})
+	arguments = append(arguments, []string{"NEARUSDT", "DOTUSDT", "2021-10-25", "2023-05-31"})
+	arguments = append(arguments, []string{"NEARUSDT", "ATOMUSDT", "2021-10-25", "2023-05-31"}) //800
+	arguments = append(arguments, []string{"AVAXUSDT", "ATOMUSDT", "2021-10-25", "2023-05-31"})
+	arguments = append(arguments, []string{"BNBUSDT", "SOLUSDT", "2021-07-10", "2023-05-31"})
+	arguments = append(arguments, []string{"BTCUSDT", "XMRUSDT", "2022-02-10", "2023-05-31"})
 
-	arguments = append(arguments, []string{"BNBUSDT", "ATOMUSDT", "2022-01-01", "2023-05-31"})
-	arguments = append(arguments, []string{"SOLUSDT", "DOTUSDT", "2022-01-01", "2023-05-31"})
-	arguments = append(arguments, []string{"AVAXUSDT", "NEARUSDT", "2022-01-01", "2023-05-31"})
-	arguments = append(arguments, []string{"XMRUSDT", "SOLUSDT", "2022-02-01", "2023-05-31"})
-	arguments = append(arguments, []string{"XMRUSDT", "ETHUSDT", "2022-02-01", "2023-05-31"})
+	arguments = append(arguments, []string{"BNBUSDT", "ATOMUSDT", "2022-01-10", "2023-05-31"})
+	arguments = append(arguments, []string{"SOLUSDT", "DOTUSDT", "2022-01-10", "2023-05-31"})
+	arguments = append(arguments, []string{"AVAXUSDT", "NEARUSDT", "2022-01-10", "2023-05-31"}) //806
+	arguments = append(arguments, []string{"XMRUSDT", "SOLUSDT", "2022-02-10", "2023-05-31"})
+	arguments = append(arguments, []string{"XMRUSDT", "ETHUSDT", "2022-02-10", "2023-05-31"})
 
 	for i, argument := range arguments {
 		symbol1 := argument[0]
@@ -110,7 +110,7 @@ func main() {
 		end := time.Now()
 		zap.S().Infof("EXECUTED %s-%s  in %s", symbol1, symbol2, end.Sub(start).Milliseconds())
 
-		tradingStrategy := 750 + i
+		tradingStrategy := 780 + i //770-780 fail
 		postgresDb.Exec("update transaction_table set trading_strategy = $1 where trading_strategy = 6;", tradingStrategy)
 	}
 

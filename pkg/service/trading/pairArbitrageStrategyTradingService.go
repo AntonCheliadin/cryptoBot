@@ -40,14 +40,14 @@ func NewPairArbitrageStrategyTradingService(
 		TechanConvertorService: techanConvertorService,
 		coin1:                  coin1,
 		coin2:                  coin2,
-		startCapitalInCents:    10000,
-		strategyLength:         20, //try 144
+		startCapitalInCents:    20000,
+		strategyLength:         20,
 		klineInterval:          60,
 		klineIntervalS:         "60",
 		leverage:               1,
 		stopLossPercent:        0, //disabled
 		closeOnProfit:          1,
-		maxOrderLoss:           -5,
+		maxOrderLoss:           -3,
 		tradingStrategy:        constants.PAIR_ARBITRAGE,
 	}
 	return pairArbitrageStrategyTradingService
@@ -215,8 +215,9 @@ func (s *PairArbitrageStrategyTradingService) hasOpenedOrders() bool {
 
 func (s *PairArbitrageStrategyTradingService) openOrder(coin *domains.Coin, futuresType futureType.FuturesType) {
 	stopLossPrice := s.calculateOrderStopLoss(coin, futuresType)
+	orderCost := s.calculateCostForOrder()
 
-	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, int64(s.startCapitalInCents), stopLossPrice, 0)
+	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, orderCost, stopLossPrice, 0)
 }
 
 func (s *PairArbitrageStrategyTradingService) calculateOrderStopLoss(coin *domains.Coin, futuresType futureType.FuturesType) int64 {
@@ -226,4 +227,11 @@ func (s *PairArbitrageStrategyTradingService) calculateOrderStopLoss(coin *domai
 	}
 
 	return int64(0)
+}
+
+func (s *PairArbitrageStrategyTradingService) calculateCostForOrder() int64 {
+	sumOfProfitByCoin1, _ := s.TransactionRepo.CalculateSumOfProfitByCoin(s.coin1.Id, s.tradingStrategy)
+	sumOfProfitByCoin2, _ := s.TransactionRepo.CalculateSumOfProfitByCoin(s.coin2.Id, s.tradingStrategy)
+
+	return (int64(s.startCapitalInCents) + sumOfProfitByCoin1 + sumOfProfitByCoin2) / 2 * int64(s.leverage)
 }

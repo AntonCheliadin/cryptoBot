@@ -39,7 +39,7 @@ func main() {
 
 	postgresDb := bootstrap.Database(closableClosure)
 	repos := repository.NewRepositories(postgresDb)
-	exchangeApi := bybit.NewBybitApi(os.Getenv("BYBIT_CryptoBotFutures_API_KEY"), os.Getenv("BYBIT_CryptoBotFutures_API_SECRET"))
+	exchangeApi := bybit.NewBybitApi(os.Getenv("BYBIT_PairTrading1_API_KEY"), os.Getenv("BYBIT_PairTrading1_API_SECRET"))
 	clock := date.GetClock()
 
 	seriesConvertorService := techanLib.NewTechanConvertorService(clock, repos.Kline)

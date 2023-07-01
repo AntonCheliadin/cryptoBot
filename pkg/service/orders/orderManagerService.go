@@ -100,8 +100,8 @@ func (s *OrderManagerService) OpenFuturesOrderWithFixedStopLoss(coin *domains.Co
 }
 
 func (s *OrderManagerService) OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin *domains.Coin, futuresType futureType.FuturesType, costInCents int64, stopLossPriceInCents int64, profitPriceInCents int64) {
-	zap.S().Infof("stopLossPriceInCents %v  [%v]", stopLossPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-	zap.S().Infof("profitPriceInCents %v  [%v]", profitPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+	//zap.S().Infof("stopLossPriceInCents %v  [%v]", stopLossPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+	//zap.S().Infof("profitPriceInCents %v  [%v]", profitPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 
 	s.openOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, stopLossPriceInCents, profitPriceInCents, costInCents, constants.FUTURES, false)
 }
