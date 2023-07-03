@@ -70,6 +70,7 @@ func main() {
 			coin1,
 			coin2,
 		)
+		tradingService.Initialize()
 		cron.InitCronJobs(tradingService)
 	}
 
