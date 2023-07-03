@@ -27,23 +27,28 @@ func main() {
 
 	log.InitLoggerAnalyser()
 
-	exchangeApi := bybit.NewBybitApi(os.Getenv("BYBIT_CryptoBotFutures_API_KEY"), os.Getenv("BYBIT_CryptoBotFutures_API_SECRET")).(*bybit.BybitApi)
+	exchangeApi := bybit.NewBybitApi(os.Getenv("BYBIT_PairTrading1_API_KEY"), os.Getenv("BYBIT_PairTrading1_API_SECRET")).(*bybit.BybitApi)
 
 	coin := &domains.Coin{
-		Symbol: "ETHUSDT",
+		Symbol: "ADAUSDT",
 	}
 
 	testGetCurrentPrice(exchangeApi, coin)
 
 	//testGetKlines(exchangeApi, coin)
 
-	//err := exchangeApi.SetFuturesLeverage(coin, 5)
+	//err := exchangeApi.SetFuturesLeverage(coin, 1)
+	//if err != nil {
+	//	zap.S().Errorf("API error: %s", err.Error())
+	//}
+
+	//err := exchangeApi.SetIsolatedMargin(coin, 1)
 	//if err != nil {
 	//	zap.S().Errorf("API error: %s", err.Error())
 	//}
 
 	//testOpenFutures(exchangeApi, coin)
-	//testGetActiveFuturesOrder(exchangeApi, coin, "95057c7b-caa2-45c4-8854-127c08bc67bd")
+	//testGetActiveFuturesOrder(exchangeApi, coin, "722d4949-395d-45c9-b128-d7afc823870e")
 	//testBreakEvenOrder(exchangeApi, coin)
 	//testReplaceOrder(exchangeApi, coin)
 	//testCloseFutures(exchangeApi, coin)
@@ -95,7 +100,7 @@ func testGetKlines(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 }
 
 func testOpenFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) api.OrderResponseDto {
-	order, err := exchangeApi.OpenFuturesOrder(coin, 2, 3200, futureType.LONG, 2944)
+	order, err := exchangeApi.OpenFuturesOrder(coin, 40, 29, futureType.LONG, 26)
 	if err != nil {
 		zap.S().Errorf("API error: %s", err.Error())
 		return nil
@@ -106,9 +111,9 @@ func testOpenFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) api.OrderR
 
 func testCloseFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 	transaction := domains.Transaction{}
-	transaction.Amount = 1
-	transaction.FuturesType = futureType.SHORT
-	transaction.Price = 3854
+	transaction.Amount = 40
+	transaction.FuturesType = futureType.LONG
+	transaction.Price = 31
 
 	exchangeApi.CloseFuturesOrder(coin, &transaction, 3836)
 }

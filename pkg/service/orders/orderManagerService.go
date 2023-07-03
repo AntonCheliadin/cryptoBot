@@ -70,6 +70,14 @@ func (s *OrderManagerService) SetFuturesLeverage(coin *domains.Coin, leverage in
 	return nil
 }
 
+func (s *OrderManagerService) SetIsolatedMargin(coin *domains.Coin, leverage int) error {
+	err := s.exchangeApi.SetIsolatedMargin(coin, leverage)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *OrderManagerService) OpenFuturesOrderWithPercentStopLoss(coin *domains.Coin, futuresType futureType.FuturesType, stopLossInPercent float64) {
 	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
 	if err != nil {

@@ -40,6 +40,10 @@ func (api *BinanceApiMock) SetFuturesLeverage(coin *domains.Coin, leverage int) 
 	return nil
 }
 
+func (api *BinanceApiMock) SetIsolatedMargin(coin *domains.Coin, leverage int) error {
+	return nil
+}
+
 func (api *BinanceApiMock) IsFuturesPositionOpened(coin *domains.Coin, openedOrder *domains.Transaction) bool {
 	return true
 }

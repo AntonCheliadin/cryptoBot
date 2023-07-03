@@ -92,6 +92,10 @@ func (api *BybitApiMock) SetFuturesLeverage(coin *domains.Coin, leverage int) er
 	return nil
 }
 
+func (api *BybitApiMock) SetIsolatedMargin(coin *domains.Coin, leverage int) error {
+	return nil
+}
+
 func (api *BybitApiMock) IsFuturesPositionOpened(coin *domains.Coin, openedOrder *domains.Transaction) bool {
 	return true
 }

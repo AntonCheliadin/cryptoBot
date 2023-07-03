@@ -82,12 +82,12 @@ func (s *PairArbitrageStrategyTradingService) InitializeTrading(coin *domains.Co
 }
 
 func (s *PairArbitrageStrategyTradingService) Initialize() error {
-	err := s.OrderManagerService.SetFuturesLeverage(s.coin1, s.leverage)
+	err := s.OrderManagerService.SetIsolatedMargin(s.coin1, s.leverage)
 	if err != nil {
 		return err
 	}
 
-	err = s.OrderManagerService.SetFuturesLeverage(s.coin2, s.leverage)
+	err = s.OrderManagerService.SetIsolatedMargin(s.coin2, s.leverage)
 	if err != nil {
 		return err
 	}

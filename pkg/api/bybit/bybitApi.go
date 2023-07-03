@@ -250,6 +250,21 @@ func (api *BybitApi) SetFuturesLeverage(coin *domains.Coin, leverage int) error 
 	return err
 }
 
+func (api *BybitApi) SetIsolatedMargin(coin *domains.Coin, leverage int) error {
+	_, err := api.postSignedApiRequest("/contract/v3/private/position/switch-isolated",
+		map[string]interface{}{
+			"api_key":       api.apiKey,
+			"tradeMode":     1, //0: cross margin. 1: isolated margin
+			"buy_leverage":  strconv.Itoa(leverage),
+			"sell_leverage": strconv.Itoa(leverage),
+			"symbol":        coin.Symbol,
+			"timestamp":     util.MakeTimestamp(),
+		},
+	)
+
+	return err
+}
+
 func (api *BybitApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
 	queryParams := api.buildOpenFuturesParams(coin, amount, price, futuresType, stopLossPriceInCents)
 	return api.futuresOrderByMarketWithResponseDetails(queryParams)

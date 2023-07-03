@@ -141,6 +141,10 @@ func (api *BinanceApi) SetFuturesLeverage(coin *domains.Coin, leverage int) erro
 	return nil
 }
 
+func (api *BinanceApi) SetIsolatedMargin(coin *domains.Coin, leverage int) error {
+	return nil
+}
+
 func (api *BinanceApi) IsFuturesPositionOpened(coin *domains.Coin, openedOrder *domains.Transaction) bool {
 	return true
 }
