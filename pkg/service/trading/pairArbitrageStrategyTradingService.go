@@ -178,8 +178,8 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 		return
 	}
 
-	currentPrice1, _ := s.ExchangeDataService.GetCurrentPrice(s.coin1)
-	currentPrice2, _ := s.ExchangeDataService.GetCurrentPrice(s.coin2)
+	currentPrice1, _ := s.ExchangeDataService.GetCurrentPriceWithInterval(s.coin1, s.klineInterval)
+	currentPrice2, _ := s.ExchangeDataService.GetCurrentPriceWithInterval(s.coin2, s.klineInterval)
 
 	profitInPercent1 := util.CalculateProfitInPercent(openedOrder1.Price, currentPrice1, openedOrder1.FuturesType)
 	profitInPercent2 := util.CalculateProfitInPercent(openedOrder2.Price, currentPrice2, openedOrder2.FuturesType)
@@ -218,6 +218,8 @@ func (s *PairArbitrageStrategyTradingService) openOrder(coin *domains.Coin, futu
 	stopLossPrice := s.calculateOrderStopLoss(coin, futuresType)
 	orderCost := s.calculateCostForOrder()
 
+	zap.S().Debugf("Open order for %v with cost %v", coin.Symbol, orderCost)
+
 	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, orderCost, stopLossPrice, 0)
 }
 
@@ -234,5 +236,5 @@ func (s *PairArbitrageStrategyTradingService) calculateCostForOrder() int64 {
 	sumOfProfitByCoin1, _ := s.TransactionRepo.CalculateSumOfProfitByCoin(s.coin1.Id, s.tradingStrategy)
 	sumOfProfitByCoin2, _ := s.TransactionRepo.CalculateSumOfProfitByCoin(s.coin2.Id, s.tradingStrategy)
 
-	return (int64(s.startCapitalInCents) + sumOfProfitByCoin1 + sumOfProfitByCoin2) / 2 * int64(s.leverage)
+	return ((int64(s.startCapitalInCents) + sumOfProfitByCoin1 + sumOfProfitByCoin2) / 2) * int64(s.leverage)
 }

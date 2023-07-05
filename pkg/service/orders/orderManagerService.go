@@ -108,16 +108,10 @@ func (s *OrderManagerService) OpenFuturesOrderWithFixedStopLoss(coin *domains.Co
 }
 
 func (s *OrderManagerService) OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin *domains.Coin, futuresType futureType.FuturesType, costInCents int64, stopLossPriceInCents int64, profitPriceInCents int64) {
-	//zap.S().Infof("stopLossPriceInCents %v  [%v]", stopLossPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-	//zap.S().Infof("profitPriceInCents %v  [%v]", profitPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-
 	s.openOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, stopLossPriceInCents, profitPriceInCents, costInCents, constants.FUTURES, false)
 }
 
 func (s *OrderManagerService) OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfitAndFake(coin *domains.Coin, futuresType futureType.FuturesType, costInCents int64, stopLossPriceInCents int64, profitPriceInCents int64, isFake bool) {
-	zap.S().Infof("stopLossPriceInCents %s  [%v]", stopLossPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-	zap.S().Infof("profitPriceInCents %s  [%v]", profitPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-
 	s.openOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, stopLossPriceInCents, profitPriceInCents, costInCents, constants.FUTURES, isFake)
 }
 
@@ -131,6 +125,13 @@ func (s *OrderManagerService) OpenOrderWithCost(coin *domains.Coin, futuresType 
 
 func (s *OrderManagerService) openOrderWithCostAndFixedStopLossAndTakeProfit(coin *domains.Coin, futuresType futureType.FuturesType,
 	stopLossPriceInCents int64, takeProfitPriceInCents int64, costInCents int64, tradingType constants.TradingType, isFake bool) {
+	if stopLossPriceInCents > 0 {
+		zap.S().Debugf("stopLossPriceInCents %v  [%v]", stopLossPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+	}
+	if takeProfitPriceInCents > 0 {
+		zap.S().Debugf("profitPriceInCents %v  [%v]", takeProfitPriceInCents, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+	}
+
 	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
 	if err != nil {
 		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
