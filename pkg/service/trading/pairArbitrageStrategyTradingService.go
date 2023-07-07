@@ -40,7 +40,7 @@ func NewPairArbitrageStrategyTradingService(
 		TechanConvertorService: techanConvertorService,
 		coin1:                  coin1,
 		coin2:                  coin2,
-		startCapitalInCents:    20000,
+		startCapitalInCents:    10000,
 		strategyLength:         20,
 		klineInterval:          60,
 		klineIntervalS:         "60",

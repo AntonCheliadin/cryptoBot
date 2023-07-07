@@ -59,7 +59,7 @@ func (api *BinanceApi) SellCoinByMarket(coin *domains.Coin, amount float64, pric
 }
 
 func (api *BinanceApi) orderCoinByMarket(queryParams string) (api.OrderResponseDto, error) {
-	zap.S().Infof("OrderCoinByMarket = %s", queryParams)
+	zap.S().Debugf("OrderCoinByMarket = %s", queryParams)
 
 	uri := "https://api.binance.com/api/v3/order?" // /test
 	signatureParameter := "&signature=" + api.sign(queryParams)
@@ -90,7 +90,7 @@ func (api *BinanceApi) orderCoinByMarket(queryParams string) (api.OrderResponseD
 		zap.S().Errorf("API error: %s", err)
 		return nil, err
 	}
-	zap.S().Infof("API response: %s", string(body))
+	zap.S().Debugf("API response: %s", string(body))
 
 	dto := binance.OrderResponseBinanceDto{}
 	errUnmarshal := json.Unmarshal(body, &dto)

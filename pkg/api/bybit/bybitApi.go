@@ -308,6 +308,7 @@ func (api *BybitApi) buildCloseFuturesParams(coin *domains.Coin, openedTransacti
 func (api *BybitApi) buildFuturesParams(coin *domains.Coin, amount float64, side string, positionIdx int) map[string]interface{} {
 	return map[string]interface{}{
 		"api_key":          api.apiKey,
+		"recv_window":      60000,
 		"qty":              amount,
 		"side":             side,
 		"symbol":           coin.Symbol,
@@ -327,7 +328,7 @@ func (api *BybitApi) futuresOrderByMarket(queryParams map[string]interface{}) (*
 		return nil, err
 	}
 
-	zap.S().Infof("API response: %s", string(body))
+	zap.S().Debugf("API response: %s", string(body))
 
 	dto := order.FuturesOrderResponseDto{}
 	errUnmarshal := json.Unmarshal(body, &dto)
