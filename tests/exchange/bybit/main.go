@@ -30,10 +30,11 @@ func main() {
 	exchangeApi := bybit.NewBybitApi(os.Getenv("BYBIT_PairTrading1_API_KEY"), os.Getenv("BYBIT_PairTrading1_API_SECRET")).(*bybit.BybitApi)
 
 	coin := &domains.Coin{
-		Symbol: "ADAUSDT",
+		Symbol: "DASHUSDT",
 	}
 
 	testGetCurrentPrice(exchangeApi, coin)
+	testGetCurrentPriceForFutures(exchangeApi, coin)
 
 	//testGetKlines(exchangeApi, coin)
 
@@ -88,6 +89,14 @@ func testGetCurrentPrice(exchangeApi api.ExchangeApi, coin *domains.Coin) {
 		zap.S().Errorf("Error on GetCurrentCoinPrice: %s", err)
 	}
 	fmt.Printf("coinPrice=%v\n", coinPrice)
+}
+
+func testGetCurrentPriceForFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) {
+	coinPrice, err := exchangeApi.GetCurrentCoinPriceForFutures(coin)
+	if err != nil {
+		zap.S().Errorf("Error on GetCurrentPriceForFutures: %s", err)
+	}
+	fmt.Printf("coinPrice futures=%v\n", coinPrice)
 }
 
 func testGetKlines(exchangeApi api.ExchangeApi, coin *domains.Coin) {

@@ -180,8 +180,8 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 		return
 	}
 
-	currentPrice1, _ := s.ExchangeDataService.GetCurrentPriceWithInterval(s.coin1, s.klineInterval)
-	currentPrice2, _ := s.ExchangeDataService.GetCurrentPriceWithInterval(s.coin2, s.klineInterval)
+	currentPrice1, _ := s.ExchangeDataService.GetCurrentPriceForFutures(s.coin1, s.klineInterval)
+	currentPrice2, _ := s.ExchangeDataService.GetCurrentPriceForFutures(s.coin2, s.klineInterval)
 
 	profitInPercent1 := util.CalculateProfitInPercent(openedOrder1.Price, currentPrice1, openedOrder1.FuturesType)
 	profitInPercent2 := util.CalculateProfitInPercent(openedOrder2.Price, currentPrice2, openedOrder2.FuturesType)
@@ -230,7 +230,7 @@ func (s *PairArbitrageStrategyTradingService) openOrder(coin *domains.Coin, futu
 
 func (s *PairArbitrageStrategyTradingService) calculateOrderStopLoss(coin *domains.Coin, futuresType futureType.FuturesType) int64 {
 	if s.stopLossPercent > 0 {
-		currentPrice, _ := s.ExchangeDataService.GetCurrentPriceWithInterval(coin, s.klineInterval)
+		currentPrice, _ := s.ExchangeDataService.GetCurrentPriceForFutures(coin, s.klineInterval)
 		return util.CalculatePriceForStopLoss(currentPrice, s.stopLossPercent, futuresType)
 	}
 

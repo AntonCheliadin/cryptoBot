@@ -54,6 +54,10 @@ func (api *BybitApiMock) CloseFuturesOrder(coin *domains.Coin, openedTransaction
 	}, nil
 }
 
+func (api *BybitApiMock) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error) {
+	return 0, errors.New("Shouldn't be called.")
+}
+
 func (api *BybitApiMock) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
 	return 0, errors.New("Shouldn't be called.")
 }

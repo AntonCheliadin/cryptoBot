@@ -57,6 +57,21 @@ func (bybitApi *BybitApi) GetKlines(coin *domains.Coin, interval string, limit i
 	return &dto, nil
 }
 
+func (api *BybitApi) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error) {
+	resp, err := http.Get("https://api.bytick.com/derivatives/v3/public/tickers?symbol=" + coin.Symbol)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	var priceDto bybit.TickerInfoDto
+	if err := json.NewDecoder(resp.Body).Decode(&priceDto); err != nil {
+		return 0, err
+	}
+
+	return priceDto.PriceInCents()
+}
+
 func (api *BybitApi) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
 	resp, err := http.Get("https://api.bytick.com/spot/quote/v1/ticker/price?symbol=" + coin.Symbol)
 	if err != nil {

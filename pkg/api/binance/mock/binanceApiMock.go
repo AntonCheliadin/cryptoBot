@@ -28,6 +28,10 @@ func (api *BinanceApiMock) CloseFuturesOrder(coin *domains.Coin, openedTransacti
 	return nil, errors.New("Futures api is not implemented")
 }
 
+func (api *BinanceApiMock) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error) {
+	return 0, errors.New("Shouldn't be called.")
+}
+
 func (api *BinanceApiMock) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
 	return 0, errors.New("Shouldn't be called.")
 }

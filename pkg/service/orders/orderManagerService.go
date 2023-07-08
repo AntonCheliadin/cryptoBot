@@ -158,7 +158,7 @@ func (s *OrderManagerService) openOrderWithCostAndFixedStopLossAndTakeProfit(coi
 	}
 
 	zap.S().Infof("at %v Order opened  with price %v and type [%v] (0-L, 1-S)", s.Clock.NowTime(), currentPrice, futuresType)
-	telegramApi.SendTextToTelegramChat(transaction.String())
+	telegramApi.SendTextToTelegramChat(coin.Symbol + " " + transaction.String())
 }
 
 func (s *OrderManagerService) CloseCombinedOrder(openTransaction []*domains.Transaction, coin *domains.Coin, price int64, tradingType constants.TradingType) {
@@ -194,7 +194,7 @@ func (s *OrderManagerService) CloseOrder(openTransaction *domains.Transaction, c
 
 	openTransaction.RelatedTransactionId = sql.NullInt64{Int64: closeTransaction.Id, Valid: true}
 	_ = s.transactionRepo.SaveTransaction(openTransaction)
-	telegramApi.SendTextToTelegramChat(closeTransaction.String())
+	telegramApi.SendTextToTelegramChat(coin.Symbol + " " + closeTransaction.String())
 }
 
 func (s *OrderManagerService) createOpenTransactionByOrderResponseDto(coin *domains.Coin, futuresType futureType.FuturesType,

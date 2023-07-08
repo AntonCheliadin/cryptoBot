@@ -33,6 +33,10 @@ func (api *BinanceApi) GetKlines(coin *domains.Coin, interval string, limit int,
 	return nil, errors.New("Not implemented for Binance API")
 }
 
+func (api *BinanceApi) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error) {
+	return 0, errors.New("Not implemennted.")
+}
+
 func (api *BinanceApi) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
 	resp, err := http.Get("https://api.binance.com/api/v3/ticker/price?symbol=" + coin.Symbol)
 	if err != nil {

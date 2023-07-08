@@ -7,6 +7,7 @@ import (
 )
 
 type ExchangeApi interface {
+	GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error)
 	GetCurrentCoinPrice(coin *domains.Coin) (int64, error)
 	GetKlines(coin *domains.Coin, interval string, limit int, fromTime time.Time) (KlinesDto, error)
 
