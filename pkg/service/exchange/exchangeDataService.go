@@ -51,10 +51,6 @@ func (s *DataService) GetCurrentPriceWithInterval(coin *domains.Coin, interval i
 		}
 	}
 
-	if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), "60"); kline != nil {
-		return kline.Open, nil
-	}
-
 	currentCoinPrice, err := s.exchangeApi.GetCurrentCoinPrice(coin)
 	if err != nil {
 		zap.S().Errorf("Error during GetCurrentCoinPrice at %s (rounded to %s) - %s", s.Clock.NowTime(), util.RoundToMinutes(s.Clock.NowTime()), err.Error())

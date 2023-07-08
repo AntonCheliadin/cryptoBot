@@ -125,17 +125,18 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 	if s.hasOpenedOrders() {
 		s.CloseOpenedOrderByStopLossIfNeeded()
 		if zScore.GT(big.NewDecimal(-0.1)) && zScore.LT(big.NewDecimal(0.1)) {
+			zap.S().Infof("Close by zScore(%v) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 			s.closeOrders()
 		}
 		return
 	}
 
 	if zScore.GT(big.NewDecimal(2)) {
-		zap.S().Infof("Upper Level crossed at %v", s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+		zap.S().Infof("Upper Level zScore(%v) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		s.openOrder(s.coin1, futureType.SHORT)
 		s.openOrder(s.coin2, futureType.LONG)
 	} else if zScore.LT(big.NewDecimal(-2)) {
-		zap.S().Infof("Lower Level crossed at %v", s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+		zap.S().Infof("Lower Level zScore(%v) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		s.openOrder(s.coin1, futureType.LONG)
 		s.openOrder(s.coin2, futureType.SHORT)
 	}
@@ -174,6 +175,7 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 
 	//if one of order has been closed by exchange
 	if openedOrder1 == nil && openedOrder2 != nil || openedOrder2 == nil && openedOrder1 != nil {
+		zap.S().Infof("Order closed by exchange")
 		s.closeOrders()
 		return
 	}
@@ -184,11 +186,14 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 	profitInPercent1 := util.CalculateProfitInPercent(openedOrder1.Price, currentPrice1, openedOrder1.FuturesType)
 	profitInPercent2 := util.CalculateProfitInPercent(openedOrder2.Price, currentPrice2, openedOrder2.FuturesType)
 
-	if profitInPercent1+profitInPercent2 < s.maxOrderLoss {
+	sumProfit := profitInPercent1 + profitInPercent2
+	if sumProfit < s.maxOrderLoss {
+		zap.S().Infof("Close orders by stopLoss[%v] at %v", sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		s.closeOrders()
 		return
 	}
-	if profitInPercent1+profitInPercent2 > s.closeOnProfit {
+	if sumProfit > s.closeOnProfit {
+		zap.S().Infof("Close orders with profit[%v] at %v", sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		s.closeOrders()
 		return
 	}
