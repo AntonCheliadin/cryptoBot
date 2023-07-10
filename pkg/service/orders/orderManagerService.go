@@ -158,7 +158,7 @@ func (s *OrderManagerService) openOrderWithCostAndFixedStopLossAndTakeProfit(coi
 	}
 
 	zap.S().Infof("at %v Order opened  with price %v and type [%v] (0-L, 1-S)", s.Clock.NowTime(), currentPrice, futuresType)
-	telegramApi.SendTextToTelegramChat(coin.Symbol + " " + transaction.String())
+	//telegramApi.SendTextToTelegramChat(coin.Symbol + " " + transaction.String())
 }
 
 func (s *OrderManagerService) CloseCombinedOrder(openTransaction []*domains.Transaction, coin *domains.Coin, price int64, tradingType constants.TradingType) {
@@ -167,12 +167,12 @@ func (s *OrderManagerService) CloseCombinedOrder(openTransaction []*domains.Tran
 	}
 }
 
-func (s *OrderManagerService) CloseFuturesOrderWithCurrentPrice(coin *domains.Coin, openTransaction *domains.Transaction) {
+func (s *OrderManagerService) CloseFuturesOrderWithCurrentPrice(coin *domains.Coin, openTransaction *domains.Transaction) *domains.Transaction {
 	currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
-	s.CloseOrder(openTransaction, coin, currentPrice, constants.FUTURES)
+	return s.CloseOrder(openTransaction, coin, currentPrice, constants.FUTURES)
 }
 
-func (s *OrderManagerService) CloseOrder(openTransaction *domains.Transaction, coin *domains.Coin, price int64, tradingType constants.TradingType) {
+func (s *OrderManagerService) CloseOrder(openTransaction *domains.Transaction, coin *domains.Coin, price int64, tradingType constants.TradingType) *domains.Transaction {
 	var orderResponseDto api.OrderResponseDto
 	var err error
 	if tradingType == constants.SPOT {
@@ -183,18 +183,20 @@ func (s *OrderManagerService) CloseOrder(openTransaction *domains.Transaction, c
 	if err != nil {
 		zap.S().Errorf("Error during CloseFuturesOrder: %s", err.Error())
 		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Error during CloseFuturesOrder: %s", err.Error()))
-		return
+		return nil
 	}
 
 	closeTransaction := s.createCloseTransactionByOrderResponseDto(coin, openTransaction, orderResponseDto)
 	if errT := s.transactionRepo.SaveTransaction(closeTransaction); errT != nil {
 		zap.S().Errorf("Error during SaveTransaction: %s", errT.Error())
-		return
+		return nil
 	}
 
 	openTransaction.RelatedTransactionId = sql.NullInt64{Int64: closeTransaction.Id, Valid: true}
 	_ = s.transactionRepo.SaveTransaction(openTransaction)
 	telegramApi.SendTextToTelegramChat(coin.Symbol + " " + closeTransaction.String())
+
+	return closeTransaction
 }
 
 func (s *OrderManagerService) createOpenTransactionByOrderResponseDto(coin *domains.Coin, futuresType futureType.FuturesType,

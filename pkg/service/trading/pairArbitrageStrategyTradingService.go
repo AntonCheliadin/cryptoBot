@@ -1,6 +1,7 @@
 package trading
 
 import (
+	telegramApi "cryptoBot/pkg/api/telegram"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/data/domains"
@@ -10,6 +11,7 @@ import (
 	"cryptoBot/pkg/service/indicator/techanLib"
 	"cryptoBot/pkg/service/orders"
 	"cryptoBot/pkg/util"
+	"fmt"
 	"github.com/sdcoffey/big"
 	"github.com/sdcoffey/techan"
 	"go.uber.org/zap"
@@ -127,6 +129,7 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 		if zScore.GT(big.NewDecimal(-0.1)) && zScore.LT(big.NewDecimal(0.1)) {
 			zap.S().Infof("Close by zScore(%v) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 			s.closeOrders()
+			telegramApi.SendTextToTelegramChat("Closed by zScore " + s.coin1.Symbol + "-" + s.coin2.Symbol)
 		}
 		return
 	}
@@ -135,10 +138,12 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 		zap.S().Infof("Upper Level zScore(%v) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		s.openOrder(s.coin1, futureType.SHORT)
 		s.openOrder(s.coin2, futureType.LONG)
+		telegramApi.SendTextToTelegramChat("Opened " + s.coin1.Symbol + "⬇️" + s.coin2.Symbol + "⬆ ️")
 	} else if zScore.LT(big.NewDecimal(-2)) {
 		zap.S().Infof("Lower Level zScore(%v) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		s.openOrder(s.coin1, futureType.LONG)
 		s.openOrder(s.coin2, futureType.SHORT)
+		telegramApi.SendTextToTelegramChat("Opened " + s.coin1.Symbol + "⬆ ️" + s.coin2.Symbol + "⬇️")
 	}
 }
 
@@ -176,7 +181,8 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 	//if one of order has been closed by exchange
 	if openedOrder1 == nil && openedOrder2 != nil || openedOrder2 == nil && openedOrder1 != nil {
 		zap.S().Infof("Order closed by exchange")
-		s.closeOrders()
+		closedOrder1, closedOrder2 := s.closeOrders()
+		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by exchange %v - %v profit: %+d (%.2f%%)", s.coin1.Symbol, s.coin2.Symbol, closedOrder1.Profit.Int64+closedOrder2.Profit.Int64, closedOrder1.PercentProfit.Float64+closedOrder2.PercentProfit.Float64))
 		return
 	}
 
@@ -189,27 +195,32 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 	sumProfit := profitInPercent1 + profitInPercent2
 	if sumProfit < s.maxOrderLoss {
 		zap.S().Infof("Close orders by stopLoss[%v] at %v", sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-		s.closeOrders()
+		closedOrder1, closedOrder2 := s.closeOrders()
+		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by stopLoss %v - %v profit: %+d (%.2f%%)", s.coin1.Symbol, s.coin2.Symbol, closedOrder1.Profit.Int64+closedOrder2.Profit.Int64, closedOrder1.PercentProfit.Float64+closedOrder2.PercentProfit.Float64))
 		return
 	}
 	if sumProfit > s.closeOnProfit {
 		zap.S().Infof("Close orders with profit[%v] at %v", sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-		s.closeOrders()
+		closedOrder1, closedOrder2 := s.closeOrders()
+		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed with profit %v - %v profit: %+d (%.2f%%)", s.coin1.Symbol, s.coin2.Symbol, closedOrder1.Profit.Int64+closedOrder2.Profit.Int64, closedOrder1.PercentProfit.Float64+closedOrder2.PercentProfit.Float64))
 		return
 	}
 }
 
-func (s *PairArbitrageStrategyTradingService) closeOrders() {
+func (s *PairArbitrageStrategyTradingService) closeOrders() (*domains.Transaction, *domains.Transaction) {
 	zap.S().Infof("Close orders")
 	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin1.Id)
+	var closedOrder1 *domains.Transaction
 	if openedOrder1 != nil {
-		s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(s.coin1, openedOrder1)
+		closedOrder1 = s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(s.coin1, openedOrder1)
 	}
 
 	openedOrder2, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin2.Id)
+	var closedOrder2 *domains.Transaction
 	if openedOrder2 != nil {
-		s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(s.coin2, openedOrder2)
+		closedOrder2 = s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(s.coin2, openedOrder2)
 	}
+	return closedOrder1, closedOrder2
 }
 
 func (s *PairArbitrageStrategyTradingService) hasOpenedOrders() bool {
