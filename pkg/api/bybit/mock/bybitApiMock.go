@@ -41,6 +41,10 @@ func (api *BybitApiMock) GetKlines(coin *domains.Coin, interval string, limit in
 	return &dto, nil
 }
 
+func (api *BybitApiMock) GetKlinesFutures(coin *domains.Coin, interval string, limit int, fromTime time.Time) (api.KlinesDto, error) {
+	return nil, errors.New("Not implemented for Bybit API mock")
+}
+
 func (api *BybitApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
 	return &orderResponseMockDto{
 		price:  price,

@@ -21,6 +21,10 @@ func (api *BinanceApiMock) GetKlines(coin *domains.Coin, interval string, limit 
 	return nil, errors.New("Not implemented for Binance API")
 }
 
+func (api *BinanceApiMock) GetKlinesFutures(coin *domains.Coin, interval string, limit int, fromTime time.Time) (api.KlinesDto, error) {
+	return nil, errors.New("Not implemented for Binance API")
+}
+
 func (api *BinanceApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }

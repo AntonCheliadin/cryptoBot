@@ -3,7 +3,6 @@ package main
 import (
 	"cryptoBot/pkg/api"
 	"cryptoBot/pkg/api/bybit"
-	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/log"
@@ -34,9 +33,10 @@ func main() {
 	}
 
 	testGetCurrentPrice(exchangeApi, coin)
-	testGetCurrentPriceForFutures(exchangeApi, coin)
+	//testGetCurrentPriceForFutures(exchangeApi, coin)
 
 	//testGetKlines(exchangeApi, coin)
+	//testGetKlinesFutures(exchangeApi, coin)
 
 	//err := exchangeApi.SetFuturesLeverage(coin, 1)
 	//if err != nil {
@@ -100,12 +100,25 @@ func testGetCurrentPriceForFutures(exchangeApi api.ExchangeApi, coin *domains.Co
 }
 
 func testGetKlines(exchangeApi api.ExchangeApi, coin *domains.Coin) {
-	timeFrom, _ := time.Parse(constants.DATE_FORMAT, "2022-05-01")
-	klinesDto, err := exchangeApi.GetKlines(coin, "1", 10, timeFrom)
+	timeFrom := time.Now().Add(time.Minute * time.Duration(-60))
+	klinesDto, err := exchangeApi.GetKlines(coin, "1", 200, timeFrom)
 	if err != nil {
 		zap.S().Errorf("Error on GetCurrentCoinPrice: %s", err)
 	}
-	fmt.Printf("klinesDto=%v", klinesDto)
+	fmt.Printf("klinesDto=%v\n", klinesDto)
+	fmt.Printf("klinesDto current price spot =%v\n", klinesDto.GetKlines()[0].GetClose())
+	return
+}
+
+func testGetKlinesFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) api.KlinesDto {
+	timeFrom := time.Now().Add(time.Minute * time.Duration(-60))
+	klinesDto, err := exchangeApi.GetKlinesFutures(coin, "1", 200, timeFrom)
+	if err != nil {
+		zap.S().Errorf("Error on GetKlinesFutures: %s", err)
+	}
+	fmt.Printf("klinesDto=%v\n", klinesDto)
+	fmt.Printf("klinesDto current price futures=%v\n", klinesDto.GetKlines()[0].GetClose())
+	return klinesDto
 }
 
 func testOpenFutures(exchangeApi api.ExchangeApi, coin *domains.Coin) api.OrderResponseDto {

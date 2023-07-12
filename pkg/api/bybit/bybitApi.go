@@ -56,6 +56,29 @@ func (bybitApi *BybitApi) GetKlines(coin *domains.Coin, interval string, limit i
 
 	return &dto, nil
 }
+func (bybitApi *BybitApi) GetKlinesFutures(coin *domains.Coin, interval string, limit int, fromTime time.Time) (api.KlinesDto, error) {
+	intervalInt, _ := strconv.Atoi(interval)
+	end := fromTime.Add(time.Minute * time.Duration(intervalInt*limit))
+
+	resp, err := http.Get("https://api.bytick.com/derivatives/v3/public/kline?" +
+		"category=linear" +
+		"&symbol=" + coin.Symbol +
+		"&interval=" + interval +
+		"&start=" + strconv.FormatInt(util.GetMillisByTime(fromTime), 10) +
+		"&end=" + strconv.FormatInt(util.GetMillisByTime(end), 10) +
+		"&limit=" + strconv.Itoa(limit))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	dto := &bybit.KlinesFuturesDto{Interval: intervalInt}
+	if err := json.NewDecoder(resp.Body).Decode(&dto); err != nil {
+		return nil, err
+	}
+
+	return dto, nil
+}
 
 func (api *BybitApi) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error) {
 	resp, err := http.Get("https://api.bytick.com/derivatives/v3/public/tickers?symbol=" + coin.Symbol)

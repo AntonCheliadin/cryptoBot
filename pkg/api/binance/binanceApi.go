@@ -33,6 +33,10 @@ func (api *BinanceApi) GetKlines(coin *domains.Coin, interval string, limit int,
 	return nil, errors.New("Not implemented for Binance API")
 }
 
+func (api *BinanceApi) GetKlinesFutures(coin *domains.Coin, interval string, limit int, fromTime time.Time) (api.KlinesDto, error) {
+	return nil, errors.New("Not implemented for Binance API")
+}
+
 func (api *BinanceApi) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error) {
 	return 0, errors.New("Not implemennted.")
 }
