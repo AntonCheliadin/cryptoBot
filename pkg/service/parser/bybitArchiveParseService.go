@@ -207,23 +207,22 @@ func (s *BybitArchiveParseService) parseData(coin *domains.Coin, day time.Time, 
 
 		tickVolume, _ := strconv.ParseFloat(line[3], 64)
 		price, _ := strconv.ParseFloat(line[4], 64)
-		priceInCents := util.GetCents(price)
 
 		if kline != nil && util.InTimeSpanInclusive(kline.OpenTime, kline.CloseTime, tickTime) {
-			kline.Close = priceInCents
+			kline.Close = price
 			kline.Volume += tickVolume
-			if kline.High < priceInCents {
-				kline.High = priceInCents
+			if kline.High < price {
+				kline.High = price
 			}
-			if kline.Low > priceInCents {
-				kline.Low = priceInCents
+			if kline.Low > price {
+				kline.Low = price
 			}
 		} else {
 			if kline != nil {
 				s.klineRepo.SaveKline(kline)
 			}
-			s.findOrCreatePrevKline(coin, klineOpenTime, intervalInMinutes, priceInCents)
-			kline = s.findOrCreateKline(coin, klineOpenTime, intervalInMinutes, priceInCents, tickVolume)
+			s.findOrCreatePrevKline(coin, klineOpenTime, intervalInMinutes, price)
+			kline = s.findOrCreateKline(coin, klineOpenTime, intervalInMinutes, price, tickVolume)
 		}
 	}
 
@@ -233,13 +232,13 @@ func (s *BybitArchiveParseService) parseData(coin *domains.Coin, day time.Time, 
 	return nil
 }
 
-func (s *BybitArchiveParseService) findOrCreatePrevKline(coin *domains.Coin, klineOpenTime time.Time, intervalInMinutes int, priceInCents int64) *domains.Kline {
+func (s *BybitArchiveParseService) findOrCreatePrevKline(coin *domains.Coin, klineOpenTime time.Time, intervalInMinutes int, price float64) *domains.Kline {
 	prevKlineOpenTime := klineOpenTime.Add(time.Minute * time.Duration(-intervalInMinutes))
 
-	return s.findOrCreateKline(coin, prevKlineOpenTime, intervalInMinutes, priceInCents, 0)
+	return s.findOrCreateKline(coin, prevKlineOpenTime, intervalInMinutes, price, 0)
 }
 
-func (s *BybitArchiveParseService) findOrCreateKline(coin *domains.Coin, klineOpenTime time.Time, intervalInMinutes int, priceInCents int64, volume float64) *domains.Kline {
+func (s *BybitArchiveParseService) findOrCreateKline(coin *domains.Coin, klineOpenTime time.Time, intervalInMinutes int, price float64, volume float64) *domains.Kline {
 	kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, klineOpenTime, strconv.Itoa(intervalInMinutes))
 	if kline != nil {
 		return kline
@@ -250,10 +249,10 @@ func (s *BybitArchiveParseService) findOrCreateKline(coin *domains.Coin, klineOp
 		OpenTime:  klineOpenTime,
 		CloseTime: klineOpenTime.Add(time.Minute * time.Duration(intervalInMinutes)),
 		Interval:  strconv.Itoa(intervalInMinutes),
-		Open:      priceInCents,
-		Close:     priceInCents,
-		High:      priceInCents,
-		Low:       priceInCents,
+		Open:      price,
+		Close:     price,
+		High:      price,
+		Low:       price,
 		Volume:    volume,
 	}
 }

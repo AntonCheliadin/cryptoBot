@@ -68,13 +68,13 @@ func (s *LocalExtremumTrendService) IsTrendDown(coin *domains.Coin, klinesInterv
 	return isLowerLowAndLowerHigh
 }
 
-func (s *LocalExtremumTrendService) CalculateStopLoss(coin *domains.Coin, klinesInterval string, futuresType futureType.FuturesType) int64 {
+func (s *LocalExtremumTrendService) CalculateStopLoss(coin *domains.Coin, klinesInterval string, futuresType futureType.FuturesType) float64 {
 	if futuresType == futureType.SHORT {
 		highExtremumKline := s.FindNearestHighExtremum(coin, klinesInterval, s.Clock.NowTime())
-		return highExtremumKline.High + int64(float64(highExtremumKline.High)*0.0003) // +0.03%
+		return highExtremumKline.High + ((highExtremumKline.High) * 0.0003) // +0.03%
 	} else {
 		lowExtremumKline := s.FindNearestLowExtremum(coin, klinesInterval, s.Clock.NowTime())
-		return lowExtremumKline.Low - int64(float64(lowExtremumKline.Low)*0.0003) // -0.03%
+		return lowExtremumKline.Low - ((lowExtremumKline.Low) * 0.0003) // -0.03%
 	}
 }
 

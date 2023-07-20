@@ -48,10 +48,10 @@ func (s *TechanConvertorService) BuildTimeSeriesByKlinesAtMoment(coin *domains.C
 		period := techan.NewTimePeriod(kline.OpenTime, time.Minute*time.Duration(candleDurationInt))
 
 		candle := techan.NewCandle(period)
-		candle.OpenPrice = big.NewDecimal(float64(kline.Open) / 100)
-		candle.ClosePrice = big.NewDecimal(float64(kline.Close) / 100)
-		candle.MaxPrice = big.NewDecimal(float64(kline.High) / 100)
-		candle.MinPrice = big.NewDecimal(float64(kline.Low) / 100)
+		candle.OpenPrice = big.NewDecimal(kline.Open)
+		candle.ClosePrice = big.NewDecimal(kline.Close)
+		candle.MaxPrice = big.NewDecimal(kline.High)
+		candle.MinPrice = big.NewDecimal(kline.Low)
 		candle.Volume = big.NewDecimal(kline.Volume)
 
 		series.AddCandle(candle)
@@ -67,8 +67,8 @@ func (s *TechanConvertorService) ConvertKlinesToSeries(klines []domains.IKline, 
 		period := techan.NewTimePeriod(kline.GetOpenTime(), time.Minute*time.Duration(candleDuration))
 
 		candle := techan.NewCandle(period)
-		candle.OpenPrice = big.NewDecimal(float64(kline.GetOpen()) / 100)
-		candle.ClosePrice = big.NewDecimal(float64(kline.GetClose()) / 100)
+		candle.OpenPrice = big.NewDecimal(kline.GetOpen())
+		candle.ClosePrice = big.NewDecimal(kline.GetClose())
 
 		series.AddCandle(candle)
 	}

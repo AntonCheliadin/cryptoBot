@@ -3,6 +3,7 @@ package orders
 import (
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/repository"
+	"cryptoBot/pkg/util"
 )
 
 var serviceImpl *PriceChangeTrackingService
@@ -21,15 +22,15 @@ type PriceChangeTrackingService struct {
 	priceChangeRepo repository.PriceChange
 }
 
-func (s *PriceChangeTrackingService) GetChangePrice(transactionId int64, currentPrice int64) *domains.PriceChange {
+func (s *PriceChangeTrackingService) GetChangePrice(transactionId int64, currentPrice float64) *domains.PriceChange {
 	priceChange, _ := s.priceChangeRepo.FindByTransactionId(transactionId)
 	if priceChange != nil {
-		s.saveNewPriceIfNeeded(priceChange, currentPrice)
+		s.saveNewPriceIfNeeded(priceChange, util.GetCents(currentPrice))
 	} else {
 		priceChange = &domains.PriceChange{
 			TransactionId: transactionId,
-			LowPrice:      currentPrice,
-			HighPrice:     currentPrice,
+			LowPrice:      util.GetCents(currentPrice),
+			HighPrice:     util.GetCents(currentPrice),
 		}
 		priceChange.RecalculatePercent()
 		_ = s.priceChangeRepo.SavePriceChange(priceChange)

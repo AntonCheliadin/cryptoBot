@@ -18,16 +18,16 @@ type Transaction struct {
 
 	Amount float64
 
-	Price int64
+	Price float64
 
-	StopLossPrice sql.NullInt64 `db:"stop_loss_price"`
+	StopLossPrice sql.NullFloat64 `db:"stop_loss_price"`
 
-	TakeProfitPrice sql.NullInt64 `db:"take_profit_price"`
+	TakeProfitPrice sql.NullFloat64 `db:"take_profit_price"`
 
 	/* TotalCost=(amount * price) */
-	TotalCost int64 `db:"total_cost"`
+	TotalCost float64 `db:"total_cost"`
 
-	Commission int64
+	Commission float64
 
 	CreatedAt time.Time `db:"created_at"`
 
@@ -54,8 +54,8 @@ type Transaction struct {
 }
 
 func (t *Transaction) String() string {
-	desc := fmt.Sprintf("Transaction {amount: %v, price: %v, cost: %v",
-		t.Amount, util.RoundCentsToUsd(t.Price), util.RoundCentsToUsd(t.TotalCost))
+	desc := fmt.Sprintf("Transaction {amount: %v, price: %.2f, cost: %.2f",
+		t.Amount, t.Price, t.TotalCost)
 
 	if t.Profit.Valid {
 		desc += fmt.Sprintf(", profit: %v", util.RoundCentsToUsd(t.Profit.Int64))

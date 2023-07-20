@@ -155,7 +155,7 @@ func (s *TrendMeterStrategyTradingService) BotActionBuyMoreIfNeeded(coin *domain
 		return
 	}
 
-	s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, costInUSDT*100, s.tradingType)
+	s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, float64(costInUSDT), s.tradingType)
 }
 
 func (s *TrendMeterStrategyTradingService) BotActionCloseOrderIfNeeded(coin *domains.Coin) {
@@ -204,8 +204,8 @@ func (s *TrendMeterStrategyTradingService) isTakeProfitSignalForCombinedOrder(co
 	return isProfitSignal
 }
 
-func (s *TrendMeterStrategyTradingService) calculateAveragePrice(openedTransactions []*domains.Transaction) int64 {
-	totalCost := int64(0)
+func (s *TrendMeterStrategyTradingService) calculateAveragePrice(openedTransactions []*domains.Transaction) float64 {
+	totalCost := float64(0)
 	for _, transaction := range openedTransactions {
 		totalCost += transaction.TotalCost
 	}
@@ -215,7 +215,7 @@ func (s *TrendMeterStrategyTradingService) calculateAveragePrice(openedTransacti
 		totalAmount += transaction.Amount
 	}
 
-	return int64(float64(totalCost) / totalAmount)
+	return (float64(totalCost) / totalAmount)
 }
 
 func (s *TrendMeterStrategyTradingService) isTakeProfitSignal(coin *domains.Coin, openedOrder *domains.Transaction) bool {
@@ -294,7 +294,7 @@ func (s *TrendMeterStrategyTradingService) calculateIndicators(coin *domains.Coi
 	////if > 10% end
 
 	if trendMeterSignalLong && trendBar1 && trendBar2 && emaFastAbove && volatilityOscillatorSignal && volatilityFuturesType == futureType.LONG {
-		s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, viper.GetInt64("strategy.trendMeter.initialCostInCents"), s.tradingType)
+		s.OrderManagerService.OpenOrderWithCost(coin, futureType.LONG, util.GetDollarsByCents(viper.GetInt64("strategy.trendMeter.initialCostInCents")), s.tradingType)
 	}
 }
 

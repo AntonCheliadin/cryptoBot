@@ -39,29 +39,29 @@ type TradeHistoryDto struct {
 	} `json:"result"`
 }
 
-func (d *TradeHistoryDto) CalculateAvgPrice() int64 {
-	return int64(float64(d.CalculateTotalCost()) / d.GetAmount())
+func (d *TradeHistoryDto) CalculateAvgPrice() float64 {
+	return float64(d.CalculateTotalCost()) / d.GetAmount()
 }
 
-func (d *TradeHistoryDto) CalculateTotalCost() int64 {
-	sumCost := int64(0)
+func (d *TradeHistoryDto) CalculateTotalCost() float64 {
+	sumCost := float64(0)
 	for _, trade := range d.Result {
 		amount, _ := strconv.ParseFloat(trade.Qty, 64)
 		price, _ := strconv.ParseFloat(trade.Price, 64)
 
-		sumCost += int64(amount * price * 100)
+		sumCost += (amount * price)
 	}
 	return sumCost
 }
 
-func (d *TradeHistoryDto) CalculateCommissionInUsd() int64 {
+func (d *TradeHistoryDto) CalculateCommissionInUsd() float64 {
 	sum := float64(0)
 	for _, trade := range d.Result {
 		commission, _ := strconv.ParseFloat(trade.Commission, 64)
 
 		sum += commission
 	}
-	return int64(sum * 100)
+	return sum
 }
 
 func (d *TradeHistoryDto) GetAmount() float64 {

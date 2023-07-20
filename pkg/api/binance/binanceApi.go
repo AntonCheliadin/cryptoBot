@@ -37,11 +37,11 @@ func (api *BinanceApi) GetKlinesFutures(coin *domains.Coin, interval string, lim
 	return nil, errors.New("Not implemented for Binance API")
 }
 
-func (api *BinanceApi) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error) {
+func (api *BinanceApi) GetCurrentCoinPriceForFutures(coin *domains.Coin) (float64, error) {
 	return 0, errors.New("Not implemennted.")
 }
 
-func (api *BinanceApi) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
+func (api *BinanceApi) GetCurrentCoinPrice(coin *domains.Coin) (float64, error) {
 	resp, err := http.Get("https://api.binance.com/api/v3/ticker/price?symbol=" + coin.Symbol)
 	if err != nil {
 		return 0, err
@@ -53,15 +53,15 @@ func (api *BinanceApi) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
 		return 0, err
 	}
 
-	return priceDto.PriceInCents()
+	return priceDto.GetPrice()
 }
 
-func (api *BinanceApi) BuyCoinByMarket(coin *domains.Coin, amount float64, price int64) (api.OrderResponseDto, error) {
+func (api *BinanceApi) BuyCoinByMarket(coin *domains.Coin, amount float64, price float64) (api.OrderResponseDto, error) {
 	queryParams := api.buildParams(coin, amount, "BUY")
 	return api.orderCoinByMarket(queryParams)
 }
 
-func (api *BinanceApi) SellCoinByMarket(coin *domains.Coin, amount float64, price int64) (api.OrderResponseDto, error) {
+func (api *BinanceApi) SellCoinByMarket(coin *domains.Coin, amount float64, price float64) (api.OrderResponseDto, error) {
 	queryParams := api.buildParams(coin, amount, "SELL")
 	return api.orderCoinByMarket(queryParams)
 }
@@ -134,10 +134,10 @@ func (api *BinanceApi) sign(data string) string {
 	return sha
 }
 
-func (api *BinanceApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
+func (api *BinanceApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price float64, futuresType futureType.FuturesType, stopLossPriceInCents float64) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }
-func (api *BinanceApi) CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price int64) (api.OrderResponseDto, error) {
+func (api *BinanceApi) CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price float64) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }
 

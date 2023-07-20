@@ -257,7 +257,7 @@ func (s *SmaVolumeScalperStrategyTradingService) openOrder(coin *domains.Coin, f
 	currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
 	//takeProfit := util.CalculateProfitByRation(currentPrice, stopLoss, futuresTypeSignal, s.takeProfitRatio)
 
-	takeProfit := int64(0) //util.CalculatePriceForTakeProfit(currentPrice, 0.86, futuresTypeSignal) //int64(0)
+	takeProfit := float64(0) //util.CalculatePriceForTakeProfit(currentPrice, 0.86, futuresTypeSignal) //int64(0)
 
 	stopLossInPercent := util.CalculateProfitInPercent(currentPrice, stopLoss, futuresTypeSignal)
 	if math.Abs(stopLossInPercent) > 2.5 {
@@ -266,9 +266,9 @@ func (s *SmaVolumeScalperStrategyTradingService) openOrder(coin *domains.Coin, f
 	}
 
 	isNextOrderFake := s.isNextOrderFake(coin)
-	costOrOrderInCents := s.calculateCurrentWalletValue(coin)
+	costOrOrder := s.calculateCurrentWalletValue(coin)
 
-	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfitAndFake(coin, futuresTypeSignal, costOrOrderInCents, stopLoss, takeProfit, isNextOrderFake)
+	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfitAndFake(coin, futuresTypeSignal, costOrOrder, stopLoss, takeProfit, isNextOrderFake)
 }
 
 func (s *SmaVolumeScalperStrategyTradingService) isNextOrderFake(coin *domains.Coin) bool {
@@ -284,8 +284,8 @@ func (s *SmaVolumeScalperStrategyTradingService) isNextOrderFake(coin *domains.C
 	return false
 }
 
-func (s *SmaVolumeScalperStrategyTradingService) calculateCurrentWalletValue(coin *domains.Coin) int64 {
+func (s *SmaVolumeScalperStrategyTradingService) calculateCurrentWalletValue(coin *domains.Coin) float64 {
 	sumOfProfitByCoin, _ := s.TransactionRepo.CalculateSumOfProfitByCoin(coin.Id, s.tradingStrategy)
 
-	return (int64(s.costOfOrderInCents) + sumOfProfitByCoin) * viper.GetInt64("strategy.smaVolumeScalper.futures.leverage")
+	return util.GetDollarsByCents((int64(s.costOfOrderInCents) + sumOfProfitByCoin) * viper.GetInt64("strategy.smaVolumeScalper.futures.leverage"))
 }

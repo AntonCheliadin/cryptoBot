@@ -14,11 +14,11 @@ type SyntheticKline struct {
 	CloseTime time.Time `db:"close_time"`
 	Interval  string    `db:"duration"`
 
-	Open1  int64 `db:"open_1"`
-	Close1 int64 `db:"close_1"`
+	Open1  float64 `db:"open_1"`
+	Close1 float64 `db:"close_1"`
 
-	Open2  int64 `db:"open_2"`
-	Close2 int64 `db:"close_2"`
+	Open2  float64 `db:"open_2"`
+	Close2 float64 `db:"close_2"`
 
 	SyntheticOpen  float64 `db:"synthetic_open"`
 	SyntheticClose float64 `db:"synthetic_close"`
@@ -49,9 +49,9 @@ func (d *SyntheticKline) GetInterval() string {
 }
 
 // GetOpen Price doesn't matter for synthetic klines, just relation of two prices
-func (d *SyntheticKline) GetOpen() int64 {
-	return int64(d.SyntheticOpen * 10000 * 10000)
+func (d *SyntheticKline) GetOpen() float64 {
+	return d.SyntheticOpen * 10000 * 10000
 }
-func (d *SyntheticKline) GetClose() int64 {
-	return int64(d.SyntheticClose * 10000 * 10000)
+func (d *SyntheticKline) GetClose() float64 {
+	return d.SyntheticClose * 10000 * 10000
 }

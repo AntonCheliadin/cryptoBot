@@ -33,10 +33,10 @@ func main() {
 	}
 
 	testGetCurrentPrice(exchangeApi, coin)
-	//testGetCurrentPriceForFutures(exchangeApi, coin)
+	testGetCurrentPriceForFutures(exchangeApi, coin)
 
-	//testGetKlines(exchangeApi, coin)
-	//testGetKlinesFutures(exchangeApi, coin)
+	testGetKlines(exchangeApi, coin)
+	testGetKlinesFutures(exchangeApi, coin)
 
 	//err := exchangeApi.SetFuturesLeverage(coin, 1)
 	//if err != nil {

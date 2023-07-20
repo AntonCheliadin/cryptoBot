@@ -111,7 +111,7 @@ func (s *MovingAverageResistanceStrategyTradingService) calculateMovingAverage(c
 	}
 }
 
-func (s *MovingAverageResistanceStrategyTradingService) isAllKlinesInTubeMa(downMA []int64, upMA []int64, klines []*domains.Kline) bool {
+func (s *MovingAverageResistanceStrategyTradingService) isAllKlinesInTubeMa(downMA []float64, upMA []float64, klines []*domains.Kline) bool {
 	for i := len(klines) - 1; i >= 0; i-- {
 		if klines[i].Open < downMA[i] || klines[i].Close < downMA[i] ||
 			klines[i].Open > upMA[i] || klines[i].Close > upMA[i] {
@@ -122,7 +122,7 @@ func (s *MovingAverageResistanceStrategyTradingService) isAllKlinesInTubeMa(down
 	return true
 }
 
-func (s *MovingAverageResistanceStrategyTradingService) isUpTrend(shortAvgs []int64, mediumAvgs []int64) bool {
+func (s *MovingAverageResistanceStrategyTradingService) isUpTrend(shortAvgs []float64, mediumAvgs []float64) bool {
 	for i := 0; i < len(shortAvgs); i++ {
 		if mediumAvgs[i] > shortAvgs[i] {
 			return false
@@ -131,7 +131,7 @@ func (s *MovingAverageResistanceStrategyTradingService) isUpTrend(shortAvgs []in
 	return true
 }
 
-func (s *MovingAverageResistanceStrategyTradingService) isDownTrend(shortAvgs []int64, mediumAvgs []int64) bool {
+func (s *MovingAverageResistanceStrategyTradingService) isDownTrend(shortAvgs []float64, mediumAvgs []float64) bool {
 	for i := 0; i < len(shortAvgs); i++ {
 		if mediumAvgs[i] < shortAvgs[i] {
 			return false
@@ -147,7 +147,7 @@ func (s *MovingAverageResistanceStrategyTradingService) openOrder(coin *domains.
 		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
 		return
 	}
-	amountTransaction := util.CalculateAmountByPriceAndCost(currentPrice, viper.GetInt64("strategy.ma.cost"))
+	amountTransaction := util.CalculateAmountByPriceAndCost(currentPrice, viper.GetFloat64("strategy.ma.cost"))
 	orderDto, err2 := s.exchangeApi.OpenFuturesOrder(coin, amountTransaction, currentPrice, futuresType, 10)
 	if err2 != nil {
 		zap.S().Errorf("Error during OpenFuturesOrder: %s", err2.Error())
@@ -213,8 +213,8 @@ func (s *MovingAverageResistanceStrategyTradingService) closeOrder(openTransacti
 func (s *MovingAverageResistanceStrategyTradingService) createCloseTransactionByOrderResponseDto(coin *domains.Coin, openedTransaction *domains.Transaction,
 	orderDto api.OrderResponseDto) domains.Transaction {
 
-	var buyCost int64
-	var sellCost int64
+	var buyCost float64
+	var sellCost float64
 	var transactionType constants.TransactionType
 
 	if openedTransaction.FuturesType == futureType.LONG {
@@ -239,7 +239,7 @@ func (s *MovingAverageResistanceStrategyTradingService) createCloseTransactionBy
 		TotalCost:            orderDto.CalculateTotalCost(),
 		Commission:           orderDto.CalculateCommissionInUsd(),
 		RelatedTransactionId: sql.NullInt64{Int64: openedTransaction.Id, Valid: true},
-		Profit:               sql.NullInt64{Int64: profitInUsd, Valid: true},
+		Profit:               sql.NullInt64{Int64: util.GetCents(profitInUsd), Valid: true},
 		PercentProfit:        sql.NullFloat64{Float64: float64(profitInUsd) / float64(openedTransaction.TotalCost) * 100, Valid: true},
 		CreatedAt:            s.Clock.NowTime(),
 	}
@@ -371,7 +371,7 @@ func (s *MovingAverageResistanceStrategyTradingService) isProfitByTrolling(lastT
 
 	if lastTransaction.FuturesType == futureType.LONG {
 		// close order if price on percentProfit lower from high
-		priceChangeInPercent := util.CalculateChangeInPercents(priceChange.HighPrice, currentPrice)
+		priceChangeInPercent := util.CalculateChangeInPercents(float64(priceChange.HighPrice), float64(util.GetCents(currentPrice)))
 		if priceChangeInPercent < -1*viper.GetFloat64("strategy.maResistance.percentTrollingProfit") {
 			zap.S().Infof("At %v close order trolling. Higher price %v current price %v percent %v",
 				s.Clock.NowTime(), priceChange.HighPrice, currentPrice, priceChangeInPercent)
@@ -380,7 +380,7 @@ func (s *MovingAverageResistanceStrategyTradingService) isProfitByTrolling(lastT
 	}
 	if lastTransaction.FuturesType == futureType.SHORT {
 		// close order if price on percentProfit higher from low
-		priceChangeInPercent := util.CalculateChangeInPercents(priceChange.LowPrice, currentPrice)
+		priceChangeInPercent := util.CalculateChangeInPercents(float64(priceChange.LowPrice), float64(util.GetCents(currentPrice)))
 		if priceChangeInPercent > viper.GetFloat64("strategy.maResistance.percentTrollingProfit") {
 			zap.S().Infof("At %v close order trolling. Lower price %v current price %v percent %v",
 				s.Clock.NowTime(), priceChange.LowPrice, currentPrice, priceChangeInPercent)

@@ -25,8 +25,8 @@ func GetDollarsByCents(moneyInCents int64) float64 {
 	return float64(moneyInCents) / 100
 }
 
-func CalculateAmountByPriceAndCost(currentPriceWithCents int64, costWithoutCents int64) float64 {
-	amount := float64(costWithoutCents*100) / float64(currentPriceWithCents)
+func CalculateAmountByPriceAndCost(currentPrice float64, cost float64) float64 {
+	amount := float64(cost) / float64(currentPrice)
 	if amount > 10 {
 		return math.Round(amount)
 	} else if amount > 0.1 {
@@ -36,54 +36,43 @@ func CalculateAmountByPriceAndCost(currentPriceWithCents int64, costWithoutCents
 	}
 }
 
-func CalculateAmountByPriceAndCostWithCents(currentPriceWithCents int64, costWithCents int64) float64 {
-	amount := float64(costWithCents) / float64(currentPriceWithCents)
-	if amount > 10 {
-		return math.Round(amount)
-	} else if amount > 0.1 {
-		return math.Round(amount*100) / 100
-	} else {
-		return math.Round(amount*1000000) / 1000000
-	}
-}
+func CalculatePriceForStopLoss(price float64, stopLossPercent float64, futuresType futureType.FuturesType) float64 {
+	percentOfPriceValue := CalculatePercentOf(float64(price), stopLossPercent)
 
-func CalculatePriceForStopLoss(priceInCents int64, stopLossPercent float64, futuresType futureType.FuturesType) int64 {
-	percentOfPriceValue := int64(CalculatePercentOf(float64(priceInCents), stopLossPercent))
-
-	result := int64(0)
+	result := float64(0)
 
 	if futuresType == futureType.LONG {
-		result = priceInCents - percentOfPriceValue
+		result = price - percentOfPriceValue
 	} else {
-		result = priceInCents + percentOfPriceValue
+		result = price + percentOfPriceValue
 	}
 
-	zap.S().Infof("CalculatePriceForStopLoss price[%v] percent[%v] futuresType[%v] result[%v]", priceInCents, stopLossPercent, futuresType, result)
+	zap.S().Infof("CalculatePriceForStopLoss price[%v] percent[%v] futuresType[%v] result[%v]", price, stopLossPercent, futuresType, result)
 	return result
 }
 
-func CalculatePriceForTakeProfit(priceInCents int64, takeProfitPercent float64, futuresType futureType.FuturesType) int64 {
-	percentOfPriceValue := int64(CalculatePercentOf(float64(priceInCents), takeProfitPercent))
+func CalculatePriceForTakeProfit(price float64, takeProfitPercent float64, futuresType futureType.FuturesType) float64 {
+	percentOfPriceValue := CalculatePercentOf(float64(price), takeProfitPercent)
 
-	result := int64(0)
+	result := float64(0)
 
 	if futuresType == futureType.LONG {
-		result = priceInCents + percentOfPriceValue
+		result = price + percentOfPriceValue
 	} else {
-		result = priceInCents - percentOfPriceValue
+		result = price - percentOfPriceValue
 	}
-	zap.S().Infof("CalculatePriceForTakeProfit price[%v] percent[%v] futuresType[%v] result[%v]", priceInCents, takeProfitPercent, futureType.GetString(futuresType), result)
+	zap.S().Infof("CalculatePriceForTakeProfit price[%v] percent[%v] futuresType[%v] result[%v]", price, takeProfitPercent, futureType.GetString(futuresType), result)
 	return result
 }
 
-func CalculateProfitInPercent(prevPrice int64, currentPrice int64, futuresType futureType.FuturesType) float64 {
+func CalculateProfitInPercent(prevPrice float64, currentPrice float64, futuresType futureType.FuturesType) float64 {
 	return CalculateChangeInPercents(prevPrice, currentPrice) * futureType.GetFuturesSignFloat64(futuresType)
 }
-func CalculateProfitInPercentWithLeverage(prevPrice int64, currentPrice int64, futuresType futureType.FuturesType, leverage int64) float64 {
+func CalculateProfitInPercentWithLeverage(prevPrice float64, currentPrice float64, futuresType futureType.FuturesType, leverage int64) float64 {
 	return CalculateChangeInPercents(prevPrice, currentPrice) * futureType.GetFuturesSignFloat64(futuresType) * float64(leverage)
 }
 
-func CalculateProfitByRation(openPrice int64, stopLossPrice int64, futuresType futureType.FuturesType, profitRatio float64) int64 {
+func CalculateProfitByRation(openPrice float64, stopLossPrice float64, futuresType futureType.FuturesType, profitRatio float64) float64 {
 	stopLossInPercent := CalculateChangeInPercentsAbs(openPrice, stopLossPrice)
 	takeProfitInPercent := stopLossInPercent * profitRatio
 

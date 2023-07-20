@@ -30,7 +30,7 @@ type MovingAverageService struct {
 /**
 Return two last points of moving averages
 */
-func (s *MovingAverageService) CalculateAvg(coin *domains.Coin, length int, returnPointsSize int) []int64 {
+func (s *MovingAverageService) CalculateAvg(coin *domains.Coin, length int, returnPointsSize int) []float64 {
 	candleDuration := viper.GetString("strategy.ma.interval")
 	klines, err := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coin.Id, candleDuration, s.Clock.NowTime(), int64(length+returnPointsSize-1))
 	if err != nil {
@@ -38,14 +38,14 @@ func (s *MovingAverageService) CalculateAvg(coin *domains.Coin, length int, retu
 		return nil
 	}
 
-	var avgPoints []int64
-	var movingAvgPoints []int64
+	var avgPoints []float64
+	var movingAvgPoints []float64
 
 	for _, kline := range klines {
 		avgPoints = append(avgPoints, kline.Close /*(kline.Open+kline.Close+kline.High+kline.Low)/4*/)
 
 		if len(avgPoints) == length {
-			averageByLength := util.Sum(avgPoints) / int64(length)
+			averageByLength := util.SumFloat64(avgPoints) / float64(length)
 			movingAvgPoints = append(movingAvgPoints, averageByLength)
 
 			avgPoints = avgPoints[1:] //remove first element

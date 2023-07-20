@@ -1,7 +1,6 @@
 package order
 
 import (
-	"cryptoBot/pkg/util"
 	"strconv"
 	"time"
 )
@@ -35,16 +34,17 @@ type OrderHistoryDto struct {
 	} `json:"result"`
 }
 
-func (d *OrderHistoryDto) CalculateAvgPrice() int64 {
-	return util.GetCentsFromString(d.Result[0].AvgPrice)
+func (d *OrderHistoryDto) CalculateAvgPrice() float64 {
+	parseFloat, _ := strconv.ParseFloat(d.Result[0].AvgPrice, 64)
+	return parseFloat
 }
 
-func (d *OrderHistoryDto) CalculateTotalCost() int64 {
-	return int64(float64(d.CalculateAvgPrice()) * d.GetAmount())
+func (d *OrderHistoryDto) CalculateTotalCost() float64 {
+	return float64(d.CalculateAvgPrice()) * d.GetAmount()
 }
 
-func (d *OrderHistoryDto) CalculateCommissionInUsd() int64 {
-	return int64(float64(d.CalculateTotalCost()) * 0.001) // 0.1% for taker and maker
+func (d *OrderHistoryDto) CalculateCommissionInUsd() float64 {
+	return (float64(d.CalculateTotalCost()) * 0.001) // 0.1% for taker and maker
 }
 
 func (d *OrderHistoryDto) GetAmount() float64 {

@@ -1,7 +1,6 @@
 package order
 
 import (
-	"cryptoBot/pkg/util"
 	"time"
 )
 
@@ -45,16 +44,16 @@ type ActiveOrderDto struct {
 	SlTriggerBy    string    `json:"sl_trigger_by"`
 }
 
-func (d *ActiveOrderDto) CalculateAvgPrice() int64 {
-	return util.GetCents(d.LastExecPrice)
+func (d *ActiveOrderDto) CalculateAvgPrice() float64 {
+	return d.LastExecPrice
 }
 
-func (d *ActiveOrderDto) CalculateTotalCost() int64 {
-	return util.GetCents(d.CumExecValue)
+func (d *ActiveOrderDto) CalculateTotalCost() float64 {
+	return d.CumExecValue
 }
 
-func (d *ActiveOrderDto) CalculateCommissionInUsd() int64 {
-	return util.GetCents(d.CumExecFee)
+func (d *ActiveOrderDto) CalculateCommissionInUsd() float64 {
+	return d.CumExecFee
 }
 
 func (d *ActiveOrderDto) GetAmount() float64 {

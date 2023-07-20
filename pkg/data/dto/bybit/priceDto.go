@@ -13,10 +13,10 @@ type PriceDto struct {
 	ExtInfo interface{} `json:"ext_info"`
 }
 
-func (d *PriceDto) PriceInCents() (int64, error) {
+func (d *PriceDto) Price() (float64, error) {
 	price, err := decimal.NewFromString(d.Result.Price)
 	if err != nil {
 		return 0, err
 	}
-	return decimal.NewFromInt(100).Mul(price).IntPart(), nil
+	return price.InexactFloat64(), nil
 }

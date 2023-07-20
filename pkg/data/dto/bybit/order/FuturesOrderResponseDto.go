@@ -40,16 +40,16 @@ type FuturesOrderResponseDto struct {
 	RateLimit        int    `json:"rate_limit"`
 }
 
-func (d *FuturesOrderResponseDto) CalculateAvgPrice() int64 {
-	return int64(d.Result.Price * 100)
+func (d *FuturesOrderResponseDto) CalculateAvgPrice() float64 {
+	return d.Result.Price
 }
 
-func (d *FuturesOrderResponseDto) CalculateTotalCost() int64 {
-	return int64(d.GetAmount() * float64(d.CalculateAvgPrice()))
+func (d *FuturesOrderResponseDto) CalculateTotalCost() float64 {
+	return d.GetAmount() * d.CalculateAvgPrice()
 }
 
-func (d *FuturesOrderResponseDto) CalculateCommissionInUsd() int64 {
-	return int64(float64(d.CalculateTotalCost()) * 0.001) // 0.1% for taker and maker
+func (d *FuturesOrderResponseDto) CalculateCommissionInUsd() float64 {
+	return float64(d.CalculateTotalCost()) * 0.001 // 0.1% for taker and maker
 }
 
 func (d *FuturesOrderResponseDto) GetAmount() float64 {

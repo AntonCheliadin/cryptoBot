@@ -80,7 +80,7 @@ func (bybitApi *BybitApi) GetKlinesFutures(coin *domains.Coin, interval string, 
 	return dto, nil
 }
 
-func (api *BybitApi) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error) {
+func (api *BybitApi) GetCurrentCoinPriceForFutures(coin *domains.Coin) (float64, error) {
 	resp, err := http.Get("https://api.bytick.com/derivatives/v3/public/tickers?symbol=" + coin.Symbol)
 	if err != nil {
 		return 0, err
@@ -92,10 +92,10 @@ func (api *BybitApi) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, e
 		return 0, err
 	}
 
-	return priceDto.PriceInCents()
+	return priceDto.Price()
 }
 
-func (api *BybitApi) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
+func (api *BybitApi) GetCurrentCoinPrice(coin *domains.Coin) (float64, error) {
 	resp, err := http.Get("https://api.bytick.com/spot/quote/v1/ticker/price?symbol=" + coin.Symbol)
 	if err != nil {
 		return 0, err
@@ -107,16 +107,16 @@ func (api *BybitApi) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
 		return 0, err
 	}
 
-	return priceDto.PriceInCents()
+	return priceDto.Price()
 }
 
-func (api *BybitApi) BuyCoinByMarket(coin *domains.Coin, amount float64, priceInCents int64) (api.OrderResponseDto, error) {
-	queryParams := api.buildParams(coin, amount, priceInCents, "Buy")
+func (api *BybitApi) BuyCoinByMarket(coin *domains.Coin, amount float64, price float64) (api.OrderResponseDto, error) {
+	queryParams := api.buildParams(coin, amount, price, "Buy")
 	return api.orderCoinByMarket(queryParams)
 }
 
-func (api *BybitApi) SellCoinByMarket(coin *domains.Coin, amount float64, priceInCents int64) (api.OrderResponseDto, error) {
-	queryParams := api.buildParams(coin, amount, priceInCents, "Sell")
+func (api *BybitApi) SellCoinByMarket(coin *domains.Coin, amount float64, price float64) (api.OrderResponseDto, error) {
+	queryParams := api.buildParams(coin, amount, price, "Sell")
 	return api.orderCoinByMarket(queryParams)
 }
 
@@ -228,10 +228,10 @@ func (api *BybitApi) getSpotTradeHistory(orderResponseDto order.OrderResponseDto
 	return &dto, nil
 }
 
-func (api *BybitApi) buildParams(coin *domains.Coin, amount float64, priceInCents int64, side string) map[string]interface{} {
+func (api *BybitApi) buildParams(coin *domains.Coin, amount float64, price float64, side string) map[string]interface{} {
 	return map[string]interface{}{
 		"api_key":   api.apiKey,
-		"qty":       api.buildQty(amount, priceInCents, side),
+		"qty":       api.buildQty(amount, price, side),
 		"side":      side,
 		"symbol":    coin.Symbol,
 		"timestamp": util.MakeTimestamp(),
@@ -246,9 +246,9 @@ for market orders: when side is Buy, this is in the quote currency.
 Otherwise, qty is in the base currency.
 For example, on BTCUSDT a Buy order is in USDT, otherwise it's in BTC. For limit orders, the qty is always in the base currency.
 */
-func (api *BybitApi) buildQty(amount float64, priceInCents int64, side string) string {
+func (api *BybitApi) buildQty(amount float64, price float64, side string) string {
 	if side == "Buy" {
-		costInUsd := float64(priceInCents / 100)
+		costInUsd := price
 		return strings.TrimRight(fmt.Sprintf("%f", amount*costInUsd), "0")
 	} else {
 		return strings.TrimRight(fmt.Sprintf("%f", amount), "0")
@@ -303,18 +303,18 @@ func (api *BybitApi) SetIsolatedMargin(coin *domains.Coin, leverage int) error {
 	return err
 }
 
-func (api *BybitApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
+func (api *BybitApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price float64, futuresType futureType.FuturesType, stopLossPriceInCents float64) (api.OrderResponseDto, error) {
 	queryParams := api.buildOpenFuturesParams(coin, amount, price, futuresType, stopLossPriceInCents)
 	return api.futuresOrderByMarketWithResponseDetails(queryParams)
 }
 
-func (api *BybitApi) CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price int64) (api.OrderResponseDto, error) {
+func (api *BybitApi) CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price float64) (api.OrderResponseDto, error) {
 	queryParams := api.buildCloseFuturesParams(coin, openedTransaction, price)
 	return api.futuresOrderByMarketWithResponseDetails(queryParams)
 }
 
-func (api *BybitApi) buildOpenFuturesParams(coin *domains.Coin, amount float64, priceInCents int64,
-	futuresType futureType.FuturesType, stopLossPriceInCents int64) map[string]interface{} {
+func (api *BybitApi) buildOpenFuturesParams(coin *domains.Coin, amount float64, price float64,
+	futuresType futureType.FuturesType, stopLossPriceInCents float64) map[string]interface{} {
 
 	side := "Buy"
 	positionIdx := 1
@@ -326,13 +326,13 @@ func (api *BybitApi) buildOpenFuturesParams(coin *domains.Coin, amount float64, 
 	requestParams := api.buildFuturesParams(coin, amount, side, positionIdx)
 
 	if stopLossPriceInCents > 0 {
-		requestParams["stop_loss"] = util.GetDollarsByCents(stopLossPriceInCents)
+		requestParams["stop_loss"] = stopLossPriceInCents
 	}
 
 	return requestParams
 }
 
-func (api *BybitApi) buildCloseFuturesParams(coin *domains.Coin, openedTransaction *domains.Transaction, priceInCents int64) map[string]interface{} {
+func (api *BybitApi) buildCloseFuturesParams(coin *domains.Coin, openedTransaction *domains.Transaction, price float64) map[string]interface{} {
 	side := "Sell"
 	positionIdx := 1
 	if openedTransaction.FuturesType == futureType.SHORT {

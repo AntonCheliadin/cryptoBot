@@ -64,7 +64,7 @@ func (s *HolderStrategyTradingService) BotAction(coin *domains.Coin) {
 	s.BotActionForPrice(coin, currentPrice)
 }
 
-func (s *HolderStrategyTradingService) BotActionForPrice(coin *domains.Coin, currentPrice int64) {
+func (s *HolderStrategyTradingService) BotActionForPrice(coin *domains.Coin, currentPrice float64) {
 	boughtNotSoldTransaction, err := s.transactionRepo.FindLastBoughtNotSold(coin.Id, constants.HOLDER)
 	if err != nil {
 		zap.S().Error(err)
@@ -97,7 +97,7 @@ func (s *HolderStrategyTradingService) BotActionForPrice(coin *domains.Coin, cur
 	}
 }
 
-func (s *HolderStrategyTradingService) shouldBuy(lastTransaction *domains.Transaction, currentPrice int64) bool {
+func (s *HolderStrategyTradingService) shouldBuy(lastTransaction *domains.Transaction, currentPrice float64) bool {
 	if lastTransaction == nil {
 		return true
 	}
@@ -111,18 +111,18 @@ func (s *HolderStrategyTradingService) shouldBuy(lastTransaction *domains.Transa
 	return false
 }
 
-func (s *HolderStrategyTradingService) shouldSell(lastTransaction *domains.Transaction, currentPrice int64) bool {
+func (s *HolderStrategyTradingService) shouldSell(lastTransaction *domains.Transaction, currentPrice float64) bool {
 	tradingPercent := viper.GetFloat64("trading.percentChange")
 	priceChangeInPercent := util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 
 	return priceChangeInPercent >= tradingPercent
 }
 
-func (s *HolderStrategyTradingService) getPriceChangeInPercent(lastTransaction *domains.Transaction, currentPrice int64) float64 {
+func (s *HolderStrategyTradingService) getPriceChangeInPercent(lastTransaction *domains.Transaction, currentPrice float64) float64 {
 	return util.CalculateChangeInPercents(lastTransaction.Price, currentPrice)
 }
 
-func (s *HolderStrategyTradingService) buy(coin *domains.Coin, currentPrice int64) {
+func (s *HolderStrategyTradingService) buy(coin *domains.Coin, currentPrice float64) {
 	if !configs.RuntimeConfig.TradingEnabled {
 		return
 	}
@@ -139,7 +139,7 @@ func (s *HolderStrategyTradingService) buy(coin *domains.Coin, currentPrice int6
 		}
 	}
 
-	amountTransaction := util.CalculateAmountByPriceAndCost(currentPrice, viper.GetInt64("trading.defaultCost"))
+	amountTransaction := util.CalculateAmountByPriceAndCost(currentPrice, viper.GetFloat64("trading.defaultCost"))
 
 	orderDto, err := s.exchangeApi.BuyCoinByMarket(coin, amountTransaction, currentPrice)
 	if err != nil || orderDto.GetAmount() == 0 {
@@ -152,7 +152,7 @@ func (s *HolderStrategyTradingService) buy(coin *domains.Coin, currentPrice int6
 	s.createBuyTransaction(coin, constants.BUY, orderDto, err)
 }
 
-func (s *HolderStrategyTradingService) sell(coin *domains.Coin, buyTransaction *domains.Transaction, currentPrice int64) {
+func (s *HolderStrategyTradingService) sell(coin *domains.Coin, buyTransaction *domains.Transaction, currentPrice float64) {
 	orderDto, err := s.exchangeApi.SellCoinByMarket(coin, buyTransaction.Amount, currentPrice)
 	if err != nil || orderDto.GetAmount() == 0 {
 		zap.S().Errorf("Error during sell coin by market")
@@ -208,7 +208,7 @@ func (s *HolderStrategyTradingService) createSellTransaction(coin *domains.Coin,
 		TotalCost:            sellTotalCost,
 		Commission:           commissionInUsd,
 		RelatedTransactionId: sql.NullInt64{Int64: buyTransaction.Id, Valid: true},
-		Profit:               sql.NullInt64{Int64: profitInUsd, Valid: true},
+		Profit:               sql.NullInt64{Int64: util.GetCents(profitInUsd), Valid: true},
 		PercentProfit:        sql.NullFloat64{Float64: float64(profitInUsd) / float64(buyTransaction.TotalCost) * 100, Valid: true},
 	}
 

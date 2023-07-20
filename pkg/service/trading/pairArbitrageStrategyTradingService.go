@@ -112,12 +112,13 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 		return
 	}
 
-	klines, err := s.SyntheticKlineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(s.coin1.Id, s.coin2.Id, s.klineIntervalS, s.Clock.NowTime(), s.strategyLength+1)
+	klinesFetchLimit := s.strategyLength + 1
+	klines, err := s.SyntheticKlineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(s.coin1.Id, s.coin2.Id, s.klineIntervalS, s.Clock.NowTime(), klinesFetchLimit)
 	if err != nil {
 		zap.S().Errorf("Error on fetch synthetic klines: %s. ", err.Error())
 		return
 	}
-	if len(klines) < s.strategyLength {
+	if len(klines) < klinesFetchLimit {
 		zap.S().Errorf("Empty klines: %s. ", s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		return
 	}
@@ -128,8 +129,8 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 		s.CloseOpenedOrderByStopLossIfNeeded()
 		if zScore.GT(big.NewDecimal(-0.1)) && zScore.LT(big.NewDecimal(0.1)) {
 			zap.S().Infof("Close by zScore(%v) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-			s.closeOrders()
-			telegramApi.SendTextToTelegramChat("Closed by zScore " + s.coin1.Symbol + "-" + s.coin2.Symbol)
+			closedOrder1, closedOrder2 := s.closeOrders()
+			telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by zScore %v - %v profit: %+d (%.2f%%)", s.coin1.Symbol, s.coin2.Symbol, closedOrder1.Profit.Int64+closedOrder2.Profit.Int64, closedOrder1.PercentProfit.Float64+closedOrder2.PercentProfit.Float64))
 		}
 		return
 	}
@@ -194,13 +195,13 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 
 	sumProfit := profitInPercent1 + profitInPercent2
 	if sumProfit < s.maxOrderLoss {
-		zap.S().Infof("Close orders by stopLoss[%v] at %v", sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+		zap.S().Infof("Close orders by stopLoss[%.2f] at %v", sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		closedOrder1, closedOrder2 := s.closeOrders()
 		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by stopLoss %v - %v profit: %+d (%.2f%%)", s.coin1.Symbol, s.coin2.Symbol, closedOrder1.Profit.Int64+closedOrder2.Profit.Int64, closedOrder1.PercentProfit.Float64+closedOrder2.PercentProfit.Float64))
 		return
 	}
 	if sumProfit > s.closeOnProfit {
-		zap.S().Infof("Close orders with profit[%v] at %v", sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+		zap.S().Infof("Close orders with profit[%.2f] at %v", sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		closedOrder1, closedOrder2 := s.closeOrders()
 		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed with profit %v - %v profit: %+d (%.2f%%)", s.coin1.Symbol, s.coin2.Symbol, closedOrder1.Profit.Int64+closedOrder2.Profit.Int64, closedOrder1.PercentProfit.Float64+closedOrder2.PercentProfit.Float64))
 		return
@@ -239,18 +240,18 @@ func (s *PairArbitrageStrategyTradingService) openOrder(coin *domains.Coin, futu
 	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, orderCost, stopLossPrice, 0)
 }
 
-func (s *PairArbitrageStrategyTradingService) calculateOrderStopLoss(coin *domains.Coin, futuresType futureType.FuturesType) int64 {
+func (s *PairArbitrageStrategyTradingService) calculateOrderStopLoss(coin *domains.Coin, futuresType futureType.FuturesType) float64 {
 	if s.stopLossPercent > 0 {
 		currentPrice, _ := s.ExchangeDataService.GetCurrentPriceForFutures(coin, s.klineInterval)
 		return util.CalculatePriceForStopLoss(currentPrice, s.stopLossPercent, futuresType)
 	}
 
-	return int64(0)
+	return float64(0)
 }
 
-func (s *PairArbitrageStrategyTradingService) calculateCostForOrder() int64 {
+func (s *PairArbitrageStrategyTradingService) calculateCostForOrder() float64 {
 	sumOfProfitByCoin1, _ := s.TransactionRepo.CalculateSumOfProfitByCoin(s.coin1.Id, s.tradingStrategy)
 	sumOfProfitByCoin2, _ := s.TransactionRepo.CalculateSumOfProfitByCoin(s.coin2.Id, s.tradingStrategy)
 
-	return ((int64(s.startCapitalInCents) + sumOfProfitByCoin1 + sumOfProfitByCoin2) / 2) * int64(s.leverage)
+	return util.GetDollarsByCents(((int64(s.startCapitalInCents) + sumOfProfitByCoin1 + sumOfProfitByCoin2) / 2) * int64(s.leverage))
 }

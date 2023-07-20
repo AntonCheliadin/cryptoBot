@@ -25,18 +25,18 @@ func (api *BinanceApiMock) GetKlinesFutures(coin *domains.Coin, interval string,
 	return nil, errors.New("Not implemented for Binance API")
 }
 
-func (api *BinanceApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
+func (api *BinanceApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price float64, futuresType futureType.FuturesType, stopLossPriceInCents float64) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }
-func (api *BinanceApiMock) CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price int64) (api.OrderResponseDto, error) {
+func (api *BinanceApiMock) CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price float64) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }
 
-func (api *BinanceApiMock) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error) {
+func (api *BinanceApiMock) GetCurrentCoinPriceForFutures(coin *domains.Coin) (float64, error) {
 	return 0, errors.New("Shouldn't be called.")
 }
 
-func (api *BinanceApiMock) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
+func (api *BinanceApiMock) GetCurrentCoinPrice(coin *domains.Coin) (float64, error) {
 	return 0, errors.New("Shouldn't be called.")
 }
 
@@ -70,7 +70,7 @@ func (api *BinanceApiMock) GetActiveFuturesConditionalOrder(coin *domains.Coin, 
 var countOfNotSoldTransactions = 0
 var maxCountOfNotSoldTransactions = 0
 
-func (api *BinanceApiMock) BuyCoinByMarket(coin *domains.Coin, amount float64, price int64) (api.OrderResponseDto, error) {
+func (api *BinanceApiMock) BuyCoinByMarket(coin *domains.Coin, amount float64, price float64) (api.OrderResponseDto, error) {
 	countOfNotSoldTransactions = countOfNotSoldTransactions + 1
 
 	if countOfNotSoldTransactions > maxCountOfNotSoldTransactions {
@@ -84,7 +84,7 @@ func (api *BinanceApiMock) BuyCoinByMarket(coin *domains.Coin, amount float64, p
 	}, nil
 }
 
-func (api *BinanceApiMock) SellCoinByMarket(coin *domains.Coin, amount float64, price int64) (api.OrderResponseDto, error) {
+func (api *BinanceApiMock) SellCoinByMarket(coin *domains.Coin, amount float64, price float64) (api.OrderResponseDto, error) {
 	countOfNotSoldTransactions = countOfNotSoldTransactions - 1
 
 	return &orderResponseMockDto{
@@ -94,20 +94,20 @@ func (api *BinanceApiMock) SellCoinByMarket(coin *domains.Coin, amount float64, 
 }
 
 type orderResponseMockDto struct {
-	price  int64
+	price  float64
 	amount float64
 }
 
-func (d *orderResponseMockDto) CalculateAvgPrice() int64 {
-	return d.price
+func (d *orderResponseMockDto) CalculateAvgPrice() float64 {
+	return float64(d.price) * 0.01
 }
 
-func (d *orderResponseMockDto) CalculateTotalCost() int64 {
-	return int64(float64(d.price) * d.amount)
+func (d *orderResponseMockDto) CalculateTotalCost() float64 {
+	return d.price * d.amount
 }
 
-func (d *orderResponseMockDto) CalculateCommissionInUsd() int64 {
-	return int64(float64(d.CalculateTotalCost()) * 0.001) // 0.1% commission
+func (d *orderResponseMockDto) CalculateCommissionInUsd() float64 {
+	return float64(d.CalculateTotalCost()) * 0.001 // 0.1% commission
 }
 
 func (d *orderResponseMockDto) GetAmount() float64 {
