@@ -194,7 +194,7 @@ func (s *OrderManagerService) CloseOrder(openTransaction *domains.Transaction, c
 
 	openTransaction.RelatedTransactionId = sql.NullInt64{Int64: closeTransaction.Id, Valid: true}
 	_ = s.transactionRepo.SaveTransaction(openTransaction)
-	telegramApi.SendTextToTelegramChat(coin.Symbol + " " + closeTransaction.String())
+	//telegramApi.SendTextToTelegramChat(coin.Symbol + " " + closeTransaction.String())
 
 	return closeTransaction
 }

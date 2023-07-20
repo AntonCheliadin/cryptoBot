@@ -74,7 +74,7 @@ func (dto *KlineFuturesDto) GetSymbol() string {
 }
 
 func (dto *KlineFuturesDto) GetInterval() string {
-	panic("Unexpected GetInterval in KlineFuturesDto")
+	return strconv.Itoa(dto.Interval)
 }
 
 func (dto *KlineFuturesDto) GetStartAt() time.Time {
