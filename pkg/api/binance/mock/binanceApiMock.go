@@ -21,11 +21,19 @@ func (api *BinanceApiMock) GetKlines(coin *domains.Coin, interval string, limit 
 	return nil, errors.New("Not implemented for Binance API")
 }
 
+func (api *BinanceApiMock) GetKlinesFutures(coin *domains.Coin, interval string, limit int, fromTime time.Time) (api.KlinesDto, error) {
+	return nil, errors.New("Not implemented for Binance API")
+}
+
 func (api *BinanceApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
 }
 func (api *BinanceApiMock) CloseFuturesOrder(coin *domains.Coin, openedTransaction *domains.Transaction, price int64) (api.OrderResponseDto, error) {
 	return nil, errors.New("Futures api is not implemented")
+}
+
+func (api *BinanceApiMock) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error) {
+	return 0, errors.New("Shouldn't be called.")
 }
 
 func (api *BinanceApiMock) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
@@ -37,6 +45,10 @@ func (api *BinanceApiMock) GetWalletBalance() (api.WalletBalanceDto, error) {
 }
 
 func (api *BinanceApiMock) SetFuturesLeverage(coin *domains.Coin, leverage int) error {
+	return nil
+}
+
+func (api *BinanceApiMock) SetIsolatedMargin(coin *domains.Coin, leverage int) error {
 	return nil
 }
 

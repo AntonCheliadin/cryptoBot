@@ -24,3 +24,14 @@ func (r *Coin) FindBySymbol(symbol string) (*domains.Coin, error) {
 	}
 	return &c, nil
 }
+
+func (r *Coin) FindById(id int64) (*domains.Coin, error) {
+	var c domains.Coin
+	if err := r.db.Get(&c, "SELECT * FROM coin WHERE id=$1", id); err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &c, nil
+}

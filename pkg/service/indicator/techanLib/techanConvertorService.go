@@ -59,3 +59,19 @@ func (s *TechanConvertorService) BuildTimeSeriesByKlinesAtMoment(coin *domains.C
 
 	return series
 }
+
+func (s *TechanConvertorService) ConvertKlinesToSeries(klines []domains.IKline, candleDuration int) *techan.TimeSeries {
+	series := techan.NewTimeSeries()
+
+	for _, kline := range klines {
+		period := techan.NewTimePeriod(kline.GetOpenTime(), time.Minute*time.Duration(candleDuration))
+
+		candle := techan.NewCandle(period)
+		candle.OpenPrice = big.NewDecimal(float64(kline.GetOpen()) / 100)
+		candle.ClosePrice = big.NewDecimal(float64(kline.GetClose()) / 100)
+
+		series.AddCandle(candle)
+	}
+
+	return series
+}

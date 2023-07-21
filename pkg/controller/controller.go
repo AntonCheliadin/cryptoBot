@@ -11,11 +11,13 @@ import (
 	"net/http"
 )
 
-func InitControllers(telegramService *telegram.TelegramService) *chi.Mux {
+func InitControllers(telegramService telegram.ITelegramService) *chi.Mux {
 	r := chi.NewRouter()
 
 	InitHealthCheckEndpoints(r)
-	InitTelegramWebhookEndpoints(r, telegramService)
+	if telegramService != nil {
+		InitTelegramWebhookEndpoints(r, telegramService)
+	}
 	return r
 }
 
@@ -23,7 +25,7 @@ func InitHealthCheckEndpoints(r *chi.Mux) {
 	r.Get("/healthcheck", func(res http.ResponseWriter, req *http.Request) {})
 }
 
-func InitTelegramWebhookEndpoints(r *chi.Mux, telegramService *telegram.TelegramService) {
+func InitTelegramWebhookEndpoints(r *chi.Mux, telegramService telegram.ITelegramService) {
 	r.Post("/telegram/webhook", func(res http.ResponseWriter, req *http.Request) {
 
 		var update, err = parseTelegramRequest(req)

@@ -41,6 +41,10 @@ func (api *BybitApiMock) GetKlines(coin *domains.Coin, interval string, limit in
 	return &dto, nil
 }
 
+func (api *BybitApiMock) GetKlinesFutures(coin *domains.Coin, interval string, limit int, fromTime time.Time) (api.KlinesDto, error) {
+	return nil, errors.New("Not implemented for Bybit API mock")
+}
+
 func (api *BybitApiMock) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
 	return &orderResponseMockDto{
 		price:  price,
@@ -52,6 +56,10 @@ func (api *BybitApiMock) CloseFuturesOrder(coin *domains.Coin, openedTransaction
 		price:  price,
 		amount: openedTransaction.Amount,
 	}, nil
+}
+
+func (api *BybitApiMock) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error) {
+	return 0, errors.New("Shouldn't be called.")
 }
 
 func (api *BybitApiMock) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
@@ -89,6 +97,10 @@ func (api *BybitApiMock) GetWalletBalance() (api.WalletBalanceDto, error) {
 }
 
 func (api *BybitApiMock) SetFuturesLeverage(coin *domains.Coin, leverage int) error {
+	return nil
+}
+
+func (api *BybitApiMock) SetIsolatedMargin(coin *domains.Coin, leverage int) error {
 	return nil
 }
 

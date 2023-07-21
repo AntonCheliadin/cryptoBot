@@ -89,7 +89,7 @@ func main() {
 	telegramService := telegram.NewTelegramService(repos.Transaction, repos.Coin, exchangeApi)
 
 	if enabled, err := strconv.ParseBool(os.Getenv("TRADING_ENABLED")); enabled && err == nil {
-		cron.InitCronJobs(maTradingService, repos.Coin)
+		cron.InitCronJobs(maTradingService)
 	}
 
 	router := controller.InitControllers(telegramService)

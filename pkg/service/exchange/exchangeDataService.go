@@ -8,6 +8,7 @@ import (
 	"cryptoBot/pkg/util"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"strconv"
 )
 
 var exchangeDataServiceImpl *DataService
@@ -35,21 +36,39 @@ type DataService struct {
 	klineRepo       repository.Kline
 }
 
-func (s *DataService) GetCurrentPrice(coin *domains.Coin) (int64, error) { //todo: refactor getting price to remove dependency on interval
-	if s.Clock.NowTime().Minute()%viper.GetInt("strategy.trendMeter.interval") == 0 {
-		strategyInterval := viper.GetString("strategy.trendMeter.interval")
-		if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), strategyInterval); kline != nil {
+//Deprecated: use GetCurrentPriceWithInterval instead
+func (s *DataService) GetCurrentPrice(coin *domains.Coin) (int64, error) {
+	interval := viper.GetInt("strategy.trendMeter.interval")
+
+	return s.GetCurrentPriceWithInterval(coin, interval)
+}
+
+func (s *DataService) GetCurrentPriceWithInterval(coin *domains.Coin, interval int) (int64, error) {
+	if s.Clock.NowTime().Minute()%interval == 0 {
+		strategyIntervalString := strconv.Itoa(interval)
+		if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), strategyIntervalString); kline != nil {
 			return kline.Open, nil
 		}
-	}
-
-	if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), "60"); kline != nil {
-		return kline.Open, nil
 	}
 
 	currentCoinPrice, err := s.exchangeApi.GetCurrentCoinPrice(coin)
 	if err != nil {
 		zap.S().Errorf("Error during GetCurrentCoinPrice at %s (rounded to %s) - %s", s.Clock.NowTime(), util.RoundToMinutes(s.Clock.NowTime()), err.Error())
+	}
+	return currentCoinPrice, err
+}
+
+func (s *DataService) GetCurrentPriceForFutures(coin *domains.Coin, interval int) (int64, error) {
+	if s.Clock.NowTime().Minute()%interval == 0 {
+		strategyIntervalString := strconv.Itoa(interval)
+		if kline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, util.RoundToMinutes(s.Clock.NowTime()), strategyIntervalString); kline != nil {
+			return kline.Open, nil
+		}
+	}
+
+	currentCoinPrice, err := s.exchangeApi.GetCurrentCoinPriceForFutures(coin)
+	if err != nil {
+		zap.S().Errorf("Error during GetCurrentPriceForFutures at %s (rounded to %s) - %s", s.Clock.NowTime(), util.RoundToMinutes(s.Clock.NowTime()), err.Error())
 	}
 	return currentCoinPrice, err
 }

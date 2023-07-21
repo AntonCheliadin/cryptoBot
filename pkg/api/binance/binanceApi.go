@@ -33,6 +33,14 @@ func (api *BinanceApi) GetKlines(coin *domains.Coin, interval string, limit int,
 	return nil, errors.New("Not implemented for Binance API")
 }
 
+func (api *BinanceApi) GetKlinesFutures(coin *domains.Coin, interval string, limit int, fromTime time.Time) (api.KlinesDto, error) {
+	return nil, errors.New("Not implemented for Binance API")
+}
+
+func (api *BinanceApi) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error) {
+	return 0, errors.New("Not implemennted.")
+}
+
 func (api *BinanceApi) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
 	resp, err := http.Get("https://api.binance.com/api/v3/ticker/price?symbol=" + coin.Symbol)
 	if err != nil {
@@ -59,7 +67,7 @@ func (api *BinanceApi) SellCoinByMarket(coin *domains.Coin, amount float64, pric
 }
 
 func (api *BinanceApi) orderCoinByMarket(queryParams string) (api.OrderResponseDto, error) {
-	zap.S().Infof("OrderCoinByMarket = %s", queryParams)
+	zap.S().Debugf("OrderCoinByMarket = %s", queryParams)
 
 	uri := "https://api.binance.com/api/v3/order?" // /test
 	signatureParameter := "&signature=" + api.sign(queryParams)
@@ -90,7 +98,7 @@ func (api *BinanceApi) orderCoinByMarket(queryParams string) (api.OrderResponseD
 		zap.S().Errorf("API error: %s", err)
 		return nil, err
 	}
-	zap.S().Infof("API response: %s", string(body))
+	zap.S().Debugf("API response: %s", string(body))
 
 	dto := binance.OrderResponseBinanceDto{}
 	errUnmarshal := json.Unmarshal(body, &dto)
@@ -138,6 +146,10 @@ func (api *BinanceApi) GetWalletBalance() (api.WalletBalanceDto, error) {
 }
 
 func (api *BinanceApi) SetFuturesLeverage(coin *domains.Coin, leverage int) error {
+	return nil
+}
+
+func (api *BinanceApi) SetIsolatedMargin(coin *domains.Coin, leverage int) error {
 	return nil
 }
 

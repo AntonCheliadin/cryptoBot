@@ -16,9 +16,6 @@ import (
 var klinesFetcherServiceImpl *KlinesFetcherService
 
 func NewKlinesFetcherService(exchangeApi api.ExchangeApi, klineRepo repository.Kline, clock date.Clock) *KlinesFetcherService {
-	if klinesFetcherServiceImpl != nil {
-		panic("Unexpected try to create second service instance")
-	}
 	klinesFetcherServiceImpl = &KlinesFetcherService{
 		klineRepo:   klineRepo,
 		exchangeApi: exchangeApi,
@@ -59,7 +56,7 @@ func (s *KlinesFetcherService) FetchActualKlines(coin *domains.Coin, intervalInM
 func (s *KlinesFetcherService) FetchKlinesForPeriod(coin *domains.Coin, timeFrom time.Time, timeTo time.Time, interval string) error {
 	timeIter := timeFrom
 	for timeIter.Before(timeTo) {
-		klinesDto, err := s.exchangeApi.GetKlines(coin, interval, bybit.BYBIT_MAX_LIMIT, timeIter)
+		klinesDto, err := s.exchangeApi.GetKlinesFutures(coin, interval, bybit.BYBIT_MAX_LIMIT, timeIter)
 		if err != nil {
 			zap.S().Errorf("Error on fetch klines: %s", err)
 			return err

@@ -3,6 +3,7 @@ package repository
 import (
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/data/domains"
+	"cryptoBot/pkg/data/dto/postgres/transaction"
 	"cryptoBot/pkg/repository/postgres"
 	"github.com/jmoiron/sqlx"
 	"time"
@@ -10,6 +11,7 @@ import (
 
 type Coin interface {
 	FindBySymbol(symbol string) (*domains.Coin, error)
+	FindById(id int64) (*domains.Coin, error)
 }
 
 type Transaction interface {
@@ -30,6 +32,10 @@ type Transaction interface {
 
 	FindOpenedTransaction(tradingStrategy constants.TradingStrategy) (*domains.Transaction, error)
 	FindAllOpenedTransactions(tradingStrategy constants.TradingStrategy) ([]*domains.Transaction, error)
+	FindOpenedTransactionByCoin(tradingStrategy constants.TradingStrategy, coinId int64) (*domains.Transaction, error)
+
+	FindAllProfitPercents(tradingStrategy int) ([]transaction.TransactionProfitPercentsDto, error)
+	FindAllCoinIds(tradingStrategy int) ([]int64, error)
 }
 
 type ConditionalOrder interface {
@@ -51,7 +57,9 @@ type Kline interface {
 }
 
 type SyntheticKline interface {
-	FindAllSyntheticKlinesByCoinIdsAndIntervalAndCloseTimeInRange(coinId1 int64, coinId2 int64, interval string, openTime time.Time, closeTime time.Time) ([]*domains.SyntheticKline, error)
+	FindAllByCoinIdsAndIntervalAndCloseTimeInRange(coinId1 int64, coinId2 int64, interval string, openTime time.Time, closeTime time.Time) ([]domains.IKline, error)
+	FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coinId1 int64, coinId2 int64, interval string, closeTime time.Time, limit int) ([]domains.IKline, error)
+	RefreshView() error
 }
 
 type Repository struct {

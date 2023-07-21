@@ -3,6 +3,7 @@ package postgres
 import (
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/data/domains"
+	"cryptoBot/pkg/data/dto/postgres/transaction"
 	"database/sql"
 	"fmt"
 	"github.com/jmoiron/sqlx"
@@ -41,6 +42,17 @@ func (r *Transaction) FindOpenedTransaction(tradingStrategy constants.TradingStr
 	return &transaction, nil
 }
 
+func (r *Transaction) FindOpenedTransactionByCoin(tradingStrategy constants.TradingStrategy, coinId int64) (*domains.Transaction, error) {
+	var transaction domains.Transaction
+	if err := r.db.Get(&transaction, "SELECT * FROM transaction_table WHERE related_transaction_id is null AND trading_strategy=$1 AND coin_id=$2 order by created_at desc limit 1", tradingStrategy, coinId); err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &transaction, nil
+}
+
 func (r *Transaction) FindAllOpenedTransactions(tradingStrategy constants.TradingStrategy) ([]*domains.Transaction, error) {
 	var klines []domains.Transaction
 	err := r.db.Select(&klines, "SELECT * FROM transaction_table WHERE related_transaction_id is null AND trading_strategy=$1 order by created_at desc",
@@ -51,6 +63,30 @@ func (r *Transaction) FindAllOpenedTransactions(tradingStrategy constants.Tradin
 	}
 
 	return r.listRelationsToListRelationsPointers(klines), nil
+}
+
+func (r *Transaction) FindAllProfitPercents(tradingStrategy int) ([]transaction.TransactionProfitPercentsDto, error) {
+	var profitPercents []transaction.TransactionProfitPercentsDto
+	err := r.db.Select(&profitPercents, "select created_at, sum(percent_profit) profit_percent from transaction_table where trading_strategy = $1 and profit is not null group by created_at order by created_at asc;",
+		tradingStrategy)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error during select domain: %s", err.Error())
+	}
+
+	return profitPercents, nil
+}
+
+func (r *Transaction) FindAllCoinIds(tradingStrategy int) ([]int64, error) {
+	var results []int64
+	err := r.db.Select(&results, "select distinct coin_id from transaction_table where trading_strategy = $1;",
+		tradingStrategy)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error during select domain: %s", err.Error())
+	}
+
+	return results, nil
 }
 
 func (r *Transaction) listRelationsToListRelationsPointers(domainList []domains.Transaction) []*domains.Transaction {

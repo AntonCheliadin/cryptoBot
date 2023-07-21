@@ -15,7 +15,14 @@ import (
 )
 
 type TradingService interface {
+	BeforeExecute()
+	Execute()
+	Initialize() error
+
+	//Deprecated: use Execute instead
 	BotAction(coin *domains.Coin)
+
+	//Deprecated: use Initialize instead
 	InitializeTrading(coin *domains.Coin) error
 }
 

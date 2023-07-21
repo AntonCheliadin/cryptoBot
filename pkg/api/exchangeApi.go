@@ -7,8 +7,10 @@ import (
 )
 
 type ExchangeApi interface {
+	GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error)
 	GetCurrentCoinPrice(coin *domains.Coin) (int64, error)
 	GetKlines(coin *domains.Coin, interval string, limit int, fromTime time.Time) (KlinesDto, error)
+	GetKlinesFutures(coin *domains.Coin, interval string, limit int, fromTime time.Time) (KlinesDto, error)
 
 	BuyCoinByMarket(coin *domains.Coin, amount float64, price int64) (OrderResponseDto, error)
 	SellCoinByMarket(coin *domains.Coin, amount float64, price int64) (OrderResponseDto, error)
@@ -24,6 +26,7 @@ type ExchangeApi interface {
 
 	GetWalletBalance() (WalletBalanceDto, error)
 	SetFuturesLeverage(coin *domains.Coin, leverage int) error
+	SetIsolatedMargin(coin *domains.Coin, leverage int) error
 }
 
 type OrderResponseDto interface {

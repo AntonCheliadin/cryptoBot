@@ -56,6 +56,44 @@ func (bybitApi *BybitApi) GetKlines(coin *domains.Coin, interval string, limit i
 
 	return &dto, nil
 }
+func (bybitApi *BybitApi) GetKlinesFutures(coin *domains.Coin, interval string, limit int, fromTime time.Time) (api.KlinesDto, error) {
+	intervalInt, _ := strconv.Atoi(interval)
+	end := fromTime.Add(time.Minute * time.Duration(intervalInt*limit))
+
+	resp, err := http.Get("https://api.bytick.com/derivatives/v3/public/kline?" +
+		"category=linear" +
+		"&symbol=" + coin.Symbol +
+		"&interval=" + interval +
+		"&start=" + strconv.FormatInt(util.GetMillisByTime(fromTime), 10) +
+		"&end=" + strconv.FormatInt(util.GetMillisByTime(end), 10) +
+		"&limit=" + strconv.Itoa(limit))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	dto := &bybit.KlinesFuturesDto{Interval: intervalInt}
+	if err := json.NewDecoder(resp.Body).Decode(&dto); err != nil {
+		return nil, err
+	}
+
+	return dto, nil
+}
+
+func (api *BybitApi) GetCurrentCoinPriceForFutures(coin *domains.Coin) (int64, error) {
+	resp, err := http.Get("https://api.bytick.com/derivatives/v3/public/tickers?symbol=" + coin.Symbol)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	var priceDto bybit.TickerInfoDto
+	if err := json.NewDecoder(resp.Body).Decode(&priceDto); err != nil {
+		return 0, err
+	}
+
+	return priceDto.PriceInCents()
+}
 
 func (api *BybitApi) GetCurrentCoinPrice(coin *domains.Coin) (int64, error) {
 	resp, err := http.Get("https://api.bytick.com/spot/quote/v1/ticker/price?symbol=" + coin.Symbol)
@@ -250,6 +288,21 @@ func (api *BybitApi) SetFuturesLeverage(coin *domains.Coin, leverage int) error 
 	return err
 }
 
+func (api *BybitApi) SetIsolatedMargin(coin *domains.Coin, leverage int) error {
+	_, err := api.postSignedApiRequest("/contract/v3/private/position/switch-isolated",
+		map[string]interface{}{
+			"api_key":       api.apiKey,
+			"tradeMode":     1, //0: cross margin. 1: isolated margin
+			"buy_leverage":  strconv.Itoa(leverage),
+			"sell_leverage": strconv.Itoa(leverage),
+			"symbol":        coin.Symbol,
+			"timestamp":     util.MakeTimestamp(),
+		},
+	)
+
+	return err
+}
+
 func (api *BybitApi) OpenFuturesOrder(coin *domains.Coin, amount float64, price int64, futuresType futureType.FuturesType, stopLossPriceInCents int64) (api.OrderResponseDto, error) {
 	queryParams := api.buildOpenFuturesParams(coin, amount, price, futuresType, stopLossPriceInCents)
 	return api.futuresOrderByMarketWithResponseDetails(queryParams)
@@ -293,6 +346,7 @@ func (api *BybitApi) buildCloseFuturesParams(coin *domains.Coin, openedTransacti
 func (api *BybitApi) buildFuturesParams(coin *domains.Coin, amount float64, side string, positionIdx int) map[string]interface{} {
 	return map[string]interface{}{
 		"api_key":          api.apiKey,
+		"recv_window":      60000,
 		"qty":              amount,
 		"side":             side,
 		"symbol":           coin.Symbol,
@@ -312,7 +366,7 @@ func (api *BybitApi) futuresOrderByMarket(queryParams map[string]interface{}) (*
 		return nil, err
 	}
 
-	zap.S().Infof("API response: %s", string(body))
+	zap.S().Debugf("API response: %s", string(body))
 
 	dto := order.FuturesOrderResponseDto{}
 	errUnmarshal := json.Unmarshal(body, &dto)
