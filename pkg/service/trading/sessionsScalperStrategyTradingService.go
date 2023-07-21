@@ -169,5 +169,5 @@ func (s *SessionsScalperStrategyTradingService) openOrder(coin *domains.Coin, st
 	currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
 	takeProfit := util.CalculateProfitByRation(currentPrice, stopLoss, stochasticFuturesTypeSignal, s.takeProfitRatio)
 
-	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin, stochasticFuturesTypeSignal, int64(s.costOfOrderInCents), stopLoss, takeProfit)
+	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin, stochasticFuturesTypeSignal, util.GetDollarsByCents(int64(s.costOfOrderInCents)), stopLoss, takeProfit)
 }

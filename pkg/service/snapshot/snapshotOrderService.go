@@ -7,7 +7,6 @@ import (
 	"cryptoBot/pkg/data/domains"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/service/indicator"
-	moneyUtil "cryptoBot/pkg/util"
 	"fmt"
 	"github.com/blend/go-sdk/mathutil"
 	"github.com/sdcoffey/big"
@@ -133,7 +132,7 @@ func (s *SnapshotOrderService) collectPriceData(coin *domains.Coin, openTransact
 
 	for _, kline := range klines {
 		xvalues = append(xvalues, kline.CloseTime)
-		yvalues = append(yvalues, moneyUtil.GetDollarsByCents(kline.Close))
+		yvalues = append(yvalues, kline.Close)
 	}
 
 	return xvalues, yvalues
@@ -143,7 +142,7 @@ func (s *SnapshotOrderService) getOrderLabels(openTransaction *domains.Transacti
 	annotations := []chart.Value2{
 		{
 			XValue: util.Time.ToFloat64(closeTransaction.CreatedAt),
-			YValue: moneyUtil.GetDollarsByCents(closeTransaction.Price),
+			YValue: (closeTransaction.Price),
 			Label:  "Profit " + strconv.Itoa(int(closeTransaction.Profit.Int64)),
 		},
 	}
@@ -151,13 +150,13 @@ func (s *SnapshotOrderService) getOrderLabels(openTransaction *domains.Transacti
 	if closeTransaction.Profit.Int64 > 0 {
 		annotations = append(annotations, chart.Value2{
 			XValue: util.Time.ToFloat64(openTransaction.CreatedAt),
-			YValue: moneyUtil.GetDollarsByCents(openTransaction.StopLossPrice.Int64),
+			YValue: (openTransaction.StopLossPrice.Float64),
 			Label:  "Stop loss",
 		})
 	} else {
 		annotations = append(annotations, chart.Value2{
 			XValue: util.Time.ToFloat64(openTransaction.CreatedAt),
-			YValue: moneyUtil.GetDollarsByCents(openTransaction.TakeProfitPrice.Int64),
+			YValue: (openTransaction.TakeProfitPrice.Float64),
 			Label:  "Take profit",
 		})
 	}
@@ -169,10 +168,10 @@ func (s *SnapshotOrderService) getOrderLabels(openTransaction *domains.Transacti
 
 func (s *SnapshotOrderService) getPointsOfOpenCloseTime(openTransaction *domains.Transaction, closeTransaction *domains.Transaction) []chart.GridLine {
 	return []chart.GridLine{
-		{Value: moneyUtil.GetDollarsByCents(openTransaction.Price)},
-		{Value: moneyUtil.GetDollarsByCents(openTransaction.StopLossPrice.Int64)},
-		{Value: moneyUtil.GetDollarsByCents(openTransaction.TakeProfitPrice.Int64)},
-		{Value: moneyUtil.GetDollarsByCents(closeTransaction.Price)},
+		{Value: (openTransaction.Price)},
+		{Value: (openTransaction.StopLossPrice.Float64)},
+		{Value: (openTransaction.TakeProfitPrice.Float64)},
+		{Value: (closeTransaction.Price)},
 	}
 }
 

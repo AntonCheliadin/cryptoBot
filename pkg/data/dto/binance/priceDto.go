@@ -8,10 +8,11 @@ type PriceDto struct {
 	Price string `json:"price"`
 }
 
-func (d PriceDto) PriceInCents() (int64, error) {
+func (d PriceDto) GetPrice() (float64, error) {
 	price, err := decimal.NewFromString(d.Price)
 	if err != nil {
 		return 0, err
 	}
-	return int64(decimal.NewFromInt(100).Mul(price).IntPart()), nil
+	f, _ := price.Float64()
+	return f, nil
 }

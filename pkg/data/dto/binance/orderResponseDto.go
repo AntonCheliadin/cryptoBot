@@ -1,7 +1,6 @@
 package binance
 
 import (
-	"cryptoBot/pkg/util"
 	"github.com/spf13/viper"
 	"strconv"
 	"time"
@@ -41,28 +40,29 @@ func (f fill) getCommission() float64 {
 	return money
 }
 
-func (d OrderResponseBinanceDto) CalculateAvgPrice() int64 {
+func (d OrderResponseBinanceDto) CalculateAvgPrice() float64 {
 	price := float64(0)
 
 	for _, fill := range d.Fills {
 		price += fill.getPrice()
 	}
 
-	return util.GetCents(price / float64(len(d.Fills)))
+	return price / float64(len(d.Fills))
 }
 
-func (d OrderResponseBinanceDto) CalculateTotalCost() int64 {
-	return util.GetCentsFromString(d.CummulativeQuoteQty)
+func (d OrderResponseBinanceDto) CalculateTotalCost() float64 {
+	parseFloat, _ := strconv.ParseFloat(d.CummulativeQuoteQty, 64)
+	return parseFloat
 }
 
-func (d OrderResponseBinanceDto) CalculateCommissionInUsd() int64 {
+func (d OrderResponseBinanceDto) CalculateCommissionInUsd() float64 {
 	totalCommission := float64(0)
 
 	for _, fill := range d.Fills {
 		totalCommission += fill.getCommission() * viper.GetFloat64("api.binance.commission.bnbCost")
 	}
 
-	return util.GetCents(totalCommission)
+	return totalCommission
 }
 
 func (d OrderResponseBinanceDto) GetAmount() float64 {

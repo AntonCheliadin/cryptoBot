@@ -1,7 +1,5 @@
 package wallet
 
-import "cryptoBot/pkg/util"
-
 type GetWalletBalanceDto struct {
 	RetCode int    `json:"ret_code"`
 	RetMsg  string `json:"ret_msg"`
@@ -30,6 +28,6 @@ type GetWalletBalanceDto struct {
 	RateLimit        int    `json:"rate_limit"`
 }
 
-func (dto *GetWalletBalanceDto) GetAvailableBalanceInCents() int64 {
-	return util.GetCents(dto.Result.USDT.AvailableBalance)
+func (dto *GetWalletBalanceDto) GetAvailableBalanceInCents() float64 {
+	return dto.Result.USDT.AvailableBalance
 }

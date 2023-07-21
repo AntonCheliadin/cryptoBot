@@ -10,8 +10,8 @@ type IKline interface {
 	GetOpenTime() time.Time
 	GetCloseTime() time.Time
 	GetInterval() string
-	GetOpen() int64
-	GetClose() int64
+	GetOpen() float64
+	GetClose() float64
 }
 
 type Kline struct {
@@ -22,10 +22,10 @@ type Kline struct {
 	CloseTime time.Time `db:"close_time"`
 	Interval  string    //Data refresh interval. Enum : 1 3 5 15 30 60 120 240 360 720 "D" "M" "W"
 
-	Open  int64
-	High  int64
-	Low   int64
-	Close int64
+	Open  float64
+	High  float64
+	Low   float64
+	Close float64
 
 	Volume float64
 }
@@ -41,7 +41,7 @@ func (d *Kline) GetIntervalInMinutes() int64 {
 	return parsedInt
 }
 
-func (d *Kline) GetPriceChange() int64 {
+func (d *Kline) GetPriceChange() float64 {
 	return d.Close - d.Open
 }
 
@@ -54,9 +54,9 @@ func (d *Kline) GetCloseTime() time.Time {
 func (d *Kline) GetInterval() string {
 	return d.Interval
 }
-func (d *Kline) GetOpen() int64 {
+func (d *Kline) GetOpen() float64 {
 	return d.Open
 }
-func (d *Kline) GetClose() int64 {
+func (d *Kline) GetClose() float64 {
 	return d.Close
 }

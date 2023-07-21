@@ -32,7 +32,7 @@ type StochasticService struct {
 }
 
 func (s *StochasticService) CalculateStochasticSignal(coin *domains.Coin, candleDuration string, periodK int, smoothK int, periodD int) (bool, futureType.FuturesType) {
-	klinesToFetchSize := util.Min(int64(periodK), int64(periodD)) + 10
+	klinesToFetchSize := util.MinInt(int64(periodK), int64(periodD)) + 10
 	series := s.TechanConvertorService.BuildTimeSeriesByKlines(coin, candleDuration, klinesToFetchSize)
 
 	k := techan.NewSimpleMovingAverage(techan.NewFastStochasticIndicator(series, (periodK)), (smoothK))

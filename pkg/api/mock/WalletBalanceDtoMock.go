@@ -2,6 +2,6 @@ package mock
 
 type BalanceDtoMock struct{}
 
-func (dto *BalanceDtoMock) GetAvailableBalanceInCents() int64 {
-	return 10000
+func (dto *BalanceDtoMock) GetAvailableBalanceInCents() float64 {
+	return 100.00
 }

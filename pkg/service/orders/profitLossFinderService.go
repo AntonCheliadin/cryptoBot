@@ -29,14 +29,14 @@ type ProfitLossFinderService struct {
 	Clock     date.Clock
 }
 
-func (s *ProfitLossFinderService) FindStopLoss(coin *domains.Coin, time time.Time, klineInterval string, futuresType futureType.FuturesType) (int64, error) {
+func (s *ProfitLossFinderService) FindStopLoss(coin *domains.Coin, time time.Time, klineInterval string, futuresType futureType.FuturesType) (float64, error) {
 	klines, err := s.klineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(coin.Id, klineInterval, time, viper.GetInt64("orders.dynamicStopLoss.klinesLimit"))
 	if err != nil {
 		return 0, err
 	}
 
-	maxHigh := int64(0)
-	minLow := int64(9223372036854775807)
+	maxHigh := float64(0)
+	minLow := float64(9223372036854775807)
 
 	for _, kline := range klines {
 		maxHigh = util.Max(maxHigh, kline.High)
@@ -48,9 +48,9 @@ func (s *ProfitLossFinderService) FindStopLoss(coin *domains.Coin, time time.Tim
 	return s.GetStopLossInConfigRange(currentPrice, minLow, maxHigh, futuresType), nil
 }
 
-func (s *ProfitLossFinderService) GetStopLossInConfigRange(currentPrice int64, minLow int64, maxHigh int64, futuresType futureType.FuturesType) int64 {
+func (s *ProfitLossFinderService) GetStopLossInConfigRange(currentPrice float64, minLow float64, maxHigh float64, futuresType futureType.FuturesType) float64 {
 	localExtremum := maxHigh
-	futuresTypeSign := int64(1)
+	futuresTypeSign := float64(1)
 	if futuresType == futureType.LONG {
 		futuresTypeSign = -1
 		localExtremum = minLow
@@ -59,11 +59,11 @@ func (s *ProfitLossFinderService) GetStopLossInConfigRange(currentPrice int64, m
 	maxHighInPercent := math.Abs(util.CalculateChangeInPercents(currentPrice, localExtremum))
 
 	if maxHighInPercent > viper.GetFloat64("orders.dynamicStopLoss.maxPercent") {
-		return currentPrice + int64(util.CalculatePercentOf(float64(currentPrice), viper.GetFloat64("orders.dynamicStopLoss.maxPercent")))*futuresTypeSign
+		return currentPrice + (util.CalculatePercentOf(float64(currentPrice), viper.GetFloat64("orders.dynamicStopLoss.maxPercent")))*futuresTypeSign
 	}
 	if maxHighInPercent < viper.GetFloat64("orders.dynamicStopLoss.minPercent") {
-		return currentPrice + int64(util.CalculatePercentOf(float64(currentPrice), viper.GetFloat64("orders.dynamicStopLoss.minPercent")))*futuresTypeSign
+		return currentPrice + (util.CalculatePercentOf(float64(currentPrice), viper.GetFloat64("orders.dynamicStopLoss.minPercent")))*futuresTypeSign
 	}
 
-	return localExtremum + int64(util.CalculatePercentOf(float64(localExtremum), viper.GetFloat64("orders.dynamicStopLoss.deviationPercent")))*futuresTypeSign
+	return localExtremum + (util.CalculatePercentOf(float64(localExtremum), viper.GetFloat64("orders.dynamicStopLoss.deviationPercent")))*futuresTypeSign
 }

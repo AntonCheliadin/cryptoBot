@@ -42,7 +42,7 @@ func NewPairArbitrageStrategyTradingService(
 		TechanConvertorService: techanConvertorService,
 		coin1:                  coin1,
 		coin2:                  coin2,
-		startCapitalInCents:    10000,
+		startCapitalInCents:    4000,
 		strategyLength:         20,
 		klineInterval:          60,
 		klineIntervalS:         "60",
@@ -112,12 +112,13 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 		return
 	}
 
-	klines, err := s.SyntheticKlineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(s.coin1.Id, s.coin2.Id, s.klineIntervalS, s.Clock.NowTime(), s.strategyLength+1)
+	klinesFetchLimit := s.strategyLength + 1
+	klines, err := s.SyntheticKlineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(s.coin1.Id, s.coin2.Id, s.klineIntervalS, s.Clock.NowTime(), klinesFetchLimit)
 	if err != nil {
 		zap.S().Errorf("Error on fetch synthetic klines: %s. ", err.Error())
 		return
 	}
-	if len(klines) < s.strategyLength {
+	if len(klines) < klinesFetchLimit {
 		zap.S().Errorf("Empty klines: %s. ", s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		return
 	}
@@ -127,24 +128,38 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 	if s.hasOpenedOrders() {
 		s.CloseOpenedOrderByStopLossIfNeeded()
 		if zScore.GT(big.NewDecimal(-0.1)) && zScore.LT(big.NewDecimal(0.1)) {
-			zap.S().Infof("Close by zScore(%v) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-			s.closeOrders()
-			telegramApi.SendTextToTelegramChat("Closed by zScore " + s.coin1.Symbol + "-" + s.coin2.Symbol)
+			zap.S().Infof("Close by zScore(%.2f) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+			closedOrder1, closedOrder2 := s.closeOrders()
+			telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by zScore %v - %v profit: %+d (%.2f%%)", s.coin1.Symbol, s.coin2.Symbol, closedOrder1.Profit.Int64+closedOrder2.Profit.Int64, closedOrder1.PercentProfit.Float64+closedOrder2.PercentProfit.Float64))
 		}
 		return
 	}
 
 	if zScore.GT(big.NewDecimal(2)) {
-		zap.S().Infof("Upper Level zScore(%v) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+		zap.S().Infof("Upper Level zScore(%.2f) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		s.openOrder(s.coin1, futureType.SHORT)
 		s.openOrder(s.coin2, futureType.LONG)
 		telegramApi.SendTextToTelegramChat("Opened " + s.coin1.Symbol + "⬇️" + s.coin2.Symbol + "⬆ ️")
+		s.debugPrices(s.coin1, s.klineInterval)
+		s.debugPrices(s.coin2, s.klineInterval)
 	} else if zScore.LT(big.NewDecimal(-2)) {
-		zap.S().Infof("Lower Level zScore(%v) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+		zap.S().Infof("Lower Level zScore(%.2f) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		s.openOrder(s.coin1, futureType.LONG)
 		s.openOrder(s.coin2, futureType.SHORT)
 		telegramApi.SendTextToTelegramChat("Opened " + s.coin1.Symbol + "⬆ ️" + s.coin2.Symbol + "⬇️")
+		s.debugPrices(s.coin1, s.klineInterval)
+		s.debugPrices(s.coin2, s.klineInterval)
 	}
+}
+
+func (s *PairArbitrageStrategyTradingService) debugPrices(coin *domains.Coin, intervalInMinutes int) {
+	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, coin.Id)
+
+	priceByLastKline := openedOrder1.Price
+	priceForFutures, _ := s.ExchangeDataService.GetCurrentPriceForFutures(coin, intervalInMinutes)
+	priceSpot, _ := s.ExchangeDataService.GetCurrentPriceWithInterval(coin, intervalInMinutes)
+	priceSpot2, _ := s.ExchangeDataService.GetCurrentPrice(coin)
+	zap.S().Infof("DEBUG %v last kline price and current price priceByLastKline[%.4f] priceForFutures[%.4f] priceSpot[%.4f] priceSpot2[%.4f]", coin.Symbol, priceByLastKline, priceForFutures, priceSpot, priceSpot2)
 }
 
 func (s *PairArbitrageStrategyTradingService) calculateZScore(klines []domains.IKline) big.Decimal {
@@ -181,8 +196,8 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 	//if one of order has been closed by exchange
 	if openedOrder1 == nil && openedOrder2 != nil || openedOrder2 == nil && openedOrder1 != nil {
 		zap.S().Infof("Order closed by exchange")
-		closedOrder1, closedOrder2 := s.closeOrders()
-		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by exchange %v - %v profit: %+d (%.2f%%)", s.coin1.Symbol, s.coin2.Symbol, closedOrder1.Profit.Int64+closedOrder2.Profit.Int64, closedOrder1.PercentProfit.Float64+closedOrder2.PercentProfit.Float64))
+		s.closeOrders()
+		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by exchange %v - %v", s.coin1.Symbol, s.coin2.Symbol))
 		return
 	}
 
@@ -193,18 +208,37 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 	profitInPercent2 := util.CalculateProfitInPercent(openedOrder2.Price, currentPrice2, openedOrder2.FuturesType)
 
 	sumProfit := profitInPercent1 + profitInPercent2
+
+	zap.S().Infof("Debug opened price:  openedOrder1.Price-%v[%.4f] openedOrder2.Price-%v[%.4f]", s.coin1.Symbol, openedOrder1.Price, s.coin2.Symbol, openedOrder2.Price)
+	zap.S().Infof("Debug price:  currentPrice1-%v[%.4f] currentPrice2-%v[%.4f]", s.coin1.Symbol, currentPrice1, s.coin2.Symbol, currentPrice2)
+	zap.S().Infof("Debug profit:  profitInPercent1-%v[%.4f] profitInPercent2-%v[%.4f] sum[%.4f]", s.coin1.Symbol, profitInPercent1, s.coin2.Symbol, profitInPercent2, sumProfit)
+
 	if sumProfit < s.maxOrderLoss {
-		zap.S().Infof("Close orders by stopLoss[%v] at %v", sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+		zap.S().Infof("Close orders [%v-%v] by stopLoss[%.4f] at %v", s.coin1.Symbol, s.coin2.Symbol, sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		closedOrder1, closedOrder2 := s.closeOrders()
-		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by stopLoss %v - %v profit: %+d (%.2f%%)", s.coin1.Symbol, s.coin2.Symbol, closedOrder1.Profit.Int64+closedOrder2.Profit.Int64, closedOrder1.PercentProfit.Float64+closedOrder2.PercentProfit.Float64))
+		s.notifyInTelegram(closedOrder1, closedOrder2)
 		return
 	}
 	if sumProfit > s.closeOnProfit {
-		zap.S().Infof("Close orders with profit[%v] at %v", sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+		zap.S().Infof("Close orders [%v-%v] with profit[%.4f] at %v", s.coin1.Symbol, s.coin2.Symbol, sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		closedOrder1, closedOrder2 := s.closeOrders()
-		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed with profit %v - %v profit: %+d (%.2f%%)", s.coin1.Symbol, s.coin2.Symbol, closedOrder1.Profit.Int64+closedOrder2.Profit.Int64, closedOrder1.PercentProfit.Float64+closedOrder2.PercentProfit.Float64))
+		s.notifyInTelegram(closedOrder1, closedOrder2)
 		return
 	}
+}
+
+func (s *PairArbitrageStrategyTradingService) notifyInTelegram(closedOrder1 *domains.Transaction, closedOrder2 *domains.Transaction) {
+	profit := int64(0)
+	profitPercent := float64(0)
+	if closedOrder1 != nil {
+		profit += closedOrder1.Profit.Int64
+		profitPercent += closedOrder1.PercentProfit.Float64
+	}
+	if closedOrder2 != nil {
+		profit += closedOrder2.Profit.Int64
+		profitPercent += closedOrder2.PercentProfit.Float64
+	}
+	telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed with profit or loss %v - %v profit: %+d (%.4f%%)", s.coin1.Symbol, s.coin2.Symbol, profit, profitPercent))
 }
 
 func (s *PairArbitrageStrategyTradingService) closeOrders() (*domains.Transaction, *domains.Transaction) {
@@ -239,18 +273,18 @@ func (s *PairArbitrageStrategyTradingService) openOrder(coin *domains.Coin, futu
 	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, orderCost, stopLossPrice, 0)
 }
 
-func (s *PairArbitrageStrategyTradingService) calculateOrderStopLoss(coin *domains.Coin, futuresType futureType.FuturesType) int64 {
+func (s *PairArbitrageStrategyTradingService) calculateOrderStopLoss(coin *domains.Coin, futuresType futureType.FuturesType) float64 {
 	if s.stopLossPercent > 0 {
 		currentPrice, _ := s.ExchangeDataService.GetCurrentPriceForFutures(coin, s.klineInterval)
 		return util.CalculatePriceForStopLoss(currentPrice, s.stopLossPercent, futuresType)
 	}
 
-	return int64(0)
+	return float64(0)
 }
 
-func (s *PairArbitrageStrategyTradingService) calculateCostForOrder() int64 {
+func (s *PairArbitrageStrategyTradingService) calculateCostForOrder() float64 {
 	sumOfProfitByCoin1, _ := s.TransactionRepo.CalculateSumOfProfitByCoin(s.coin1.Id, s.tradingStrategy)
 	sumOfProfitByCoin2, _ := s.TransactionRepo.CalculateSumOfProfitByCoin(s.coin2.Id, s.tradingStrategy)
 
-	return ((int64(s.startCapitalInCents) + sumOfProfitByCoin1 + sumOfProfitByCoin2) / 2) * int64(s.leverage)
+	return util.GetDollarsByCents(((int64(s.startCapitalInCents) + sumOfProfitByCoin1 + sumOfProfitByCoin2) / 2) * int64(s.leverage))
 }

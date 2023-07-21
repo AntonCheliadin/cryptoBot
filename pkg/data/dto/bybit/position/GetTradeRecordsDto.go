@@ -49,22 +49,22 @@ type TradesSummaryDto struct {
 	Trades []TradeRecordDto
 }
 
-func (dto *TradesSummaryDto) CalculateAvgPrice() int64 {
-	return int64(float64(dto.CalculateTotalCost()) / dto.GetAmount())
+func (dto *TradesSummaryDto) CalculateAvgPrice() float64 {
+	return float64(dto.CalculateTotalCost()) / dto.GetAmount()
 }
 
-func (dto *TradesSummaryDto) CalculateTotalCost() int64 {
-	sumAmount := int64(0)
+func (dto *TradesSummaryDto) CalculateTotalCost() float64 {
+	sumAmount := float64(0)
 	for _, trade := range dto.Trades {
-		sumAmount += util.GetCents(trade.ExecValue)
+		sumAmount += trade.ExecValue
 	}
 	return sumAmount
 }
 
-func (dto *TradesSummaryDto) CalculateCommissionInUsd() int64 {
-	sumAmount := int64(0)
+func (dto *TradesSummaryDto) CalculateCommissionInUsd() float64 {
+	sumAmount := float64(0)
 	for _, trade := range dto.Trades {
-		sumAmount += util.GetCents(trade.ExecFee)
+		sumAmount += trade.ExecFee
 	}
 	return sumAmount
 }

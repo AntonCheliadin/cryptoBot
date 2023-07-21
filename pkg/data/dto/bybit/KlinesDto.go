@@ -67,17 +67,17 @@ func (dto *KlineDto) GetCloseAt() time.Time {
 	return dto.GetStartAt().Add(time.Minute * time.Duration(parseInt))
 }
 
-func (dto *KlineDto) GetOpen() int64 {
-	return util.GetCents(dto.Open)
+func (dto *KlineDto) GetOpen() float64 {
+	return dto.Open
 }
 
-func (dto *KlineDto) GetHigh() int64 {
-	return util.GetCents(dto.High)
+func (dto *KlineDto) GetHigh() float64 {
+	return dto.High
 }
 
-func (dto *KlineDto) GetLow() int64 {
-	return util.GetCents(dto.Low)
+func (dto *KlineDto) GetLow() float64 {
+	return dto.Low
 }
-func (dto *KlineDto) GetClose() int64 {
-	return util.GetCents(dto.Close)
+func (dto *KlineDto) GetClose() float64 {
+	return dto.Close
 }
