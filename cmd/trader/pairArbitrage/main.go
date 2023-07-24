@@ -14,6 +14,7 @@ import (
 	"cryptoBot/pkg/service/exchange"
 	"cryptoBot/pkg/service/indicator/techanLib"
 	"cryptoBot/pkg/service/orders"
+	"cryptoBot/pkg/service/statistic"
 	"cryptoBot/pkg/service/telegram"
 	"cryptoBot/pkg/service/trading"
 	"fmt"
@@ -74,7 +75,10 @@ func main() {
 		cron.InitCronJobs(tradingService)
 	}
 
-	var telegramService telegram.ITelegramService //todo implement := telegram.NewTelegramPairTradingService(repos.Transaction, repos.Coin, exchangeApi)
+	statisticPairTradingService := statistic.NewStatisticPairTradingService(repos.Transaction, repos.Coin, exchangeApi)
+
+	cron.NewStatisticJob(statisticPairTradingService)
+	telegramService := telegram.NewTelegramPairTradingService(repos.Transaction, repos.Coin, exchangeApi, statisticPairTradingService)
 
 	router := controller.InitControllers(telegramService)
 

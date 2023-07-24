@@ -35,6 +35,7 @@ type Transaction interface {
 	FindOpenedTransactionByCoin(tradingStrategy constants.TradingStrategy, coinId int64) (*domains.Transaction, error)
 
 	FindAllProfitPercents(tradingStrategy int) ([]transaction.TransactionProfitPercentsDto, error)
+	FetchStatisticByDays(tradingStrategy int, coinIds []int64) ([]transaction.PairTransactionProfitPercentsDto, error)
 	FindAllCoinIds(tradingStrategy int) ([]int64, error)
 }
 
