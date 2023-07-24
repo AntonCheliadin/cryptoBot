@@ -79,7 +79,8 @@ func (r *Transaction) FindAllProfitPercents(tradingStrategy int) ([]transaction.
 
 func (r *Transaction) FetchStatisticByDays(tradingStrategy int, coinIds []int64) ([]transaction.PairTransactionProfitPercentsDto, error) {
 	var profitPercents []transaction.PairTransactionProfitPercentsDto
-	err := r.db.Select(&profitPercents, "select to_char(created_at, 'YYYY-MM-DD') created_date, avg(percent_profit) profit_percent_of_paired_order, sum(profit) profit_sum, count(1) / 2 orders_size from transaction_table where trading_strategy = $1   and profit is not null    and coin_id in ($2) group by to_char(created_at, 'YYYY-MM-DD') order by to_char(created_at, 'YYYY-MM-DD') desc limit 3;",
+
+	err := r.db.Select(&profitPercents, r.db.Rebind("select to_char(created_at, 'YYYY-MM-DD') created_date, avg(percent_profit) profit_percent_of_paired_order, sum(profit) profit_sum, count(1) / 2 orders_size from transaction_table where trading_strategy = $1   and profit is not null    and coin_id in ($2) group by to_char(created_at, 'YYYY-MM-DD') order by to_char(created_at, 'YYYY-MM-DD') desc limit 3;"),
 		tradingStrategy, coinIds)
 
 	if err != nil {
