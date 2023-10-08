@@ -83,6 +83,9 @@ strategy:
       - 'ALGOUSDT'
       - 'DASHUSDT'
 
+      - 'ARUSDT'
+      - 'DOTUSDT'
+
 indicator:
   trend:
     ma:
