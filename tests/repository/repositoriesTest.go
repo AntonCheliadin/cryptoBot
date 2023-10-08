@@ -5,12 +5,12 @@ import (
 	"cryptoBot/pkg/log"
 	"cryptoBot/pkg/repository"
 	"cryptoBot/pkg/repository/postgres"
+	"cryptoBot/pkg/util"
 	"fmt"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"os"
 	"strconv"
-	"time"
 )
 
 func main() {
@@ -53,7 +53,7 @@ func main() {
 
 	repos := repository.NewRepositories(postgresDb)
 
-	testSyntheticKline(repos)
+	testStatistic(repos)
 
 	if err := postgresDb.Close(); err != nil {
 		zap.S().Errorf("error occured on db connection close: %s", err.Error())
@@ -62,18 +62,23 @@ func main() {
 	os.Exit(0)
 }
 
-func testSyntheticKline(repos *repository.Repository) {
+func testStatistic(repos *repository.Repository) {
 
-	timeFrom, _ := time.Parse(constants.DATE_TIME_FORMAT, "2020-10-25 00:00:00")
-	timeTo, _ := time.Parse(constants.DATE_TIME_FORMAT, "2020-10-25 23:00:00")
+	ids := []int64{5, 6}
 
-	syntheticKlines, err := repos.SyntheticKline.FindAllSyntheticKlinesByCoinIdsAndIntervalAndCloseTimeInRange(1, 4, "60", timeFrom, timeTo)
+	rows, err := repos.Transaction.FetchStatisticByDays(int(constants.PAIR_ARBITRAGE), ids)
 
-	if (err != nil) {
-		zap.S().Errorf("error on get SyntheticKline %s", err.Error())
+	if err != nil {
+		zap.S().Errorf("error %s", err.Error())
 		return
 	}
 
-	zap.S().Infof("syntheticKlines=%v", syntheticKlines)
+	zap.S().Infof(fmt.Sprintf("| %v | %10v | %10v | %10v |",
+		"date", "profit", "%", "size"))
+	for k := 0; k < len(rows); k += 1 {
+		dto := rows[k]
+		zap.S().Infof(fmt.Sprintf("\n| %v | %10v | %10v | %10v |",
+			dto.CreatedAt, util.GetDollarsByCents(dto.ProfitInCents), dto.ProfitPercent, dto.OrdersSize))
+	}
 
 }
