@@ -128,9 +128,16 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 	if s.hasOpenedOrders() {
 		s.CloseOpenedOrderByStopLossIfNeeded()
 		if zScore.GT(big.NewDecimal(-0.1)) && zScore.LT(big.NewDecimal(0.1)) {
-			zap.S().Infof("Close by zScore(%.2f) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+			zap.S().Infof("Close by zScore(%.2f) crossed at %v", zScore.Float(), s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 			closedOrder1, closedOrder2 := s.closeOrders()
-			telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by zScore %v - %v profit: %+d (%.2f%%)", s.coin1.Symbol, s.coin2.Symbol, closedOrder1.Profit.Int64+closedOrder2.Profit.Int64, closedOrder1.PercentProfit.Float64+closedOrder2.PercentProfit.Float64))
+			if closedOrder1 != nil && closedOrder2 != nil {
+				telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by zScore %v - %v profit: %+d (%.2f%%)", s.coin1.Symbol, s.coin2.Symbol, closedOrder1.Profit.Int64+closedOrder2.Profit.Int64, closedOrder1.PercentProfit.Float64+closedOrder2.PercentProfit.Float64))
+			} else if s.hasOpenedOrders() {
+				panic("Orders are not closed!")
+			} else {
+				telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by zScore %v - %v", s.coin1.Symbol, s.coin2.Symbol))
+			}
+
 		}
 		return
 	}
@@ -143,7 +150,7 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 		s.debugPrices(s.coin1, s.klineInterval)
 		s.debugPrices(s.coin2, s.klineInterval)
 	} else if zScore.LT(big.NewDecimal(-2)) {
-		zap.S().Infof("Lower Level zScore(%.2f) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+		zap.S().Infof("Lower Level zScore(%.2f) crossed at %v", zScore.Float(), s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		s.openOrder(s.coin1, futureType.LONG)
 		s.openOrder(s.coin2, futureType.SHORT)
 		telegramApi.SendTextToTelegramChat("Opened " + s.coin1.Symbol + "⬆ ️" + s.coin2.Symbol + "⬇️")
