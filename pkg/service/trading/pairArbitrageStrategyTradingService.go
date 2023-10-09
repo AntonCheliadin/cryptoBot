@@ -17,8 +17,8 @@ import (
 	"go.uber.org/zap"
 )
 
-//https://youtu.be/9jn3DnLNyU0
-//Z-Score script: https://www.tradingview.com/pine/?id=PUB%3BC0yY0a1BOlCTSIHGTDWwBkWcwTdjpeEd
+// https://youtu.be/9jn3DnLNyU0
+// Z-Score script: https://www.tradingview.com/pine/?id=PUB%3BC0yY0a1BOlCTSIHGTDWwBkWcwTdjpeEd
 var pairArbitrageStrategyTradingService *PairArbitrageStrategyTradingService
 
 func NewPairArbitrageStrategyTradingService(
@@ -143,7 +143,7 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 	}
 
 	if zScore.GT(big.NewDecimal(2)) {
-		zap.S().Infof("Upper Level zScore(%.2f) crossed at %v", zScore, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+		zap.S().Infof("Upper Level zScore(%.2f) crossed at %v", zScore.Float(), s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		s.openOrder(s.coin1, futureType.SHORT)
 		s.openOrder(s.coin2, futureType.LONG)
 		telegramApi.SendTextToTelegramChat("Opened " + s.coin1.Symbol + "⬇️" + s.coin2.Symbol + "⬆ ️")
