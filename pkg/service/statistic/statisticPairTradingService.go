@@ -8,6 +8,7 @@ import (
 	"cryptoBot/pkg/util"
 	"fmt"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 type IStatisticService interface {
@@ -32,11 +33,13 @@ type StatisticPairTradingService struct {
 }
 
 func (s *StatisticPairTradingService) BuildStatistics() string {
-	var response = ""
-
 	coins := viper.GetStringSlice("strategy.pairArbitrage.coins")
 
-	var allIds = make([]int64, len(coins)*2)
+	var response = "<pre>\n" +
+		"| Coin1 | Coin2 |    Date    |   Profit   |   Percent  | Size | O |    Last    |\n" +
+		"|-------|-------|------------|------------|------------|------|---|------------|"
+
+	zap.S().Infof("coins %v", coins)
 
 	for i := 0; i < len(coins); i += 2 {
 		symbol1 := coins[i]
@@ -44,10 +47,10 @@ func (s *StatisticPairTradingService) BuildStatistics() string {
 		coin1, _ := s.coinRepo.FindBySymbol(symbol1)
 		coin2, _ := s.coinRepo.FindBySymbol(symbol2)
 
-		allIds = append(allIds, coin1.Id, coin2.Id)
-
 		response += s.BuildStatisticsByCoins(coin1, coin2)
 	}
+
+	response += "\n</pre>"
 
 	return response
 }
@@ -56,24 +59,47 @@ func (s *StatisticPairTradingService) BuildStatisticsByCoins(coin1 *domains.Coin
 	var response = ""
 
 	ids := []int64{coin1.Id, coin2.Id}
-	response += "\n" + coin1.Symbol + "-" + coin2.Symbol + "\n"
 
 	rows, err := s.transactionRepo.FetchStatisticByDays(int(constants.PAIR_ARBITRAGE), ids)
 	if err != nil {
-		return "fetch failed"
+		return "\n failed FetchStatisticByDays" + coin1.Symbol + " " + coin2.Symbol
 	}
 
-	response = "<pre>\n" +
-		"|    Date    |   Profit   |   Percent  |    Size    |\n" +
-		"|------------|------------|------------|------------|"
+	lastProfit := s.getLastProfit(coin1, coin2)
+	isPositionOpened := s.isPositionOpened(coin1, coin2)
 
 	for k := 0; k < len(rows); k += 1 {
 		dto := rows[k]
-		response += fmt.Sprintf("\n| %v | %10v | %10v | %10v |",
-			dto.CreatedAt, util.GetDollarsByCents(dto.ProfitInCents), dto.ProfitPercent, dto.OrdersSize)
+		response += fmt.Sprintf("\n| %5v | %5v | %10v | %10.2f | %10.2f | %4v | %1s | %10.2f |",
+			coin1.Symbol[:len(coin1.Symbol)-4],
+			coin2.Symbol[:len(coin2.Symbol)-4],
+			dto.CreatedAt,
+			util.GetDollarsByCents(dto.ProfitInCents),
+			dto.ProfitPercent,
+			dto.OrdersSize,
+			isPositionOpened,
+			lastProfit)
 	}
 
-	response += "\n</pre>"
-
 	return response
+}
+
+func (s *StatisticPairTradingService) isPositionOpened(coin1 *domains.Coin, coin2 *domains.Coin) string {
+	openedOrder1, _ := s.transactionRepo.FindOpenedTransactionByCoin(constants.PAIR_ARBITRAGE, coin1.Id)
+	openedOrder2, _ := s.transactionRepo.FindOpenedTransactionByCoin(constants.PAIR_ARBITRAGE, coin2.Id)
+	isPositionOpened := "-"
+	if openedOrder1 != nil && openedOrder2 != nil {
+		isPositionOpened = "+"
+	}
+	return isPositionOpened
+}
+
+func (s *StatisticPairTradingService) getLastProfit(coin1 *domains.Coin, coin2 *domains.Coin) float64 {
+	lastOrder1, _ := s.transactionRepo.FindLastByCoinId(coin1.Id, constants.PAIR_ARBITRAGE)
+	lastOrder2, _ := s.transactionRepo.FindLastByCoinId(coin2.Id, constants.PAIR_ARBITRAGE)
+	lastProfit := float64(0)
+	if lastOrder1.PercentProfit.Valid && lastOrder2.PercentProfit.Valid {
+		lastProfit = (lastOrder1.PercentProfit.Float64 + lastOrder2.PercentProfit.Float64) / 2
+	}
+	return lastProfit
 }
