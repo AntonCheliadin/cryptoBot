@@ -42,7 +42,7 @@ func NewPairArbitrageStrategyTradingService(
 		TechanConvertorService: techanConvertorService,
 		coin1:                  coin1,
 		coin2:                  coin2,
-		startCapitalInCents:    4000,
+		startCapitalInCents:    10000,
 		strategyLength:         20,
 		klineInterval:          60,
 		klineIntervalS:         "60",
@@ -108,7 +108,7 @@ func (s *PairArbitrageStrategyTradingService) BeforeExecute() {
 }
 
 func (s *PairArbitrageStrategyTradingService) Execute() {
-	if s.Clock.NowTime().Minute()%s.klineInterval != 0 {
+	if s.Clock.NowTime().Minute()%s.klineInterval > 5 {
 		return
 	}
 
@@ -127,6 +127,7 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 
 	if s.hasOpenedOrders() {
 		s.CloseOpenedOrderByStopLossIfNeeded()
+		zap.S().Infof("Debug zscore:  %s-%s zScore=%.2f", s.coin1.Symbol, s.coin2.Symbol, zScore.Float())
 		if zScore.GT(big.NewDecimal(-0.1)) && zScore.LT(big.NewDecimal(0.1)) {
 			zap.S().Infof("Close by zScore(%.2f) crossed at %v", zScore.Float(), s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 			closedOrder1, closedOrder2 := s.closeOrders()
@@ -208,9 +209,11 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 		return
 	}
 
-	currentPrice1, _ := s.ExchangeDataService.GetCurrentPriceForFutures(s.coin1, s.klineInterval)
-	currentPrice2, _ := s.ExchangeDataService.GetCurrentPriceForFutures(s.coin2, s.klineInterval)
-
+	currentPrice1, err1 := s.ExchangeDataService.GetCurrentPriceForFutures(s.coin1, s.klineInterval)
+	currentPrice2, err2 := s.ExchangeDataService.GetCurrentPriceForFutures(s.coin2, s.klineInterval)
+	if err1 != nil || err2 != nil {
+		return
+	}
 	profitInPercent1 := util.CalculateProfitInPercent(openedOrder1.Price, currentPrice1, openedOrder1.FuturesType)
 	profitInPercent2 := util.CalculateProfitInPercent(openedOrder2.Price, currentPrice2, openedOrder2.FuturesType)
 

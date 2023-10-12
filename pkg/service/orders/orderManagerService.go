@@ -157,7 +157,7 @@ func (s *OrderManagerService) openOrderWithCostAndFixedStopLossAndTakeProfit(coi
 		return
 	}
 
-	zap.S().Infof("at %v Order opened  with price %v and type [%v] (0-L, 1-S)", s.Clock.NowTime(), currentPrice, futuresType)
+	zap.S().Infof("at %v Order opened  with price %v and type [%v] (0-L, 1-S)", s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT), currentPrice, futuresType)
 	//telegramApi.SendTextToTelegramChat(coin.Symbol + " " + transaction.String())
 }
 

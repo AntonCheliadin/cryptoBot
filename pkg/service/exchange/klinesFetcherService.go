@@ -59,7 +59,7 @@ func (s *KlinesFetcherService) debugPrices(coin *domains.Coin, intervalInMinutes
 	priceByLastKline := lastKlinee.Close
 	priceForFutures, _ := s.exchangeApi.GetCurrentCoinPriceForFutures(coin)
 	priceSpot, _ := s.exchangeApi.GetCurrentCoinPrice(coin)
-	zap.S().Infof("DEBUG last kline price and current price priceByLastKline[%v] priceForFutures[%v] priceSpot[%v]", priceByLastKline, priceForFutures, priceSpot)
+	zap.S().Infof("DEBUG last kline price and current price %s priceByLastKline[%v] priceForFutures[%v] priceSpot[%v] now=%s, lastKlineClosedAt=%s", coin.Symbol, priceByLastKline, priceForFutures, priceSpot, time.Now().Format(constants.DATE_TIME_FORMAT), lastKlinee.CloseTime.Format(constants.DATE_TIME_FORMAT))
 }
 
 func (s *KlinesFetcherService) FetchKlinesForPeriod(coin *domains.Coin, timeFrom time.Time, timeTo time.Time, interval string) error {
