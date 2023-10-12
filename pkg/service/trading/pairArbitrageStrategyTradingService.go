@@ -50,6 +50,8 @@ func NewPairArbitrageStrategyTradingService(
 		stopLossPercent:        0, //disabled
 		closeOnProfit:          1,
 		maxOrderLoss:           -3,
+		zScoreCloseToZero:      0.2,
+		zScoreMinProfit:        0.3,
 		tradingStrategy:        constants.PAIR_ARBITRAGE,
 	}
 	return pairArbitrageStrategyTradingService
@@ -73,6 +75,8 @@ type PairArbitrageStrategyTradingService struct {
 	stopLossPercent        float64
 	closeOnProfit          float64
 	maxOrderLoss           float64
+	zScoreCloseToZero      float64
+	zScoreMinProfit        float64
 	tradingStrategy        constants.TradingStrategy
 }
 
@@ -126,20 +130,7 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 	zScore := s.calculateZScore(klines)
 
 	if s.hasOpenedOrders() {
-		s.CloseOpenedOrderByStopLossIfNeeded()
-		zap.S().Infof("Debug zscore:  %s-%s zScore=%.2f", s.coin1.Symbol, s.coin2.Symbol, zScore.Float())
-		if zScore.GT(big.NewDecimal(-0.1)) && zScore.LT(big.NewDecimal(0.1)) {
-			zap.S().Infof("Close by zScore(%.2f) crossed at %v", zScore.Float(), s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-			closedOrder1, closedOrder2 := s.closeOrders()
-			if closedOrder1 != nil && closedOrder2 != nil {
-				telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by zScore %v - %v profit: %+d (%.2f%%)", s.coin1.Symbol, s.coin2.Symbol, closedOrder1.Profit.Int64+closedOrder2.Profit.Int64, closedOrder1.PercentProfit.Float64+closedOrder2.PercentProfit.Float64))
-			} else if s.hasOpenedOrders() {
-				panic("Orders are not closed!")
-			} else {
-				telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by zScore %v - %v", s.coin1.Symbol, s.coin2.Symbol))
-			}
-
-		}
+		s.CloseOpenedOrderByStopLossIfNeeded(zScore)
 		return
 	}
 
@@ -184,7 +175,7 @@ func (s *PairArbitrageStrategyTradingService) calculateZScore(klines []domains.I
 }
 
 // CloseOpenedOrderByStopLossIfNeeded if one order closed by stopLoss then close other with current price
-func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded() {
+func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded(zScore big.Decimal) {
 	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin1.Id)
 	openedOrder2, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin2.Id)
 
@@ -203,9 +194,7 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 
 	//if one of order has been closed by exchange
 	if openedOrder1 == nil && openedOrder2 != nil || openedOrder2 == nil && openedOrder1 != nil {
-		zap.S().Infof("Order closed by exchange")
-		s.closeOrders()
-		telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed by exchange %v - %v", s.coin1.Symbol, s.coin2.Symbol))
+		s.closeOrders("by exchange")
 		return
 	}
 
@@ -222,22 +211,23 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 	zap.S().Infof("Debug opened price:  openedOrder1.Price-%v[%.4f] openedOrder2.Price-%v[%.4f]", s.coin1.Symbol, openedOrder1.Price, s.coin2.Symbol, openedOrder2.Price)
 	zap.S().Infof("Debug price:  currentPrice1-%v[%.4f] currentPrice2-%v[%.4f]", s.coin1.Symbol, currentPrice1, s.coin2.Symbol, currentPrice2)
 	zap.S().Infof("Debug profit:  profitInPercent1-%v[%.4f] profitInPercent2-%v[%.4f] sum[%.4f]", s.coin1.Symbol, profitInPercent1, s.coin2.Symbol, profitInPercent2, sumProfit)
+	zap.S().Infof("Debug zscore:  %s-%s zScore=%.2f", s.coin1.Symbol, s.coin2.Symbol, zScore.Float())
 
 	if sumProfit < s.maxOrderLoss {
-		zap.S().Infof("Close orders [%v-%v] by stopLoss[%.4f] at %v", s.coin1.Symbol, s.coin2.Symbol, sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-		closedOrder1, closedOrder2 := s.closeOrders()
-		s.notifyInTelegram(closedOrder1, closedOrder2)
+		s.closeOrders("by stopLoss")
 		return
 	}
 	if sumProfit > s.closeOnProfit {
-		zap.S().Infof("Close orders [%v-%v] with profit[%.4f] at %v", s.coin1.Symbol, s.coin2.Symbol, sumProfit, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
-		closedOrder1, closedOrder2 := s.closeOrders()
-		s.notifyInTelegram(closedOrder1, closedOrder2)
+		s.closeOrders("with profit")
+		return
+	}
+	if zScore.Abs().LT(big.NewDecimal(s.zScoreCloseToZero)) && sumProfit > s.zScoreMinProfit {
+		s.closeOrders("by zScore")
 		return
 	}
 }
 
-func (s *PairArbitrageStrategyTradingService) notifyInTelegram(closedOrder1 *domains.Transaction, closedOrder2 *domains.Transaction) {
+func (s *PairArbitrageStrategyTradingService) notifyInTelegram(closedOrder1 *domains.Transaction, closedOrder2 *domains.Transaction, closeReason string) {
 	profit := int64(0)
 	profitPercent := float64(0)
 	if closedOrder1 != nil {
@@ -248,10 +238,11 @@ func (s *PairArbitrageStrategyTradingService) notifyInTelegram(closedOrder1 *dom
 		profit += closedOrder2.Profit.Int64
 		profitPercent += closedOrder2.PercentProfit.Float64
 	}
-	telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed with profit or loss %v - %v profit: %+d (%.4f%%)", s.coin1.Symbol, s.coin2.Symbol, profit, profitPercent))
+	zap.S().Infof("Close orders [%v-%v] with profit[%.2f] at %v", s.coin1.Symbol, s.coin2.Symbol, profitPercent, s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
+	telegramApi.SendTextToTelegramChat(fmt.Sprintf("Closed %s %v - %v profit: %+d (%.4f%%)", closeReason, s.coin1.Symbol, s.coin2.Symbol, profit, profitPercent))
 }
 
-func (s *PairArbitrageStrategyTradingService) closeOrders() (*domains.Transaction, *domains.Transaction) {
+func (s *PairArbitrageStrategyTradingService) closeOrders(closeReason string) (*domains.Transaction, *domains.Transaction) {
 	zap.S().Infof("Close orders")
 	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin1.Id)
 	var closedOrder1 *domains.Transaction
@@ -264,6 +255,14 @@ func (s *PairArbitrageStrategyTradingService) closeOrders() (*domains.Transactio
 	if openedOrder2 != nil {
 		closedOrder2 = s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(s.coin2, openedOrder2)
 	}
+
+	if s.hasOpenedOrders() {
+		telegramApi.SendTextToTelegramChat(fmt.Sprintf("PANIC!!! Orders are not closed %s %s - %s ", closeReason, s.coin1.Symbol, s.coin2.Symbol))
+		panic("Orders are not closed!")
+	}
+
+	s.notifyInTelegram(closedOrder1, closedOrder2, closeReason)
+
 	return closedOrder1, closedOrder2
 }
 

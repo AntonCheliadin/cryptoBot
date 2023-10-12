@@ -239,7 +239,7 @@ func (api *BybitApi) buildParams(coin *domains.Coin, amount float64, price float
 	}
 }
 
-/**
+/*
 https://bybit-exchange.github.io/docs/spot/v1/#t-placeactive
 Order quantity
 for market orders: when side is Buy, this is in the quote currency.
