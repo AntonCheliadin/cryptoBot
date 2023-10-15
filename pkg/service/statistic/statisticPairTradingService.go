@@ -58,8 +58,8 @@ func (s *StatisticPairTradingService) BuildStatistics() string {
 	coins := viper.GetStringSlice("strategy.pairArbitrage.coins")
 
 	var response = "<pre>\n" +
-		"| Coin1 | Coin2 |    Date    |   Profit   |   Percent  | Size | O |    Last    |\n" +
-		"|-------|-------|------------|------------|------------|------|---|------------|"
+		"| Coin1 | Coin2 |    Date    |   Profit   |   Percent  | Size |\n" +
+		"|-------|-------|------------|------------|------------|------|"
 
 	zap.S().Infof("coins %v", coins)
 
