@@ -84,8 +84,8 @@ func (s *StatisticPairTradingService) BuildHourStatisticsByCoins(coin1 *domains.
 		return ""
 	}
 
-	currentPrice1, _ := s.exchangeApi.GetCurrentCoinPrice(coin1)
-	currentPrice2, _ := s.exchangeApi.GetCurrentCoinPrice(coin2)
+	currentPrice1, _ := s.exchangeApi.GetCurrentCoinPriceForFutures(coin1)
+	currentPrice2, _ := s.exchangeApi.GetCurrentCoinPriceForFutures(coin2)
 
 	profitInPercent1 := util.CalculateProfitInPercent(openedOrder1.Price, currentPrice1, openedOrder1.FuturesType)
 	profitInPercent2 := util.CalculateProfitInPercent(openedOrder2.Price, currentPrice2, openedOrder2.FuturesType)

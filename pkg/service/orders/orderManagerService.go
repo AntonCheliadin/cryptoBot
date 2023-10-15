@@ -157,7 +157,7 @@ func (s *OrderManagerService) openOrderWithCostAndFixedStopLossAndTakeProfit(coi
 		return
 	}
 
-	zap.S().Infof("at %v Order opened  with price %v and type [%v] (0-L, 1-S)", s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT), currentPrice, futuresType)
+	zap.S().Infof("at %s Order opened [%s] with price %v and type [%v] (0-L, 1-S)", s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT), coin.Symbol, currentPrice, futuresType)
 	//telegramApi.SendTextToTelegramChat(coin.Symbol + " " + transaction.String())
 }
 
@@ -392,25 +392,19 @@ func (s *OrderManagerService) CloseOpenedOrderByStopLossIfNeeded(coin *domains.C
 	}
 }
 
-func (s *OrderManagerService) CloseOrderByFixedStopLossOrTakeProfit(coin *domains.Coin, openedOrder *domains.Transaction, klineInterval string) bool {
+func (s *OrderManagerService) CloseOrderByFixedStopLossOrTakeProfit(coin *domains.Coin, openedOrder *domains.Transaction, klineInterval string) *domains.Transaction {
+	if isPositionOpened := s.ExchangeDataService.IsPositionOpened(coin, openedOrder); !isPositionOpened && openedOrder != nil {
+		return s.CreateCloseTransactionOnOrderClosedByExchange(coin, openedOrder)
+	}
+
 	if s.ShouldCloseByStopLoss(openedOrder, klineInterval) {
-		if isPositionOpened := s.ExchangeDataService.IsPositionOpened(coin, openedOrder); !isPositionOpened && openedOrder != nil {
-			s.CreateCloseTransactionOnOrderClosedByExchange(coin, openedOrder)
-		} else {
-			s.CloseOrder(openedOrder, coin, openedOrder.StopLossPrice.Float64, constants.FUTURES)
-		}
-		return true
+		return s.CloseOrder(openedOrder, coin, openedOrder.StopLossPrice.Float64, constants.FUTURES)
 	}
 
 	if s.ShouldCloseByTakeProfit(openedOrder, klineInterval) {
-		if isPositionOpened := s.ExchangeDataService.IsPositionOpened(coin, openedOrder); !isPositionOpened && openedOrder != nil {
-			s.CreateCloseTransactionOnOrderClosedByExchange(coin, openedOrder)
-		} else {
-			s.CloseOrder(openedOrder, coin, openedOrder.TakeProfitPrice.Float64, constants.FUTURES)
-		}
-		return true
+		return s.CloseOrder(openedOrder, coin, openedOrder.TakeProfitPrice.Float64, constants.FUTURES)
 	}
-	return false
+	return nil
 }
 
 func (s *OrderManagerService) ShouldCloseByStopLoss(openedTransaction *domains.Transaction, klineInterval string) bool {

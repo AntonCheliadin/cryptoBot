@@ -116,6 +116,8 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 		return
 	}
 
+	zap.S().Debugf("Execute %s-%s", s.coin1.Symbol, s.coin2.Symbol)
+
 	klinesFetchLimit := s.strategyLength + 1
 	klines, err := s.SyntheticKlineRepo.FindAllByCoinIdAndIntervalAndCloseTimeLessOrderByOpenTimeWithLimit(s.coin1.Id, s.coin2.Id, s.klineIntervalS, s.Clock.NowTime(), klinesFetchLimit)
 	if err != nil {
@@ -158,7 +160,7 @@ func (s *PairArbitrageStrategyTradingService) debugPrices(coin *domains.Coin, in
 	priceForFutures, _ := s.ExchangeDataService.GetCurrentPriceForFutures(coin, intervalInMinutes)
 	priceSpot, _ := s.ExchangeDataService.GetCurrentPriceWithInterval(coin, intervalInMinutes)
 	priceSpot2, _ := s.ExchangeDataService.GetCurrentPrice(coin)
-	zap.S().Infof("DEBUG %v last kline price and current price priceByLastKline[%.4f] priceForFutures[%.4f] priceSpot[%.4f] priceSpot2[%.4f]", coin.Symbol, priceByLastKline, priceForFutures, priceSpot, priceSpot2)
+	zap.S().Debugf("%v last kline price and current price priceByLastKline[%.4f] priceForFutures[%.4f] priceSpot[%.4f] priceSpot2[%.4f]", coin.Symbol, priceByLastKline, priceForFutures, priceSpot, priceSpot2)
 }
 
 func (s *PairArbitrageStrategyTradingService) calculateZScore(klines []domains.IKline) big.Decimal {
@@ -178,18 +180,26 @@ func (s *PairArbitrageStrategyTradingService) calculateZScore(klines []domains.I
 func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded(zScore big.Decimal) {
 	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin1.Id)
 	openedOrder2, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin2.Id)
+	var closedOrder1 *domains.Transaction
+	var closedOrder2 *domains.Transaction
 
 	if openedOrder1 != nil {
-		isClosed := s.OrderManagerService.CloseOrderByFixedStopLossOrTakeProfit(s.coin1, openedOrder1, s.klineIntervalS)
-		if isClosed {
+		closedOrder1 = s.OrderManagerService.CloseOrderByFixedStopLossOrTakeProfit(s.coin1, openedOrder1, s.klineIntervalS)
+		if closedOrder1 != nil {
 			openedOrder1 = nil
 		}
 	}
 	if openedOrder2 != nil {
-		isClosed := s.OrderManagerService.CloseOrderByFixedStopLossOrTakeProfit(s.coin2, openedOrder2, s.klineIntervalS)
-		if isClosed {
+		closedOrder2 = s.OrderManagerService.CloseOrderByFixedStopLossOrTakeProfit(s.coin2, openedOrder2, s.klineIntervalS)
+		if closedOrder2 != nil {
 			openedOrder2 = nil
 		}
+	}
+	if openedOrder1 == nil && openedOrder2 == nil {
+		zap.S().Infof("Orders closed in exchange %s-%s", s.coin1.Symbol, s.coin2.Symbol)
+
+		s.notifyInTelegram(closedOrder1, closedOrder2, "in exchange")
+		return
 	}
 
 	//if one of order has been closed by exchange
@@ -208,10 +218,12 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 
 	sumProfit := profitInPercent1 + profitInPercent2
 
-	zap.S().Infof("Debug opened price:  openedOrder1.Price-%v[%.4f] openedOrder2.Price-%v[%.4f]", s.coin1.Symbol, openedOrder1.Price, s.coin2.Symbol, openedOrder2.Price)
-	zap.S().Infof("Debug price:  currentPrice1-%v[%.4f] currentPrice2-%v[%.4f]", s.coin1.Symbol, currentPrice1, s.coin2.Symbol, currentPrice2)
-	zap.S().Infof("Debug profit:  profitInPercent1-%v[%.4f] profitInPercent2-%v[%.4f] sum[%.4f]", s.coin1.Symbol, profitInPercent1, s.coin2.Symbol, profitInPercent2, sumProfit)
-	zap.S().Infof("Debug zscore:  %s-%s zScore=%.2f", s.coin1.Symbol, s.coin2.Symbol, zScore.Float())
+	zap.S().Debugf("%s-%s: profit=%.2f+%.2f=%.2f%%  openedOrder1.Price-[%.4f] openedOrder2.Price-[%.4f]   currentPrice1-[%.4f] currentPrice2-[%.4f]   zScore=%.2f",
+		s.coin1.Symbol, s.coin2.Symbol,
+		profitInPercent1, profitInPercent2, sumProfit,
+		openedOrder1.Price, openedOrder2.Price,
+		currentPrice1, currentPrice2,
+		zScore.Float())
 
 	if sumProfit < s.maxOrderLoss {
 		s.closeOrders("by stopLoss")

@@ -58,8 +58,7 @@ func (s *KlinesFetcherService) debugPrices(coin *domains.Coin, intervalInMinutes
 	lastKlinee, _ := s.klineRepo.FindLast(coin.Id, fmt.Sprint(intervalInMinutes))
 	priceByLastKline := lastKlinee.Close
 	priceForFutures, _ := s.exchangeApi.GetCurrentCoinPriceForFutures(coin)
-	priceSpot, _ := s.exchangeApi.GetCurrentCoinPrice(coin)
-	zap.S().Infof("DEBUG last kline price and current price %s priceByLastKline[%v] priceForFutures[%v] priceSpot[%v] now=%s, lastKlineClosedAt=%s", coin.Symbol, priceByLastKline, priceForFutures, priceSpot, time.Now().Format(constants.DATE_TIME_FORMAT), lastKlinee.CloseTime.Format(constants.DATE_TIME_FORMAT))
+	zap.S().Debugf("last kline %s priceByLastKline[%v] priceForFutures[%v] now=%s, lastKlineClosedAt=%s", coin.Symbol, priceByLastKline, priceForFutures, time.Now().Format(constants.DATE_TIME_FORMAT), lastKlinee.CloseTime.Format(constants.DATE_TIME_FORMAT))
 }
 
 func (s *KlinesFetcherService) FetchKlinesForPeriod(coin *domains.Coin, timeFrom time.Time, timeTo time.Time, interval string) error {
@@ -104,6 +103,15 @@ func (s *KlinesFetcherService) saveKlines(coin *domains.Coin, klinesDto api.Klin
 		existedKline.Low = dto.GetLow()
 		existedKline.Close = dto.GetClose()
 
-		_ = s.klineRepo.SaveKline(existedKline)
+		err := s.klineRepo.SaveKline(existedKline)
+		if err != nil {
+			refetchedKline, _ := s.klineRepo.FindOpenedAtMoment(coin.Id, dto.GetStartAt(), dto.GetInterval())
+			zap.S().Errorf("Save kline [%d] existedKline = %s ", coin.Id, existedKline.String())
+			if refetchedKline != nil {
+				zap.S().Errorf("Save kline [%d] refetchedKline=%s", coin.Id, refetchedKline.String())
+			} else {
+				zap.S().Errorf("Save kline [%d] refetchedKline is nil ", coin.Id)
+			}
+		}
 	}
 }
