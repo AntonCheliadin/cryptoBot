@@ -49,7 +49,7 @@ func (d *FuturesOrderResponseDto) CalculateTotalCost() float64 {
 }
 
 func (d *FuturesOrderResponseDto) CalculateCommissionInUsd() float64 {
-	return float64(d.CalculateTotalCost()) * 0.001 // 0.1% for taker and maker
+	return float64(d.CalculateTotalCost()) * 0.00055 // 0.055% for maker
 }
 
 func (d *FuturesOrderResponseDto) GetAmount() float64 {

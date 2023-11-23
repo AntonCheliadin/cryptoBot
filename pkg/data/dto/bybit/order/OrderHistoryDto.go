@@ -44,7 +44,7 @@ func (d *OrderHistoryDto) CalculateTotalCost() float64 {
 }
 
 func (d *OrderHistoryDto) CalculateCommissionInUsd() float64 {
-	return (float64(d.CalculateTotalCost()) * 0.001) // 0.1% for taker and maker
+	return (float64(d.CalculateTotalCost()) * 0.00055) // 0.055% for maker
 }
 
 func (d *OrderHistoryDto) GetAmount() float64 {

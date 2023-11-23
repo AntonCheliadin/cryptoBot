@@ -175,6 +175,9 @@ func (s *PairArbitrageStrategyTradingService) calculateZScore(klines []domains.I
 	stdevIndicator := techan.NewStandardDeviationIndicator(techan.NewClosePriceIndicator(series))
 
 	stdevValue := stdevIndicator.Calculate(s.strategyLength)
+	if stdevValue.EQ(big.ZERO) {
+		return big.ZERO
+	}
 	smaValue := smaIndicator.Calculate(s.strategyLength)
 
 	//zsc = (src - sma(src, length)) / selectedStdev
