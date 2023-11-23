@@ -18,14 +18,25 @@ func NewStatisticJob(service statistic.IStatisticService) *statisticJob {
 }
 
 func (j *statisticJob) initStatisticJob() {
-	err := gocron.Every(12).Hours().Do(j.execute)
+	err := gocron.Every(60 * 6).Minutes().Do(j.execute)
 	if err != nil {
+		zap.S().Errorf("Error during trading job %s", err.Error())
+	}
+
+	err2 := gocron.Every(60).Minutes().Do(j.executeHour)
+	if err2 != nil {
 		zap.S().Errorf("Error during trading job %s", err.Error())
 	}
 }
 
 func (j *statisticJob) execute() {
 	statistics := j.service.BuildStatistics()
+
+	telegram.SendTextToTelegramChat(statistics)
+}
+
+func (j *statisticJob) executeHour() {
+	statistics := j.service.BuildHourStatistics()
 
 	telegram.SendTextToTelegramChat(statistics)
 }

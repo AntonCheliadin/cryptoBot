@@ -36,7 +36,7 @@ type DataService struct {
 	klineRepo       repository.Kline
 }
 
-//Deprecated: use GetCurrentPriceWithInterval instead
+// Deprecated: use GetCurrentPriceWithInterval instead
 func (s *DataService) GetCurrentPrice(coin *domains.Coin) (float64, error) {
 	interval := viper.GetInt("strategy.trendMeter.interval")
 
@@ -68,7 +68,7 @@ func (s *DataService) GetCurrentPriceForFutures(coin *domains.Coin, interval int
 
 	currentCoinPrice, err := s.exchangeApi.GetCurrentCoinPriceForFutures(coin)
 	if err != nil {
-		zap.S().Errorf("Error during GetCurrentPriceForFutures at %s (rounded to %s) - %s", s.Clock.NowTime(), util.RoundToMinutes(s.Clock.NowTime()), err.Error())
+		zap.S().Errorf("Error during GetCurrentPriceForFutures for %s at %s (rounded to %s) - %s", coin.Symbol, s.Clock.NowTime(), util.RoundToMinutes(s.Clock.NowTime()), err.Error())
 	}
 	return currentCoinPrice, err
 }

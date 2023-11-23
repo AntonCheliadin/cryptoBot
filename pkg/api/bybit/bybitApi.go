@@ -239,7 +239,7 @@ func (api *BybitApi) buildParams(coin *domains.Coin, amount float64, price float
 	}
 }
 
-/**
+/*
 https://bybit-exchange.github.io/docs/spot/v1/#t-placeactive
 Order quantity
 for market orders: when side is Buy, this is in the quote currency.
@@ -409,9 +409,6 @@ func (api *BybitApi) IsFuturesPositionOpened(coin *domains.Coin, openedOrder *do
 	for _, positionDto := range positionDto.Result {
 		if "Buy" == positionDto.Side && openedOrder.FuturesType == futureType.LONG ||
 			"Sell" == positionDto.Side && openedOrder.FuturesType == futureType.SHORT {
-			if positionDto.Size > 0 {
-				zap.S().Infof("Position side=%s unrealizedPNL=%vUSDT", positionDto.Side, positionDto.UnrealisedPnl)
-			}
 			return positionDto.Size > 0
 		}
 	}

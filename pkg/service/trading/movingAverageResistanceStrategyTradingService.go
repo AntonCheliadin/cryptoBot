@@ -140,11 +140,11 @@ func (s *MovingAverageResistanceStrategyTradingService) isDownTrend(shortAvgs []
 	return true
 }
 
-//copied
+// copied
 func (s *MovingAverageResistanceStrategyTradingService) openOrder(coin *domains.Coin, futuresType futureType.FuturesType) {
 	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
 	if err != nil {
-		zap.S().Errorf("Error during GetCurrentCoinPrice at %v: %s", s.Clock.NowTime(), err.Error())
+		zap.S().Errorf("Error during GetCurrentCoinPrice at %s: %s", s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT), err.Error())
 		return
 	}
 	amountTransaction := util.CalculateAmountByPriceAndCost(currentPrice, viper.GetFloat64("strategy.ma.cost"))
@@ -160,10 +160,10 @@ func (s *MovingAverageResistanceStrategyTradingService) openOrder(coin *domains.
 		return
 	}
 
-	zap.S().Infof("at %v Order opened  with price %v and type [%v] (0-L, 1-S)", s.Clock.NowTime(), currentPrice, futuresType)
+	zap.S().Infof("at %s Order opened  with price %v and type [%v] (0-L, 1-S)", s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT), currentPrice, futuresType)
 }
 
-//copied
+// copied
 func (s *MovingAverageResistanceStrategyTradingService) createOpenTransactionByOrderResponseDto(coin *domains.Coin, futuresType futureType.FuturesType,
 	orderDto api.OrderResponseDto) domains.Transaction {
 	transaction := domains.Transaction{
@@ -185,7 +185,7 @@ func (s *MovingAverageResistanceStrategyTradingService) createOpenTransactionByO
 	return transaction
 }
 
-//copied
+// copied
 func (s *MovingAverageResistanceStrategyTradingService) closeOrder(openTransaction *domains.Transaction, coin *domains.Coin) {
 	currentPrice, err := s.ExchangeDataService.GetCurrentPrice(coin)
 	if err != nil {
@@ -209,7 +209,7 @@ func (s *MovingAverageResistanceStrategyTradingService) closeOrder(openTransacti
 	_ = s.transactionRepo.SaveTransaction(openTransaction)
 }
 
-//copied
+// copied
 func (s *MovingAverageResistanceStrategyTradingService) createCloseTransactionByOrderResponseDto(coin *domains.Coin, openedTransaction *domains.Transaction,
 	orderDto api.OrderResponseDto) domains.Transaction {
 

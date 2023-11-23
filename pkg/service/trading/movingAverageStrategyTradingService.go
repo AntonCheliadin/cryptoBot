@@ -215,7 +215,7 @@ func (s *MovingAverageStrategyTradingService) openOrder(coin *domains.Coin, futu
 		return
 	}
 
-	zap.S().Infof("at %v Order opened  with price %v and type [%v] (0-L, 1-S)", s.Clock.NowTime(), currentPrice, futuresType)
+	zap.S().Infof("at %v Order opened  with price %v and type [%v] (0-L, 1-S)", s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT), currentPrice, futuresType)
 }
 
 func (s *MovingAverageStrategyTradingService) closeOrder(openTransaction *domains.Transaction, coin *domains.Coin) {
