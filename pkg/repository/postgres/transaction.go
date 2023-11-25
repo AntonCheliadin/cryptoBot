@@ -77,6 +77,20 @@ func (r *Transaction) FindAllProfitPercents(tradingStrategy int) ([]transaction.
 	return profitPercents, nil
 }
 
+func (r *Transaction) FetchStatisticByDays(tradingStrategy int, coinIds []int64) ([]transaction.PairTransactionProfitPercentsDto, error) {
+	var profitPercents []transaction.PairTransactionProfitPercentsDto
+
+	selectQuery := "select to_char(created_at, 'YYYY-MM-DD') created_date, sum(percent_profit) profit_percent_of_paired_order, sum(profit) profit_sum, count(1) / 2 orders_size from transaction_table where trading_strategy = ?  and profit is not null    and coin_id in (?) group by to_char(created_at, 'YYYY-MM-DD') order by to_char(created_at, 'YYYY-MM-DD') desc limit 5;"
+	preparedQuery, preparedParameters, _ := sqlx.In(selectQuery, tradingStrategy, coinIds)
+	err := r.db.Select(&profitPercents, r.db.Rebind(preparedQuery), preparedParameters...)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error during select domain: %s", err.Error())
+	}
+
+	return profitPercents, nil
+}
+
 func (r *Transaction) FindAllCoinIds(tradingStrategy int) ([]int64, error) {
 	var results []int64
 	err := r.db.Select(&results, "select distinct coin_id from transaction_table where trading_strategy = $1;",

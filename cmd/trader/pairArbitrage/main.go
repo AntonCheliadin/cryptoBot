@@ -14,6 +14,7 @@ import (
 	"cryptoBot/pkg/service/exchange"
 	"cryptoBot/pkg/service/indicator/techanLib"
 	"cryptoBot/pkg/service/orders"
+	"cryptoBot/pkg/service/statistic"
 	"cryptoBot/pkg/service/telegram"
 	"cryptoBot/pkg/service/trading"
 	"fmt"
@@ -52,29 +53,27 @@ func main() {
 		0,
 		0, 0, 0, 0)
 
-	coins := viper.GetStringSlice("strategy.pairArbitrage.coins")
-	for i := 0; i < len(coins); i += 2 {
-		symbol1 := coins[i]
-		symbol2 := coins[i+1]
-		coin1, _ := repos.Coin.FindBySymbol(symbol1)
-		coin2, _ := repos.Coin.FindBySymbol(symbol2)
+	tradingService := trading.NewPairArbitrageStrategyTradingService(
+		repos.Coin,
+		repos.Transaction,
+		clock,
+		exchangeDataService,
+		repos.SyntheticKline,
+		klinesFetcherService,
+		orderManagerService,
+		seriesConvertorService,
+		nil,
+		nil,
+	)
 
-		tradingService := trading.NewPairArbitrageStrategyTradingService(
-			repos.Transaction,
-			clock,
-			exchangeDataService,
-			repos.SyntheticKline,
-			klinesFetcherService,
-			orderManagerService,
-			seriesConvertorService,
-			coin1,
-			coin2,
-		)
-		tradingService.Initialize()
-		cron.InitCronJobs(tradingService)
-	}
+	tradingServiceContainer := trading.NewPairArbitrageStrategyTradingServiceContainer(tradingService)
+	tradingServiceContainer.Initialize()
+	cron.InitCronJobs(tradingServiceContainer)
 
-	var telegramService telegram.ITelegramService //todo implement := telegram.NewTelegramPairTradingService(repos.Transaction, repos.Coin, exchangeApi)
+	statisticPairTradingService := statistic.NewStatisticPairTradingService(repos.Transaction, repos.Coin, exchangeApi)
+
+	cron.NewStatisticJob(statisticPairTradingService)
+	telegramService := telegram.NewTelegramPairTradingService(repos.Transaction, repos.Coin, exchangeApi, statisticPairTradingService)
 
 	router := controller.InitControllers(telegramService)
 

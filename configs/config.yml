@@ -68,9 +68,6 @@ strategy:
       - 'ADAUSDT'
       - 'BNBUSDT'
 
-      - 'DYDXUSDT'
-      - 'IMXUSDT'
-
       - 'XRPUSDT'
       - 'LTCUSDT'
 

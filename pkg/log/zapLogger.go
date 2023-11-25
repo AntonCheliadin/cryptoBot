@@ -3,15 +3,19 @@ package log
 import (
 	"errors"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func InitLoggerAnalyser() {
-	var logger *zap.Logger
-	var err error
+	loggerConfig := zap.NewProductionConfig()
+	loggerConfig.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
+	loggerConfig.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
+	logger, err := loggerConfig.Build()
 
-	if logger, err = zap.NewProduction(); err != nil {
+	if err != nil {
 		panic(errors.New("Fatal error during create logger" + err.Error()))
 	}
+
 	zap.ReplaceGlobals(logger)
 }
 
