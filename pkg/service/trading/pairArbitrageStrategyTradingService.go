@@ -14,14 +14,24 @@ import (
 	"fmt"
 	"github.com/sdcoffey/big"
 	"github.com/sdcoffey/techan"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"time"
 )
 
 // https://youtu.be/9jn3DnLNyU0
 // Z-Score script: https://www.tradingview.com/pine/?id=PUB%3BC0yY0a1BOlCTSIHGTDWwBkWcwTdjpeEd
 var pairArbitrageStrategyTradingService *PairArbitrageStrategyTradingService
+var pairArbitrageStrategyTradingServiceContainer *PairArbitrageStrategyTradingServiceContainer
+
+func NewPairArbitrageStrategyTradingServiceContainer(tradingService *PairArbitrageStrategyTradingService) *PairArbitrageStrategyTradingServiceContainer {
+	return &PairArbitrageStrategyTradingServiceContainer{
+		TradingService: tradingService,
+	}
+}
 
 func NewPairArbitrageStrategyTradingService(
+	coinRepo repository.Coin,
 	transactionRepo repository.Transaction,
 	clock date.Clock,
 	exchangeDataService *exchange.DataService,
@@ -33,6 +43,7 @@ func NewPairArbitrageStrategyTradingService(
 	coin2 *domains.Coin,
 ) *PairArbitrageStrategyTradingService {
 	pairArbitrageStrategyTradingService = &PairArbitrageStrategyTradingService{
+		CoinRepo:               coinRepo,
 		SyntheticKlineRepo:     syntheticKlineRepo,
 		TransactionRepo:        transactionRepo,
 		Clock:                  clock,
@@ -58,6 +69,7 @@ func NewPairArbitrageStrategyTradingService(
 }
 
 type PairArbitrageStrategyTradingService struct {
+	CoinRepo               repository.Coin
 	TransactionRepo        repository.Transaction
 	SyntheticKlineRepo     repository.SyntheticKline
 	Clock                  date.Clock
@@ -78,6 +90,84 @@ type PairArbitrageStrategyTradingService struct {
 	zScoreCloseToZero      float64
 	zScoreMinProfit        float64
 	tradingStrategy        constants.TradingStrategy
+}
+
+type PairArbitrageStrategyTradingServiceContainer struct {
+	TradingService         *PairArbitrageStrategyTradingService
+	IsBeforeExecuteRunning bool
+	IsExecuteRunning       bool
+}
+
+func (s *PairArbitrageStrategyTradingServiceContainer) BotAction(coin *domains.Coin) {
+	return
+}
+func (s *PairArbitrageStrategyTradingServiceContainer) InitializeTrading(coin *domains.Coin) error {
+	return nil
+}
+
+func (s *PairArbitrageStrategyTradingServiceContainer) Initialize() error {
+	coins := viper.GetStringSlice("strategy.pairArbitrage.coins")
+
+	for i := 0; i < len(coins); i += 2 {
+		coin1, _ := s.TradingService.CoinRepo.FindBySymbol(coins[i])
+		coin2, _ := s.TradingService.CoinRepo.FindBySymbol(coins[i+1])
+
+		s.TradingService.coin1 = coin1
+		s.TradingService.coin2 = coin2
+
+		s.TradingService.Initialize()
+	}
+
+	return nil
+}
+
+func (s *PairArbitrageStrategyTradingServiceContainer) BeforeExecute() {
+	if time.Now().Minute()%60 != 0 {
+		return
+	}
+	if s.IsBeforeExecuteRunning {
+		return
+	}
+	s.IsBeforeExecuteRunning = true
+
+	coins := viper.GetStringSlice("strategy.pairArbitrage.coins")
+
+	for i := 0; i < len(coins); i += 2 {
+		coin1, _ := s.TradingService.CoinRepo.FindBySymbol(coins[i])
+		coin2, _ := s.TradingService.CoinRepo.FindBySymbol(coins[i+1])
+
+		s.TradingService.coin1 = coin1
+		s.TradingService.coin2 = coin2
+
+		s.TradingService.BeforeExecute()
+	}
+
+	s.TradingService.SyntheticKlineRepo.RefreshView()
+
+	s.IsBeforeExecuteRunning = false
+}
+
+func (s *PairArbitrageStrategyTradingServiceContainer) Execute() {
+	if time.Now().Minute()%60 != 0 {
+		return
+	}
+	if s.IsExecuteRunning {
+		return
+	}
+	s.IsExecuteRunning = true
+	coins := viper.GetStringSlice("strategy.pairArbitrage.coins")
+
+	for i := 0; i < len(coins); i += 2 {
+		coin1, _ := s.TradingService.CoinRepo.FindBySymbol(coins[i])
+		coin2, _ := s.TradingService.CoinRepo.FindBySymbol(coins[i+1])
+
+		s.TradingService.coin1 = coin1
+		s.TradingService.coin2 = coin2
+
+		s.TradingService.Execute()
+	}
+
+	s.IsExecuteRunning = false
 }
 
 func (s *PairArbitrageStrategyTradingService) BotAction(coin *domains.Coin) {
@@ -102,20 +192,11 @@ func (s *PairArbitrageStrategyTradingService) Initialize() error {
 }
 
 func (s *PairArbitrageStrategyTradingService) BeforeExecute() {
-	if s.Clock.NowTime().Minute()%s.klineInterval != 0 {
-		return
-	}
-
 	s.KlinesFetcherService.FetchActualKlines(s.coin1, s.klineInterval)
 	s.KlinesFetcherService.FetchActualKlines(s.coin2, s.klineInterval)
-	s.SyntheticKlineRepo.RefreshView()
 }
 
 func (s *PairArbitrageStrategyTradingService) Execute() {
-	if s.Clock.NowTime().Minute()%s.klineInterval > 5 {
-		return
-	}
-
 	zap.S().Debugf("Execute %s-%s", s.coin1.Symbol, s.coin2.Symbol)
 
 	klinesFetchLimit := s.strategyLength + 1
@@ -141,20 +222,21 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 		s.openOrder(s.coin1, futureType.SHORT)
 		s.openOrder(s.coin2, futureType.LONG)
 		telegramApi.SendTextToTelegramChat("Opened " + s.coin1.Symbol + "⬇️" + s.coin2.Symbol + "⬆ ️")
-		s.debugPrices(s.coin1, s.klineInterval)
-		s.debugPrices(s.coin2, s.klineInterval)
+		//s.debugPrices(s.coin1, s.klineInterval)
+		//s.debugPrices(s.coin2, s.klineInterval)
 	} else if zScore.LT(big.NewDecimal(-2)) {
 		zap.S().Infof("Lower Level zScore(%.2f) crossed at %v", zScore.Float(), s.Clock.NowTime().Format(constants.DATE_TIME_FORMAT))
 		s.openOrder(s.coin1, futureType.LONG)
 		s.openOrder(s.coin2, futureType.SHORT)
 		telegramApi.SendTextToTelegramChat("Opened " + s.coin1.Symbol + "⬆ ️" + s.coin2.Symbol + "⬇️")
-		s.debugPrices(s.coin1, s.klineInterval)
-		s.debugPrices(s.coin2, s.klineInterval)
+		//s.debugPrices(s.coin1, s.klineInterval)
+		//s.debugPrices(s.coin2, s.klineInterval)
 	}
 }
 
 func (s *PairArbitrageStrategyTradingService) debugPrices(coin *domains.Coin, intervalInMinutes int) {
 	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, coin.Id)
+	zap.S().Debugf("Opened order not found for %s", coin.Symbol)
 
 	priceByLastKline := openedOrder1.Price
 	priceForFutures, _ := s.ExchangeDataService.GetCurrentPriceForFutures(coin, intervalInMinutes)
@@ -255,7 +337,7 @@ func (s *PairArbitrageStrategyTradingService) notifyInTelegram(closedOrder1 *dom
 }
 
 func (s *PairArbitrageStrategyTradingService) closeOrders(closeReason string) (*domains.Transaction, *domains.Transaction) {
-	zap.S().Infof("Close orders")
+	zap.S().Infof("Close orders %s %s - %s ", closeReason, s.coin1.Symbol, s.coin2.Symbol)
 	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin1.Id)
 	var closedOrder1 *domains.Transaction
 	if openedOrder1 != nil {
@@ -266,11 +348,6 @@ func (s *PairArbitrageStrategyTradingService) closeOrders(closeReason string) (*
 	var closedOrder2 *domains.Transaction
 	if openedOrder2 != nil {
 		closedOrder2 = s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(s.coin2, openedOrder2)
-	}
-
-	if s.hasOpenedOrders() {
-		telegramApi.SendTextToTelegramChat(fmt.Sprintf("PANIC!!! Orders are not closed %s %s - %s ", closeReason, s.coin1.Symbol, s.coin2.Symbol))
-		panic("Orders are not closed!")
 	}
 
 	s.notifyInTelegram(closedOrder1, closedOrder2, closeReason)

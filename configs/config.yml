@@ -68,9 +68,6 @@ strategy:
       - 'ADAUSDT'
       - 'BNBUSDT'
 
-      - 'DYDXUSDT'
-      - 'IMXUSDT'
-
       - 'XRPUSDT'
       - 'LTCUSDT'
 
@@ -82,9 +79,6 @@ strategy:
 
       - 'ALGOUSDT'
       - 'DASHUSDT'
-
-      - 'ARUSDT'
-      - 'DOTUSDT'
 
 indicator:
   trend:

@@ -8,7 +8,6 @@ import (
 	"cryptoBot/pkg/util"
 	"fmt"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 type IStatisticService interface {
@@ -60,8 +59,6 @@ func (s *StatisticPairTradingService) BuildStatistics() string {
 	var response = "<pre>\n" +
 		"| Coin1 | Coin2 |    Date    |   Profit   |   Percent  | Size |\n" +
 		"|-------|-------|------------|------------|------------|------|"
-
-	zap.S().Infof("coins %v", coins)
 
 	for i := 0; i < len(coins); i += 2 {
 		symbol1 := coins[i]

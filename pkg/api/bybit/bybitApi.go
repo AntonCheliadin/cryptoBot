@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"cryptoBot/pkg/api"
+	telegramApi "cryptoBot/pkg/api/telegram"
 	"cryptoBot/pkg/constants"
 	"cryptoBot/pkg/constants/futureType"
 	"cryptoBot/pkg/data/domains"
@@ -672,7 +673,9 @@ func (api *BybitApi) GetCloseTradeRecord(coin *domains.Coin, openTransaction *do
 	tradesSummaryDto := position.TradesSummaryDto{Trades: trades}
 
 	if tradesSummaryDto.GetAmount() != openTransaction.Amount {
-		panic(fmt.Sprintf("Unexpected amount in trade records. Expected: %v; actual: %v", openTransaction.Amount, tradesSummaryDto.GetAmount()))
+		error := fmt.Sprintf("Unexpected amount in trade records. Expected: %v; actual: %v", openTransaction.Amount, tradesSummaryDto.GetAmount())
+		telegramApi.SendTextToTelegramChat(error)
+		panic(error)
 	}
 
 	return &tradesSummaryDto, nil

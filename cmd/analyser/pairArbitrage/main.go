@@ -92,6 +92,7 @@ func main() {
 		coin2, _ := repos.Coin.FindBySymbol(symbol2)
 
 		tradingService := trading.NewPairArbitrageStrategyTradingService(
+			repos.Coin,
 			repos.Transaction,
 			clockMock,
 			exchangeDataService,
