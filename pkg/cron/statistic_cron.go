@@ -26,7 +26,7 @@ func (j *statisticJob) initStatisticJob() {
 		zap.S().Errorf("Error during trading job %s", err.Error())
 	}
 
-	_, err2 := s.Cron("30 6-20 * * *").Do(j.executeHour) //every hour from 8 through 22 at 30min
+	_, err2 := s.Cron("3 6-19 * * *").Do(j.executeHour) //every hour from 8 through 21 at 3min
 	if err2 != nil {
 		zap.S().Errorf("Error during trading job %s", err.Error())
 	}

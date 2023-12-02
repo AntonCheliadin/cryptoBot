@@ -16,7 +16,7 @@ func newTradingJob(tradingService trading.TradingService) *tradingJob {
 
 func (j *tradingJob) initTradingJob() {
 	s := gocron.NewScheduler(time.UTC)
-	s.CronWithSeconds("1 */1 * * * *").Do(j.execute) // every minute
+	s.CronWithSeconds("1 0 * * * *").Do(j.execute) // every hour at 0 min 1 sec
 	s.SingletonModeAll()
 	s.StartAsync()
 }
