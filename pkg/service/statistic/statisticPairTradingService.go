@@ -39,7 +39,7 @@ func (s *StatisticPairTradingService) BuildHourStatistics() string {
 		"| Coin1 | Coin2 |      Date open      |   Profit   |\n" +
 		"|-------|-------|---------------------|------------|"
 
-	for i := 0; i < len(coins); i += 2 {
+	for i := 0; i < len(coins); i += 4 {
 		symbol1 := coins[i]
 		symbol2 := coins[i+1]
 		coin1, _ := s.coinRepo.FindBySymbol(symbol1)
@@ -60,7 +60,7 @@ func (s *StatisticPairTradingService) BuildStatistics() string {
 		"| Coin1 | Coin2 |    Date    |   Profit   |   Percent  | Size |\n" +
 		"|-------|-------|------------|------------|------------|------|"
 
-	for i := 0; i < len(coins); i += 2 {
+	for i := 0; i < len(coins); i += 4 {
 		symbol1 := coins[i]
 		symbol2 := coins[i+1]
 		coin1, _ := s.coinRepo.FindBySymbol(symbol1)

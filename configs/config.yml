@@ -67,18 +67,38 @@ strategy:
     coins:
       - 'ADAUSDT'
       - 'BNBUSDT'
+      - 'BYBIT_PairTrading1_API_KEY'
+      - 'BYBIT_PairTrading1_API_SECRET'
 
       - 'XRPUSDT'
       - 'LTCUSDT'
+      - 'BYBIT_PairTrading1_API_KEY'
+      - 'BYBIT_PairTrading1_API_SECRET'
 
       - 'MATICUSDT'
       - 'UNIUSDT'
+      - 'BYBIT_PairTrading1_API_KEY'
+      - 'BYBIT_PairTrading1_API_SECRET'
 
       - 'FILUSDT'
       - 'FLOWUSDT'
+      - 'BYBIT_PairTrading1_API_KEY'
+      - 'BYBIT_PairTrading1_API_SECRET'
 
       - 'ALGOUSDT'
       - 'DASHUSDT'
+      - 'BYBIT_PairTrading1_API_KEY'
+      - 'BYBIT_PairTrading1_API_SECRET'
+
+      - 'ADAUSDT'
+      - 'BTCUSDT'
+      - 'BYBIT_PairTrading2_API_KEY'
+      - 'BYBIT_PairTrading2_API_SECRET'
+
+      - 'ALGOUSDT'
+      - 'NEARUSDT'
+      - 'BYBIT_PairTrading2_API_KEY'
+      - 'BYBIT_PairTrading2_API_SECRET'
 
 indicator:
   trend:

@@ -21,7 +21,7 @@ func NewExchangeDataService(transactionRepo repository.Transaction, coinRepo rep
 	exchangeDataServiceImpl = &DataService{
 		transactionRepo: transactionRepo,
 		coinRepo:        coinRepo,
-		exchangeApi:     exchangeApi,
+		ExchangeApi:     exchangeApi,
 		Clock:           clock,
 		klineRepo:       klineRepo,
 	}
@@ -31,7 +31,7 @@ func NewExchangeDataService(transactionRepo repository.Transaction, coinRepo rep
 type DataService struct {
 	transactionRepo repository.Transaction
 	coinRepo        repository.Coin
-	exchangeApi     api.ExchangeApi
+	ExchangeApi     api.ExchangeApi
 	Clock           date.Clock
 	klineRepo       repository.Kline
 }
@@ -51,7 +51,7 @@ func (s *DataService) GetCurrentPriceWithInterval(coin *domains.Coin, interval i
 		}
 	}
 
-	currentCoinPrice, err := s.exchangeApi.GetCurrentCoinPrice(coin)
+	currentCoinPrice, err := s.ExchangeApi.GetCurrentCoinPrice(coin)
 	if err != nil {
 		zap.S().Errorf("Error during GetCurrentCoinPrice at %s (rounded to %s) - %s", s.Clock.NowTime(), util.RoundToMinutes(s.Clock.NowTime()), err.Error())
 	}
@@ -66,7 +66,7 @@ func (s *DataService) GetCurrentPriceForFutures(coin *domains.Coin, interval int
 		}
 	}
 
-	currentCoinPrice, err := s.exchangeApi.GetCurrentCoinPriceForFutures(coin)
+	currentCoinPrice, err := s.ExchangeApi.GetCurrentCoinPriceForFutures(coin)
 	if err != nil {
 		zap.S().Errorf("Error during GetCurrentPriceForFutures for %s at %s (rounded to %s) - %s", coin.Symbol, s.Clock.NowTime(), util.RoundToMinutes(s.Clock.NowTime()), err.Error())
 	}
@@ -74,5 +74,5 @@ func (s *DataService) GetCurrentPriceForFutures(coin *domains.Coin, interval int
 }
 
 func (s *DataService) IsPositionOpened(coin *domains.Coin, openedOrder *domains.Transaction) bool {
-	return s.exchangeApi.IsFuturesPositionOpened(coin, openedOrder)
+	return s.ExchangeApi.IsFuturesPositionOpened(coin, openedOrder)
 }

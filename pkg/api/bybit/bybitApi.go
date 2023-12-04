@@ -708,3 +708,11 @@ func (api *BybitApi) ReplaceFuturesActiveOrder(coin *domains.Coin, transaction *
 
 	return &dto, nil
 }
+
+func (api *BybitApi) SetApiKey(apiKey string) {
+	api.apiKey = apiKey
+}
+
+func (api *BybitApi) SetSecretKey(secretKey string) {
+	api.secretKey = secretKey
+}

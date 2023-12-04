@@ -93,6 +93,12 @@ func (api *BinanceApiMock) SellCoinByMarket(coin *domains.Coin, amount float64, 
 	}, nil
 }
 
+func (api *BinanceApiMock) SetApiKey(apiKey string) {
+}
+
+func (api *BinanceApiMock) SetSecretKey(secretKey string) {
+}
+
 type orderResponseMockDto struct {
 	price  float64
 	amount float64

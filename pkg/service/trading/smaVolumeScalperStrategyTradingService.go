@@ -18,7 +18,7 @@ import (
 	"strconv"
 )
 
-//https://youtu.be/ZE0ACEx1U84
+// https://youtu.be/ZE0ACEx1U84
 var smaVolumeScalperStrategyTradingService *SmaVolumeScalperStrategyTradingService
 
 func NewSmaVolumeScalperStrategyTradingService(
@@ -268,7 +268,7 @@ func (s *SmaVolumeScalperStrategyTradingService) openOrder(coin *domains.Coin, f
 	isNextOrderFake := s.isNextOrderFake(coin)
 	costOrOrder := s.calculateCurrentWalletValue(coin)
 
-	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfitAndFake(coin, futuresTypeSignal, costOrOrder, stopLoss, takeProfit, isNextOrderFake)
+	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfitAndFake(coin, "", futuresTypeSignal, costOrOrder, stopLoss, takeProfit, isNextOrderFake)
 }
 
 func (s *SmaVolumeScalperStrategyTradingService) isNextOrderFake(coin *domains.Coin) bool {
