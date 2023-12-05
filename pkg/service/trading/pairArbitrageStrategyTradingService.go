@@ -16,6 +16,7 @@ import (
 	"github.com/sdcoffey/techan"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"os"
 	"time"
 )
 
@@ -108,12 +109,14 @@ func (s *PairArbitrageStrategyTradingServiceContainer) InitializeTrading(coin *d
 func (s *PairArbitrageStrategyTradingServiceContainer) Initialize() error {
 	coins := viper.GetStringSlice("strategy.pairArbitrage.coins")
 
-	for i := 0; i < len(coins); i += 2 {
+	for i := 0; i < len(coins); i += 4 {
 		coin1, _ := s.TradingService.CoinRepo.FindBySymbol(coins[i])
 		coin2, _ := s.TradingService.CoinRepo.FindBySymbol(coins[i+1])
 
 		s.TradingService.coin1 = coin1
 		s.TradingService.coin2 = coin2
+		s.TradingService.ExchangeDataService.ExchangeApi.SetApiKey(os.Getenv(coins[i+2]))
+		s.TradingService.ExchangeDataService.ExchangeApi.SetSecretKey(os.Getenv(coins[i+3]))
 
 		s.TradingService.Initialize()
 	}
@@ -132,12 +135,14 @@ func (s *PairArbitrageStrategyTradingServiceContainer) BeforeExecute() {
 
 	coins := viper.GetStringSlice("strategy.pairArbitrage.coins")
 
-	for i := 0; i < len(coins); i += 2 {
+	for i := 0; i < len(coins); i += 4 {
 		coin1, _ := s.TradingService.CoinRepo.FindBySymbol(coins[i])
 		coin2, _ := s.TradingService.CoinRepo.FindBySymbol(coins[i+1])
 
 		s.TradingService.coin1 = coin1
 		s.TradingService.coin2 = coin2
+		s.TradingService.ExchangeDataService.ExchangeApi.SetApiKey(os.Getenv(coins[i+2]))
+		s.TradingService.ExchangeDataService.ExchangeApi.SetSecretKey(os.Getenv(coins[i+3]))
 
 		s.TradingService.BeforeExecute()
 	}
@@ -157,9 +162,11 @@ func (s *PairArbitrageStrategyTradingServiceContainer) Execute() {
 	s.IsExecuteRunning = true
 	coins := viper.GetStringSlice("strategy.pairArbitrage.coins")
 
-	for i := 0; i < len(coins); i += 2 {
+	for i := 0; i < len(coins); i += 4 {
 		coin1, _ := s.TradingService.CoinRepo.FindBySymbol(coins[i])
 		coin2, _ := s.TradingService.CoinRepo.FindBySymbol(coins[i+1])
+		s.TradingService.ExchangeDataService.ExchangeApi.SetApiKey(os.Getenv(coins[i+2]))
+		s.TradingService.ExchangeDataService.ExchangeApi.SetSecretKey(os.Getenv(coins[i+3]))
 
 		s.TradingService.coin1 = coin1
 		s.TradingService.coin2 = coin2
@@ -235,7 +242,7 @@ func (s *PairArbitrageStrategyTradingService) Execute() {
 }
 
 func (s *PairArbitrageStrategyTradingService) debugPrices(coin *domains.Coin, intervalInMinutes int) {
-	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, coin.Id)
+	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoinAndTradingKey(s.tradingStrategy, coin.Id, s.getTradingKey())
 	zap.S().Debugf("Opened order not found for %s", coin.Symbol)
 
 	priceByLastKline := openedOrder1.Price
@@ -263,8 +270,8 @@ func (s *PairArbitrageStrategyTradingService) calculateZScore(klines []domains.I
 
 // CloseOpenedOrderByStopLossIfNeeded if one order closed by stopLoss then close other with current price
 func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded(zScore big.Decimal) {
-	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin1.Id)
-	openedOrder2, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin2.Id)
+	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoinAndTradingKey(s.tradingStrategy, s.coin1.Id, s.getTradingKey())
+	openedOrder2, _ := s.TransactionRepo.FindOpenedTransactionByCoinAndTradingKey(s.tradingStrategy, s.coin2.Id, s.getTradingKey())
 	var closedOrder1 *domains.Transaction
 	var closedOrder2 *domains.Transaction
 
@@ -341,13 +348,13 @@ func (s *PairArbitrageStrategyTradingService) notifyInTelegram(closedOrder1 *dom
 
 func (s *PairArbitrageStrategyTradingService) closeOrders(closeReason string) (*domains.Transaction, *domains.Transaction) {
 	zap.S().Infof("Close orders %s %s - %s ", closeReason, s.coin1.Symbol, s.coin2.Symbol)
-	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin1.Id)
+	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoinAndTradingKey(s.tradingStrategy, s.coin1.Id, s.getTradingKey())
 	var closedOrder1 *domains.Transaction
 	if openedOrder1 != nil {
 		closedOrder1 = s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(s.coin1, openedOrder1)
 	}
 
-	openedOrder2, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin2.Id)
+	openedOrder2, _ := s.TransactionRepo.FindOpenedTransactionByCoinAndTradingKey(s.tradingStrategy, s.coin2.Id, s.getTradingKey())
 	var closedOrder2 *domains.Transaction
 	if openedOrder2 != nil {
 		closedOrder2 = s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(s.coin2, openedOrder2)
@@ -359,8 +366,8 @@ func (s *PairArbitrageStrategyTradingService) closeOrders(closeReason string) (*
 }
 
 func (s *PairArbitrageStrategyTradingService) hasOpenedOrders() bool {
-	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin1.Id)
-	openedOrder2, _ := s.TransactionRepo.FindOpenedTransactionByCoin(s.tradingStrategy, s.coin2.Id)
+	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoinAndTradingKey(s.tradingStrategy, s.coin1.Id, s.getTradingKey())
+	openedOrder2, _ := s.TransactionRepo.FindOpenedTransactionByCoinAndTradingKey(s.tradingStrategy, s.coin2.Id, s.getTradingKey())
 
 	return openedOrder1 != nil || openedOrder2 != nil
 }
@@ -371,7 +378,7 @@ func (s *PairArbitrageStrategyTradingService) openOrder(coin *domains.Coin, futu
 
 	zap.S().Debugf("Open order for %v with cost %v", coin.Symbol, orderCost)
 
-	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin, futuresType, orderCost, stopLossPrice, 0)
+	s.OrderManagerService.OpenFuturesOrderWithCostAndFixedStopLossAndTakeProfit(coin, s.getTradingKey(), futuresType, orderCost, stopLossPrice, 0)
 }
 
 func (s *PairArbitrageStrategyTradingService) calculateOrderStopLoss(coin *domains.Coin, futuresType futureType.FuturesType) float64 {
@@ -384,8 +391,12 @@ func (s *PairArbitrageStrategyTradingService) calculateOrderStopLoss(coin *domai
 }
 
 func (s *PairArbitrageStrategyTradingService) calculateCostForOrder() float64 {
-	sumOfProfitByCoin1, _ := s.TransactionRepo.CalculateSumOfProfitByCoin(s.coin1.Id, s.tradingStrategy)
-	sumOfProfitByCoin2, _ := s.TransactionRepo.CalculateSumOfProfitByCoin(s.coin2.Id, s.tradingStrategy)
+	sumOfProfitByCoin1, _ := s.TransactionRepo.CalculateSumOfProfitByCoinAndTradingKey(s.coin1.Id, s.tradingStrategy, s.getTradingKey())
+	sumOfProfitByCoin2, _ := s.TransactionRepo.CalculateSumOfProfitByCoinAndTradingKey(s.coin2.Id, s.tradingStrategy, s.getTradingKey())
 
 	return util.GetDollarsByCents(((int64(s.startCapitalInCents) + sumOfProfitByCoin1 + sumOfProfitByCoin2) / 2) * int64(s.leverage))
+}
+
+func (s *PairArbitrageStrategyTradingService) getTradingKey() string {
+	return s.coin1.Symbol + "-" + s.coin2.Symbol
 }

@@ -51,6 +51,8 @@ type Transaction struct {
 	FuturesType futureType.FuturesType `db:"futures_type"`
 
 	IsFake bool `db:"fake"`
+
+	TradingKey string `db:"trading_key"`
 }
 
 func (t *Transaction) String() string {

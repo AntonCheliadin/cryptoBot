@@ -25,7 +25,7 @@ func NewBinanceApi() api.ExchangeApi {
 	return &BinanceApi{}
 }
 
-//https://binance-docs.github.io/apidocs/spot/en/#test-connectivity
+// https://binance-docs.github.io/apidocs/spot/en/#test-connectivity
 type BinanceApi struct {
 }
 
@@ -165,4 +165,10 @@ func (api *BinanceApi) GetLastFuturesOrder(coin *domains.Coin, clientOrderId str
 }
 func (api *BinanceApi) GetActiveFuturesConditionalOrder(coin *domains.Coin, conditionalOrder *domains.ConditionalOrder) (api.OrderResponseDto, error) {
 	return nil, nil
+}
+
+func (api *BinanceApi) SetApiKey(apiKey string) {
+}
+
+func (api *BinanceApi) SetSecretKey(secretKey string) {
 }

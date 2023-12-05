@@ -23,6 +23,7 @@ type Transaction interface {
 	SaveTransaction(transaction *domains.Transaction) error
 	CalculateSumOfProfit(tradingStrategy constants.TradingStrategy) (int64, error)
 	CalculateSumOfProfitByCoin(coinId int64, tradingStrategy constants.TradingStrategy) (int64, error)
+	CalculateSumOfProfitByCoinAndTradingKey(coinId int64, tradingStrategy constants.TradingStrategy, tradingKey string) (int64, error)
 	CalculateSumOfSpentTransactions(tradingStrategy constants.TradingStrategy) (int64, error)
 	CalculateSumOfSpentTransactionsAndCreatedAfter(date time.Time, tradingStrategy constants.TradingStrategy) (int64, error)
 	CalculateSumOfProfitByDate(date time.Time, tradingStrategy constants.TradingStrategy) (int64, error)
@@ -33,6 +34,7 @@ type Transaction interface {
 	FindOpenedTransaction(tradingStrategy constants.TradingStrategy) (*domains.Transaction, error)
 	FindAllOpenedTransactions(tradingStrategy constants.TradingStrategy) ([]*domains.Transaction, error)
 	FindOpenedTransactionByCoin(tradingStrategy constants.TradingStrategy, coinId int64) (*domains.Transaction, error)
+	FindOpenedTransactionByCoinAndTradingKey(tradingStrategy constants.TradingStrategy, coinId int64, tradingKey string) (*domains.Transaction, error)
 
 	FindAllProfitPercents(tradingStrategy int) ([]transaction.TransactionProfitPercentsDto, error)
 	FetchStatisticByDays(tradingStrategy int, coinIds []int64) ([]transaction.PairTransactionProfitPercentsDto, error)

@@ -118,6 +118,12 @@ func (api *BybitApiMock) GetActiveFuturesConditionalOrder(coin *domains.Coin, co
 	return nil, nil
 }
 
+func (api *BybitApiMock) SetApiKey(apiKey string) {
+}
+
+func (api *BybitApiMock) SetSecretKey(secretKey string) {
+}
+
 type orderResponseMockDto struct {
 	price  float64
 	amount float64

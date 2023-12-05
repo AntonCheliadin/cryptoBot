@@ -27,6 +27,9 @@ type ExchangeApi interface {
 	GetWalletBalance() (WalletBalanceDto, error)
 	SetFuturesLeverage(coin *domains.Coin, leverage int) error
 	SetIsolatedMargin(coin *domains.Coin, leverage int) error
+
+	SetApiKey(apiKey string)
+	SetSecretKey(secretKey string)
 }
 
 type OrderResponseDto interface {
