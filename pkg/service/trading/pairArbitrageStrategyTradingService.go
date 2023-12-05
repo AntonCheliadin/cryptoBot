@@ -65,6 +65,7 @@ func NewPairArbitrageStrategyTradingService(
 		zScoreCloseToZero:      0.2,
 		zScoreMinProfit:        0.3,
 		tradingStrategy:        constants.PAIR_ARBITRAGE,
+		orderLifeTimeInHours:   10,
 	}
 	return pairArbitrageStrategyTradingService
 }
@@ -91,6 +92,7 @@ type PairArbitrageStrategyTradingService struct {
 	zScoreCloseToZero      float64
 	zScoreMinProfit        float64
 	tradingStrategy        constants.TradingStrategy
+	orderLifeTimeInHours   int64
 }
 
 type PairArbitrageStrategyTradingServiceContainer struct {
@@ -297,6 +299,12 @@ func (s *PairArbitrageStrategyTradingService) CloseOpenedOrderByStopLossIfNeeded
 	//if one of order has been closed by exchange
 	if openedOrder1 == nil && openedOrder2 != nil || openedOrder2 == nil && openedOrder1 != nil {
 		s.closeOrders("by exchange")
+		return
+	}
+
+	orderDeadLine := openedOrder1.CreatedAt.Add(time.Hour * time.Duration(s.orderLifeTimeInHours))
+	if s.orderLifeTimeInHours > 0 && s.Clock.NowTime().After(orderDeadLine) {
+		s.closeOrders("by deadline")
 		return
 	}
 
