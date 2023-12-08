@@ -65,7 +65,7 @@ func NewPairArbitrageStrategyTradingService(
 		zScoreCloseToZero:      0.2,
 		zScoreMinProfit:        0.3,
 		tradingStrategy:        constants.PAIR_ARBITRAGE,
-		orderLifeTimeInHours:   10,
+		orderLifeTimeInHours:   0,
 	}
 	return pairArbitrageStrategyTradingService
 }
@@ -359,13 +359,13 @@ func (s *PairArbitrageStrategyTradingService) closeOrders(closeReason string) (*
 	openedOrder1, _ := s.TransactionRepo.FindOpenedTransactionByCoinAndTradingKey(s.tradingStrategy, s.coin1.Id, s.getTradingKey())
 	var closedOrder1 *domains.Transaction
 	if openedOrder1 != nil {
-		closedOrder1 = s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(s.coin1, openedOrder1)
+		closedOrder1 = s.OrderManagerService.CloseFuturesOrderWithCurrentPriceWithInterval(s.coin1, openedOrder1, s.klineInterval)
 	}
 
 	openedOrder2, _ := s.TransactionRepo.FindOpenedTransactionByCoinAndTradingKey(s.tradingStrategy, s.coin2.Id, s.getTradingKey())
 	var closedOrder2 *domains.Transaction
 	if openedOrder2 != nil {
-		closedOrder2 = s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(s.coin2, openedOrder2)
+		closedOrder2 = s.OrderManagerService.CloseFuturesOrderWithCurrentPriceWithInterval(s.coin2, openedOrder2, s.klineInterval)
 	}
 
 	s.notifyInTelegram(closedOrder1, closedOrder2, closeReason)

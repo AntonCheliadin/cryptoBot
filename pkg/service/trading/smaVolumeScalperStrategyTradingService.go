@@ -131,7 +131,7 @@ func (s *SmaVolumeScalperStrategyTradingService) BotAction(coin *domains.Coin) {
 		currentProfit, _ := s.OrderManagerService.CalculateCurrentProfitInPercentWithoutLeverage(coin, openedOrder)
 		minProfitInPercent := 0.46
 		if currentProfit > minProfitInPercent {
-			s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(coin, openedOrder)
+			s.OrderManagerService.CloseFuturesOrderWithCurrentPriceWithInterval(coin, openedOrder, s.klineInterval)
 		} else {
 			return
 		}
@@ -247,7 +247,7 @@ func (s *SmaVolumeScalperStrategyTradingService) closeOrderIfNeeded(coin *domain
 
 	openedOrder, _ = s.TransactionRepo.FindOpenedTransaction(s.tradingStrategy)
 	if openedOrder != nil && s.OrderManagerService.ShouldCloseByTrailingTakeProfitWithoutLeverage(coin, openedOrder) {
-		s.OrderManagerService.CloseFuturesOrderWithCurrentPrice(coin, openedOrder)
+		s.OrderManagerService.CloseFuturesOrderWithCurrentPriceWithInterval(coin, openedOrder, s.klineInterval)
 	}
 }
 

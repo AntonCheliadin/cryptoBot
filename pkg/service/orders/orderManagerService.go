@@ -167,8 +167,8 @@ func (s *OrderManagerService) CloseCombinedOrder(openTransaction []*domains.Tran
 	}
 }
 
-func (s *OrderManagerService) CloseFuturesOrderWithCurrentPrice(coin *domains.Coin, openTransaction *domains.Transaction) *domains.Transaction {
-	currentPrice, _ := s.ExchangeDataService.GetCurrentPrice(coin)
+func (s *OrderManagerService) CloseFuturesOrderWithCurrentPriceWithInterval(coin *domains.Coin, openTransaction *domains.Transaction, interval int) *domains.Transaction {
+	currentPrice, _ := s.ExchangeDataService.GetCurrentPriceWithInterval(coin, interval)
 	return s.CloseOrder(openTransaction, coin, currentPrice, constants.FUTURES)
 }
 

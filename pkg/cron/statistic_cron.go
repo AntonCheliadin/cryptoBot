@@ -20,18 +20,20 @@ func NewStatisticJob(service statistic.IStatisticService) *statisticJob {
 
 func (j *statisticJob) initStatisticJob() {
 	s := gocron.NewScheduler(time.UTC)
+	s2 := gocron.NewScheduler(time.UTC)
 
 	_, err := s.Cron("0 6 * * *").Do(j.execute) //every day at 6 (8 UA)
 	if err != nil {
 		zap.S().Errorf("Error during trading job %s", err.Error())
 	}
 
-	_, err2 := s.Cron("3 6-19 * * *").Do(j.executeHour) //every hour from 8 through 21 at 3min
+	_, err2 := s2.Cron("3 6-19 * * *").Do(j.executeHour) //every hour from 8 through 21 at 3min
 	if err2 != nil {
 		zap.S().Errorf("Error during trading job %s", err.Error())
 	}
 
 	s.StartAsync()
+	s2.StartAsync()
 }
 
 func (j *statisticJob) execute() {
